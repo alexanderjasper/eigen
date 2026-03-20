@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -17,25 +18,27 @@ func init() {
 }
 
 var specNewCmd = &cobra.Command{
-	Use:   "new <domain> <module>",
+	Use:   "new <path>",
 	Short: "Scaffold a new spec module",
-	Args:  cobra.ExactArgs(2),
+	Long:  "Create a new spec module at the given path (e.g. spec-cli or spec-cli/cmd-new).",
+	Args:  cobra.ExactArgs(1),
 	RunE:  runSpecNew,
 }
 
 func runSpecNew(cmd *cobra.Command, args []string) error {
-	domain, module := args[0], args[1]
+	path := args[0]
 
-	modulePath := storage.ModulePath(specsRoot, domain, module)
+	modulePath := storage.ModulePath(specsRoot, path)
 	if _, err := os.Stat(modulePath); err == nil {
-		return fmt.Errorf("module %s.%s already exists at %s", domain, module, modulePath)
+		return fmt.Errorf("module %q already exists at %s", path, modulePath)
 	}
 
-	eventsDir := storage.EventsPath(specsRoot, domain, module)
+	eventsDir := storage.EventsPath(specsRoot, path)
 	if err := os.MkdirAll(eventsDir, 0755); err != nil {
 		return fmt.Errorf("creating events directory: %w", err)
 	}
 
+	_, module := splitPath(path)
 	ev := spec.ChangeEvent{
 		ID:        "evt-001",
 		Sequence:  1,
@@ -66,22 +69,32 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("marshaling initial event: %w", err)
 	}
-	eventPath := storage.EventsPath(specsRoot, domain, module) + "/001_initial.yaml"
+	eventPath := filepath.Join(eventsDir, "001_initial.yaml")
 	if err := os.WriteFile(eventPath, data, 0644); err != nil {
 		return fmt.Errorf("writing initial event: %w", err)
 	}
 
-	events, err := storage.ReadEvents(specsRoot, domain, module)
+	events, err := storage.ReadEvents(specsRoot, path)
 	if err != nil {
 		return fmt.Errorf("reading events: %w", err)
 	}
-	s := spec.Project(domain, module, events)
-	if err := storage.WriteSpec(specsRoot, domain, module, s); err != nil {
+	s := spec.Project(path, events)
+	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml: %w", err)
 	}
 
-	fmt.Printf("Created %s.%s\n", domain, module)
+	fmt.Printf("Created %s\n", path)
 	fmt.Printf("  %s\n", eventPath)
-	fmt.Printf("  %s\n", storage.SpecPath(specsRoot, domain, module))
+	fmt.Printf("  %s\n", storage.SpecPath(specsRoot, path))
 	return nil
+}
+
+// splitPath returns the first and last segments of a slash path.
+func splitPath(path string) (first, last string) {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' {
+			return path[:i], path[i+1:]
+		}
+	}
+	return path, path
 }

@@ -16,37 +16,25 @@ func init() {
 }
 
 var specValidateCmd = &cobra.Command{
-	Use:   "validate [domain] [module]",
+	Use:   "validate [path]",
 	Short: "Validate spec modules",
-	Args:  cobra.MaximumNArgs(2),
+	Long:  "Validate a specific module by path, or all modules if no path is given.",
+	Args:  cobra.MaximumNArgs(1),
 	RunE:  runSpecValidate,
 }
 
 func runSpecValidate(cmd *cobra.Command, args []string) error {
-	type target struct {
-		domain, module string
-	}
+	var paths []string
 
-	var targets []target
-
-	switch len(args) {
-	case 2:
-		targets = []target{{args[0], args[1]}}
-	case 1:
-		refs, err := storage.WalkModules(specsRoot, args[0])
-		if err != nil {
-			return err
-		}
-		for _, r := range refs {
-			targets = append(targets, target{r.Domain, r.Module})
-		}
-	default:
+	if len(args) == 1 {
+		paths = []string{args[0]}
+	} else {
 		refs, err := storage.WalkModules(specsRoot, "")
 		if err != nil {
 			return err
 		}
 		for _, r := range refs {
-			targets = append(targets, target{r.Domain, r.Module})
+			paths = append(paths, r.Path)
 		}
 	}
 
@@ -54,21 +42,21 @@ func runSpecValidate(cmd *cobra.Command, args []string) error {
 	okColor := color.New(color.FgGreen).SprintFunc()
 
 	totalErrors := 0
-	for _, t := range targets {
-		s, err := storage.ReadSpec(specsRoot, t.domain, t.module)
+	for _, path := range paths {
+		s, err := storage.ReadSpec(specsRoot, path)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s %s.%s: %s\n", errColor("✗"), t.domain, t.module, err)
+			fmt.Fprintf(os.Stderr, "%s %s: %s\n", errColor("✗"), path, err)
 			totalErrors++
 			continue
 		}
 
 		errs := spec.Validate(s, specsRoot)
 		if len(errs) == 0 {
-			fmt.Printf("%s %s.%s\n", okColor("✓"), t.domain, t.module)
+			fmt.Printf("%s %s\n", okColor("✓"), path)
 			continue
 		}
 
-		fmt.Fprintf(os.Stderr, "%s %s.%s\n", errColor("✗"), t.domain, t.module)
+		fmt.Fprintf(os.Stderr, "%s %s\n", errColor("✗"), path)
 		for _, e := range errs {
 			fmt.Fprintf(os.Stderr, "    %s\n", e.Error())
 		}

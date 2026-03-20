@@ -14,19 +14,17 @@ func init() {
 }
 
 var specShowCmd = &cobra.Command{
-	Use:   "show <domain> <module>",
+	Use:   "show <path>",
 	Short: "Print the current spec.yaml for a module",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(1),
 	RunE:  runSpecShow,
 }
 
 func runSpecShow(cmd *cobra.Command, args []string) error {
-	domain, module := args[0], args[1]
-
-	path := storage.SpecPath(specsRoot, domain, module)
-	data, err := os.ReadFile(path)
+	path := args[0]
+	data, err := os.ReadFile(storage.SpecPath(specsRoot, path))
 	if err != nil {
-		return fmt.Errorf("reading spec.yaml for %s.%s: %w", domain, module, err)
+		return fmt.Errorf("reading spec.yaml for %q: %w", path, err)
 	}
 	fmt.Print(string(data))
 	return nil
