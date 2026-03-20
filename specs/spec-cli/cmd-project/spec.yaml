@@ -2,37 +2,35 @@ id: spec-cli/cmd-project
 domain: spec-cli
 module: cmd-project
 owner: eigen
-title: "spec project"
+title: spec project
 status: draft
 description: |
-  The spec project command recomputes and overwrites spec.yaml for a module
-  by replaying all events in its events/ directory. It is the manual
-  trigger for re-projection, used after directly editing an event file.
+    The spec project command recomputes and overwrites spec.yaml for a module
+    by replaying all events in its events/ directory. It is the manual
+    trigger for re-projection, used after directly editing an event file.
 behavior: |
-  Accepts a single slash-delimited path argument. Reads all events from
-  the module's events/ directory, applies them in sequence order via the
-  projection engine, and writes the resulting SpecModule to spec.yaml.
-  Accepts an optional path prefix to reproject all matching modules at once.
-  Prints the path of each updated spec.yaml.
+    Accepts a single slash-delimited path argument. Reads all events from
+    the module's events/ directory, applies them in sequence order via the
+    projection engine, and writes the resulting SpecModule to spec.yaml.
+    Accepts an optional path prefix to reproject all matching modules at once.
+    Prints the path of each updated spec.yaml.
 acceptance_criteria:
-  - id: AC-001
-    description: Reprojects spec.yaml from current events
-    given: A module whose event file has been edited since the last projection
-    when: eigen spec project <path> is run
-    then: spec.yaml reflects the updated event content
-  - id: AC-002
-    description: Fails with a clear error if the module does not exist
-    given: A path that has no events/ directory
-    when: eigen spec project <path> is run
-    then: Exits non-zero and prints an error identifying the missing module
-  - id: AC-003
-    description: Reprojects all modules when called with no arguments
-    given: Multiple modules exist under the specs root
-    when: eigen spec project is run with no arguments
-    then: spec.yaml is rewritten for every module and each path is printed
-dependencies:
-  - spec-cli
-  - projection-engine
+    - id: AC-001
+      description: Reprojects spec.yaml from current events
+      given: A module whose event file has been edited since the last projection
+      when: eigen spec project <path> is run
+      then: spec.yaml reflects the updated event content
+    - id: AC-002
+      description: Fails with a clear error if the module does not exist
+      given: A path that has no events/ directory
+      when: eigen spec project <path> is run
+      then: Exits non-zero and prints an error identifying the missing module
+    - id: AC-003
+      description: Reprojects all modules when called with no arguments
+      given: Multiple modules exist under the specs root
+      when: eigen spec project is run with no arguments
+      then: spec.yaml is rewritten for every module and each path is printed
+dependencies: []
 technology: {}
 last_event: evt-001
 events_count: 1
