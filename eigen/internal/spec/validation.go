@@ -58,8 +58,8 @@ func Validate(s SpecModule, specsRoot string) []ValidationError {
 	}
 
 	for _, dep := range s.Dependencies {
-		// dep is expected to be "domain.module" format
-		depPath := filepath.Join(specsRoot, filepath.FromSlash(dependencyToPath(dep)))
+		// dep is a slash path, e.g. "spec-cli/cmd-new"
+		depPath := filepath.Join(specsRoot, filepath.FromSlash(dep))
 		if _, err := os.Stat(depPath); os.IsNotExist(err) {
 			errs = append(errs, ValidationError{
 				Field:   "dependencies",
@@ -69,14 +69,4 @@ func Validate(s SpecModule, specsRoot string) []ValidationError {
 	}
 
 	return errs
-}
-
-// dependencyToPath converts "domain.module" to "domain/module".
-func dependencyToPath(dep string) string {
-	for i, c := range dep {
-		if c == '.' {
-			return dep[:i] + "/" + dep[i+1:]
-		}
-	}
-	return dep
 }

@@ -1,18 +1,23 @@
 package spec
 
-import "sort"
+import (
+	"sort"
+	"strings"
+)
 
 // Project folds a slice of ChangeEvents into a SpecModule projection.
+// path is the slash-separated path relative to the specs root (e.g. "spec-cli/cmd-new").
 // Events are applied in ascending sequence order.
-func Project(domain, module string, events []ChangeEvent) SpecModule {
+func Project(path string, events []ChangeEvent) SpecModule {
 	sorted := make([]ChangeEvent, len(events))
 	copy(sorted, events)
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].Sequence < sorted[j].Sequence
 	})
 
+	domain, module := pathSegments(path)
 	s := SpecModule{
-		ID:           domain + "." + module,
+		ID:           path,
 		Domain:       domain,
 		Module:       module,
 		Dependencies: []string{},
@@ -73,4 +78,11 @@ func Project(domain, module string, events []ChangeEvent) SpecModule {
 	s.AcceptanceCriteria = acs
 
 	return s
+}
+
+// pathSegments returns the domain (first segment) and module (last segment) of a slash path.
+// For a single-segment path like "projection-engine", both are equal.
+func pathSegments(path string) (domain, module string) {
+	parts := strings.Split(path, "/")
+	return parts[0], parts[len(parts)-1]
 }
