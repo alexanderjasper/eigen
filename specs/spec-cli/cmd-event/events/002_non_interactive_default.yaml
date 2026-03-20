@@ -31,11 +31,6 @@ changes:
       given: A valid existing module
       when: eigen spec event <path> is run without --edit
       then: Writes NNN_initial.yaml to events/, reprojects spec.yaml, prints the file path, exits 0
-    - id: AC-002
-      description: Assigns the next sequence number automatically
-      given: A module that already has N events
-      when: eigen spec event completes
-      then: The new event file is named NNN_<slug>.yaml with sequence N+1
     - id: AC-003
       description: --edit flag opens $EDITOR
       given: A valid existing module and EDITOR set
