@@ -6,27 +6,38 @@ title: "spec event"
 status: draft
 description: |
   The spec event command records a new change event against an existing
-  spec module. It opens $EDITOR with a pre-filled template, and on save
-  appends the event file and rewrites the spec.yaml projection.
+  spec module. By default it writes the event template to the events/
+  directory and exits, printing the path so the caller can edit it.
+  Pass --edit to open $EDITOR instead (human terminal workflow).
 behavior: |
   Accepts a single slash-delimited path argument identifying the target
   module. Assigns the next sequence number automatically. The event file
   is named NNN_<slug>.yaml where the slug is derived from the event summary.
-  After the editor closes the event is parsed, written to events/, and the
-  projection is recomputed.
+
+  Default (non-interactive): writes the template to events/, reprojects
+  spec.yaml, and prints the file path. The caller edits the file and runs
+  eigen spec project <path> to reproject after their edits.
+
+  With --edit: writes a temp file, opens $EDITOR, and on save parses,
+  writes the event, and reprojects — the original human workflow.
 acceptance_criteria:
   - id: AC-001
-    description: Opens the editor and records the event on save
-    given: A valid existing module and EDITOR set
-    when: eigen spec event <path> is run
-    then: Opens a pre-filled template in $EDITOR; on save appends the event file and rewrites spec.yaml
+    description: Default run writes template and exits without opening editor
+    given: A valid existing module
+    when: eigen spec event <path> is run without --edit
+    then: Writes NNN_initial.yaml to events/, reprojects spec.yaml, prints the file path, exits 0
   - id: AC-002
     description: Assigns the next sequence number automatically
     given: A module that already has N events
     when: eigen spec event completes
     then: The new event file is named NNN_<slug>.yaml with sequence N+1
+  - id: AC-003
+    description: --edit flag opens $EDITOR
+    given: A valid existing module and EDITOR set
+    when: eigen spec event <path> --edit is run
+    then: Opens a pre-filled template in $EDITOR; on save appends the event file and rewrites spec.yaml
 dependencies:
   - spec-cli
 technology: {}
-last_event: evt-001
-events_count: 1
+last_event: evt-002
+events_count: 2
