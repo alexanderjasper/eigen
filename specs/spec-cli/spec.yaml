@@ -11,8 +11,9 @@ description: |
     sub-modules.
 behavior: |
     The specs root is resolved in order: --specs flag, EIGEN_SPECS environment
-    variable, ../specs relative to the binary location. All commands share
-    this resolution.
+    variable, walking up from the current working directory until a specs/
+    directory is found, ../specs relative to the binary location. All commands
+    share this resolution.
 acceptance_criteria:
     - id: AC-001
       description: Specs root is taken from the --specs flag when provided
@@ -25,11 +26,16 @@ acceptance_criteria:
       when: Any eigen spec command is run
       then: EIGEN_SPECS is used as the specs root
     - id: AC-003
-      description: Specs root falls back to ../specs relative to the binary
-      given: Neither --specs nor EIGEN_SPECS is set
+      description: Specs root found by walking up from CWD
+      given: Neither --specs nor EIGEN_SPECS is set, and a specs/ directory exists in the current or any ancestor directory
+      when: Any eigen spec command is run
+      then: The nearest specs/ directory walking up from CWD is used as the specs root
+    - id: AC-004
+      description: Specs root falls back to ../specs relative to the binary when no specs/ found in CWD ancestors
+      given: Neither --specs nor EIGEN_SPECS is set, and no specs/ directory is found walking up from CWD
       when: Any eigen spec command is run
       then: ../specs relative to the binary path is used as the specs root
 dependencies: []
 technology: {}
-last_event: evt-002
-events_count: 2
+last_event: evt-003
+events_count: 3
