@@ -37,7 +37,21 @@ func resolveSpecsRoot(cmd *cobra.Command, args []string) error {
 		specsRoot = env
 		return nil
 	}
-	// Default: ../specs relative to the executable.
+	// Walk up from CWD looking for a specs/ directory.
+	cwd, err := os.Getwd()
+	if err == nil {
+		for dir := cwd; ; dir = filepath.Dir(dir) {
+			candidate := filepath.Join(dir, "specs")
+			if fi, err := os.Stat(candidate); err == nil && fi.IsDir() {
+				specsRoot = candidate
+				return nil
+			}
+			if filepath.Dir(dir) == dir {
+				break
+			}
+		}
+	}
+	// Fallback: ../specs relative to the executable.
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("could not determine executable path: %w", err)
