@@ -1,0 +1,52 @@
+id: evt-001
+sequence: 1
+timestamp: 2026-03-20T20:00:00Z
+author: alexander
+type: created
+summary: Initial spec for the projection engine
+reason: |
+  Eigen applies its own methodology from day one. The projection engine is the
+  core artifact that makes specs real: it folds change events into a readable,
+  diffable spec.yaml projection.
+changes:
+  title: Projection Engine
+  owner: eigen
+  status: draft
+  description: |
+    The projection engine folds an ordered sequence of change events into a
+    SpecModule projection. It is the event-sourcing core of Eigen — every
+    spec.yaml is a deterministic result of replaying all events in the
+    module's events/ directory.
+  behavior: |
+    Events are applied in ascending sequence order. Simple fields (title, owner,
+    status, description, behavior, technology) use last-write-wins semantics.
+    Acceptance criteria are merged by id: new ids are added, existing ids are
+    updated in place, and criteria with removed: true are dropped from the
+    projection. After each projection the spec.yaml metadata fields last_event
+    and events_count are updated automatically.
+  acceptance_criteria:
+    - id: AC-001
+      description: Simple fields use last-write-wins across events
+      given: A module with two events that both set the title field
+      when: The projection engine runs
+      then: The title in spec.yaml reflects the value from the later event
+    - id: AC-002
+      description: Acceptance criteria are merged by id
+      given: Event 1 adds AC-001, event 2 adds AC-002 and updates AC-001
+      when: The projection engine runs
+      then: spec.yaml contains both AC-001 (updated) and AC-002
+    - id: AC-003
+      description: Removed acceptance criteria are excluded from the projection
+      given: An event sets removed true on an existing criterion id
+      when: The projection engine runs
+      then: That criterion does not appear in spec.yaml
+    - id: AC-004
+      description: Events are applied in sequence order regardless of file name sort
+      given: Events on disk with sequences 1, 3, 2
+      when: The projection engine runs
+      then: They are applied 1, 2, 3
+    - id: AC-005
+      description: Metadata is written after each projection
+      given: A module with three events
+      when: The projection engine runs
+      then: spec.yaml shows last_event as the id of event 3 and events_count as 3
