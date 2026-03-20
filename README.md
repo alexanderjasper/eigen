@@ -140,6 +140,85 @@ The initial implementation of Eigen targets:
 
 ---
 
+## Getting Started
+
+### Install
+
+```bash
+git clone https://github.com/alexanderjasper/eigen
+cd eigen/eigen
+go install .
+```
+
+### Set up a new project
+
+Run `eigen scaffold` in your project root to install the Claude skills and create the `specs/` directory:
+
+```bash
+cd my-project
+eigen scaffold
+```
+
+This creates:
+- `.claude/skills/eigen-spec/SKILL.md`
+- `.claude/skills/eigen-plan/SKILL.md`
+- `.claude/skills/eigen-compile/SKILL.md`
+- `specs/`
+
+> If your specs live somewhere other than a `specs/` directory above your CWD, set `EIGEN_SPECS=<path>` or pass `--specs <path>` to any command.
+
+---
+
+## The Development Workflow
+
+Eigen development happens in three steps, each driven by a Claude Code skill.
+
+### 1. Author a spec — `/eigen-spec`
+
+```
+/eigen-spec [description of what you want to build]
+```
+
+Claude will identify which spec modules are affected, create or update them by writing change events, project the current state, and validate. Each change event records not just *what* changed but *why*.
+
+After this step you have a reviewed, validated spec. That is the human review checkpoint — you are approving intent, not implementation.
+
+### 2. Plan the implementation — `/eigen-plan`
+
+```
+/eigen-plan <module-path>
+```
+
+Claude reads the spec and recent events, explores the existing codebase, and produces a detailed implementation plan mapped to each acceptance criterion. No code is written yet.
+
+Use this step when the change is non-trivial and you want to align on approach before compilation begins.
+
+### 3. Compile the spec to code — `/eigen-compile`
+
+```
+/eigen-compile <module-path>
+```
+
+Claude implements exactly what the spec says — no more, no less. Each acceptance criterion in the spec is treated as a test case. If the spec is ambiguous or incomplete, compilation stops and reports the gap rather than guessing.
+
+---
+
+## CLI Reference
+
+```
+eigen spec list [prefix]          List all spec modules
+eigen spec new <path>             Create a new spec module
+eigen spec show <path>            Print the current spec projection
+eigen spec event <path>           Record a new change event
+eigen spec project [path]         Reproject spec.yaml from events
+eigen spec validate [path]        Validate completeness and dependencies
+
+eigen serve [--port 7171] [--open]   Browse specs in a web UI
+eigen scaffold [path]             Initialize a new project
+```
+
+---
+
 ## Status
 
 Early formation. The manifesto precedes the framework. Both will evolve.
