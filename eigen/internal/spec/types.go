@@ -2,53 +2,53 @@ package spec
 
 // SpecModule is the projection — the current state of a module derived from all its events.
 type SpecModule struct {
-	ID          string            `yaml:"id"`
-	Domain      string            `yaml:"domain"`
-	Module      string            `yaml:"module"`
-	Owner       string            `yaml:"owner"`
-	Title       string            `yaml:"title"`
-	Status      string            `yaml:"status"`
-	Description string            `yaml:"description"`
-	Behavior    string            `yaml:"behavior"`
-	AcceptanceCriteria []AcceptanceCriterion `yaml:"acceptance_criteria,omitempty"`
-	Dependencies []string         `yaml:"dependencies"`
-	Technology  map[string]string `yaml:"technology"`
+	ID          string            `yaml:"id"           json:"id"`
+	Domain      string            `yaml:"domain"       json:"domain"`
+	Module      string            `yaml:"module"       json:"module"`
+	Owner       string            `yaml:"owner"        json:"owner"`
+	Title       string            `yaml:"title"        json:"title"`
+	Status      string            `yaml:"status"       json:"status"`
+	Description string            `yaml:"description"  json:"description"`
+	Behavior    string            `yaml:"behavior"     json:"behavior"`
+	AcceptanceCriteria []AcceptanceCriterion `yaml:"acceptance_criteria,omitempty" json:"acceptance_criteria,omitempty"`
+	Dependencies []string         `yaml:"dependencies" json:"dependencies"`
+	Technology  map[string]string `yaml:"technology"   json:"technology"`
 	// metadata
-	LastEvent   string `yaml:"last_event"`
-	EventsCount int    `yaml:"events_count"`
+	LastEvent   string `yaml:"last_event"   json:"last_event"`
+	EventsCount int    `yaml:"events_count" json:"events_count"`
 }
 
 // AcceptanceCriterion is a single verifiable behavior assertion.
 type AcceptanceCriterion struct {
-	ID          string `yaml:"id"`
-	Description string `yaml:"description"`
-	Given       string `yaml:"given"`
-	When        string `yaml:"when"`
-	Then        string `yaml:"then"`
-	Removed     bool   `yaml:"removed,omitempty"`
+	ID          string `yaml:"id"          json:"id"`
+	Description string `yaml:"description" json:"description"`
+	Given       string `yaml:"given"       json:"given"`
+	When        string `yaml:"when"        json:"when"`
+	Then        string `yaml:"then"        json:"then"`
+	Removed     bool   `yaml:"removed,omitempty" json:"removed,omitempty"`
 }
 
 // ChangeEvent represents a single immutable change recorded against a module.
 type ChangeEvent struct {
-	ID       string `yaml:"id"`
-	Sequence int    `yaml:"sequence"`
-	Timestamp string `yaml:"timestamp"`
-	Author   string `yaml:"author"`
-	Type     string `yaml:"type"` // created | updated | deprecated
-	Summary  string `yaml:"summary"`
-	Reason   string `yaml:"reason"`
-	Changes  ChangeSet `yaml:"changes"`
+	ID        string    `yaml:"id"        json:"id"`
+	Sequence  int       `yaml:"sequence"  json:"sequence"`
+	Timestamp string    `yaml:"timestamp" json:"timestamp"`
+	Author    string    `yaml:"author"    json:"author"`
+	Type      string    `yaml:"type"      json:"type"` // created | updated | deprecated
+	Summary   string    `yaml:"summary"   json:"summary"`
+	Reason    string    `yaml:"reason"    json:"reason"`
+	Changes   ChangeSet `yaml:"changes"   json:"changes"`
 }
 
 // ChangeSet holds the fields that may change in a single event.
 // All fields are pointers / omitempty so absent fields are distinguishable from zero values.
 type ChangeSet struct {
-	Title       string            `yaml:"title,omitempty"`
-	Owner       string            `yaml:"owner,omitempty"`
-	Status      string            `yaml:"status,omitempty"`
-	Description string            `yaml:"description,omitempty"`
-	Behavior    string            `yaml:"behavior,omitempty"`
-	Technology  map[string]string `yaml:"technology,omitempty"`
-	Dependencies []string         `yaml:"dependencies,omitempty"`
-	AcceptanceCriteria []AcceptanceCriterion `yaml:"acceptance_criteria,omitempty"`
+	Title       string            `yaml:"title,omitempty"       json:"title,omitempty"`
+	Owner       string            `yaml:"owner,omitempty"       json:"owner,omitempty"`
+	Status      string            `yaml:"status,omitempty"      json:"status,omitempty"`
+	Description string            `yaml:"description,omitempty" json:"description,omitempty"`
+	Behavior    string            `yaml:"behavior,omitempty"    json:"behavior,omitempty"`
+	Technology  map[string]string `yaml:"technology,omitempty"  json:"technology,omitempty"`
+	Dependencies []string         `yaml:"dependencies,omitempty" json:"dependencies,omitempty"`
+	AcceptanceCriteria []AcceptanceCriterion `yaml:"acceptance_criteria,omitempty" json:"acceptance_criteria,omitempty"`
 }
