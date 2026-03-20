@@ -1,0 +1,75 @@
+id: evt-001
+sequence: 1
+timestamp: 2026-03-20T20:00:00Z
+author: alexander
+type: created
+summary: Initial spec for the spec CLI
+reason: |
+  The CLI is the user-facing interface to Eigen. Speccing it before writing
+  any Go code ensures the command contracts are explicit and testable.
+changes:
+  title: Spec CLI
+  owner: eigen
+  status: draft
+  description: |
+    The spec CLI is the primary interface to Eigen. It provides commands to
+    scaffold new modules, record change events, inspect the current projection,
+    list all known modules, and validate specs for completeness.
+  behavior: |
+    The CLI is a single static Go binary. All commands operate on a specs
+    directory resolved in order: --specs flag, EIGEN_SPECS environment variable,
+    ../specs relative to the binary. Commands that write to disk (spec new,
+    spec event) recompute and overwrite spec.yaml atomically after each change.
+    spec event opens $EDITOR for the user to write the event; on save the event
+    is parsed, appended to the events/ directory, and the projection is rerun.
+  acceptance_criteria:
+    - id: AC-001
+      description: spec new creates the module directory and first event file
+      given: A domain and module name that do not yet exist under specs/
+      when: eigen spec new <domain> <module> is run
+      then: Creates specs/<domain>/<module>/events/001_initial.yaml with a template and writes spec.yaml
+    - id: AC-002
+      description: spec new fails if the module already exists
+      given: A module directory that already exists
+      when: eigen spec new <domain> <module> is run
+      then: Exits with a non-zero code and prints an error message
+    - id: AC-003
+      description: spec event opens the editor and records the event on save
+      given: A valid existing module and EDITOR set
+      when: eigen spec event <domain> <module> is run
+      then: Opens a pre-filled template in $EDITOR; on save appends the event file and rewrites spec.yaml
+    - id: AC-004
+      description: spec event assigns the next sequence number automatically
+      given: A module that already has N events
+      when: eigen spec event completes
+      then: The new event file is named NNN_<slug>.yaml with sequence N+1
+    - id: AC-005
+      description: spec show prints the current spec.yaml to stdout
+      given: A valid existing module
+      when: eigen spec show <domain> <module> is run
+      then: Prints the contents of spec.yaml to stdout
+    - id: AC-006
+      description: spec list prints all modules with id, owner, and status
+      given: Multiple modules exist across domains
+      when: eigen spec list is run
+      then: Prints a table with one row per module showing id, owner, status
+    - id: AC-007
+      description: spec list accepts an optional domain filter
+      given: Modules in domains eigen and auth exist
+      when: eigen spec list eigen is run
+      then: Only modules in the eigen domain are listed
+    - id: AC-008
+      description: spec validate exits 0 when a module is valid
+      given: A module with all required fields and complete acceptance criteria
+      when: eigen spec validate <domain> <module> is run
+      then: Exits 0 and prints no errors
+    - id: AC-009
+      description: spec validate exits non-zero and reports missing required fields
+      given: A module missing the owner field
+      when: eigen spec validate <domain> <module> is run
+      then: Exits 1 and prints a message identifying the missing field
+    - id: AC-010
+      description: spec validate checks all modules when called with no arguments
+      given: Multiple modules exist, one of which is invalid
+      when: eigen spec validate is run with no arguments
+      then: Reports errors for all invalid modules and exits non-zero
