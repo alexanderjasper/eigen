@@ -16,7 +16,10 @@ import (
 	"github.com/alexanderjasper/eigen/internal/storage"
 )
 
+var specEventEdit bool
+
 func init() {
+	specEventCmd.Flags().BoolVar(&specEventEdit, "edit", false, "open $EDITOR after writing the template")
 	specCmd.AddCommand(specEventCmd)
 }
 
@@ -42,6 +45,28 @@ func runSpecEvent(cmd *cobra.Command, args []string) error {
 
 	template := buildEventTemplate(seq)
 
+	if !specEventEdit {
+		return writeEventDirect(path, seq, template)
+	}
+	return writeEventViaEditor(path, seq, template)
+}
+
+// writeEventDirect writes the template straight to events/ and reprojects.
+func writeEventDirect(path string, seq int, template string) error {
+	filename := fmt.Sprintf("%03d_initial.yaml", seq)
+	eventPath := filepath.Join(storage.EventsPath(specsRoot, path), filename)
+	if err := os.WriteFile(eventPath, []byte(template), 0644); err != nil {
+		return fmt.Errorf("writing event file: %w", err)
+	}
+	if err := reprojectModule(path); err != nil {
+		return err
+	}
+	fmt.Println(eventPath)
+	return nil
+}
+
+// writeEventViaEditor opens $EDITOR, then writes and reprojects on save.
+func writeEventViaEditor(path string, seq int, template string) error {
 	tmpFile, err := os.CreateTemp("", "eigen-event-*.yaml")
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
@@ -59,7 +84,6 @@ func runSpecEvent(cmd *cobra.Command, args []string) error {
 	if editor == "" {
 		editor = "vi"
 	}
-
 	editorCmd := exec.Command(editor, tmpPath)
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
@@ -93,15 +117,9 @@ func runSpecEvent(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("writing event file: %w", err)
 	}
 
-	events, err := storage.ReadEvents(specsRoot, path)
-	if err != nil {
-		return fmt.Errorf("reading events: %w", err)
+	if err := reprojectModule(path); err != nil {
+		return err
 	}
-	s := spec.Project(path, events)
-	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
-		return fmt.Errorf("writing spec.yaml: %w", err)
-	}
-
 	fmt.Printf("Recorded event %d for %s\n", seq, path)
 	return nil
 }
