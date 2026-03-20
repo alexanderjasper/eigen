@@ -21,21 +21,21 @@ func init() {
 }
 
 var specEventCmd = &cobra.Command{
-	Use:   "event <domain> <module>",
+	Use:   "event <path>",
 	Short: "Record a new change event for a spec module",
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.ExactArgs(1),
 	RunE:  runSpecEvent,
 }
 
 func runSpecEvent(cmd *cobra.Command, args []string) error {
-	domain, module := args[0], args[1]
+	path := args[0]
 
-	modulePath := storage.ModulePath(specsRoot, domain, module)
+	modulePath := storage.ModulePath(specsRoot, path)
 	if _, err := os.Stat(modulePath); os.IsNotExist(err) {
-		return fmt.Errorf("module %s.%s does not exist", domain, module)
+		return fmt.Errorf("module %q does not exist", path)
 	}
 
-	seq, err := storage.NextSequence(specsRoot, domain, module)
+	seq, err := storage.NextSequence(specsRoot, path)
 	if err != nil {
 		return err
 	}
@@ -88,21 +88,21 @@ func runSpecEvent(cmd *cobra.Command, args []string) error {
 	}
 
 	filename := fmt.Sprintf("%03d_%s.yaml", seq, slug)
-	eventPath := filepath.Join(storage.EventsPath(specsRoot, domain, module), filename)
+	eventPath := filepath.Join(storage.EventsPath(specsRoot, path), filename)
 	if err := os.WriteFile(eventPath, data, 0644); err != nil {
 		return fmt.Errorf("writing event file: %w", err)
 	}
 
-	events, err := storage.ReadEvents(specsRoot, domain, module)
+	events, err := storage.ReadEvents(specsRoot, path)
 	if err != nil {
 		return fmt.Errorf("reading events: %w", err)
 	}
-	s := spec.Project(domain, module, events)
-	if err := storage.WriteSpec(specsRoot, domain, module, s); err != nil {
+	s := spec.Project(path, events)
+	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml: %w", err)
 	}
 
-	fmt.Printf("Recorded event %d for %s.%s\n", seq, domain, module)
+	fmt.Printf("Recorded event %d for %s\n", seq, path)
 	return nil
 }
 
