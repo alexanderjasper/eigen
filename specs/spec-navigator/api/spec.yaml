@@ -1,0 +1,59 @@
+id: spec-navigator/api
+domain: spec-navigator
+module: api
+owner: eigen
+title: Spec Navigator API
+status: draft
+description: |
+  The spec navigator API is a set of JSON endpoints served by eigen serve.
+  It exposes module listings and per-module detail (projection + events)
+  so the frontend can render the spec tree and detail pane.
+behavior: |
+  GET /api/modules returns a flat list of ModuleSummary objects for all
+  modules under the specs root. Each summary includes path, title, owner,
+  status, and a children flag indicating whether any other module path
+  starts with this path followed by a slash.
+
+  GET /api/modules/*path returns the full SpecModule projection for the
+  module at the given path.
+
+  GET /api/modules/*path/events returns the ordered slice of ChangeEvents
+  for the module at the given path.
+
+  All endpoints return JSON with Content-Type application/json. Errors
+  return a JSON object with an "error" key and an appropriate HTTP status.
+acceptance_criteria:
+  - id: AC-001
+    description: GET /api/modules returns all modules as flat list
+    given: specs root contains modules at spec-cli and spec-cli/cmd-new
+    when: GET /api/modules is requested
+    then: response contains ModuleSummary for both paths with correct fields
+  - id: AC-002
+    description: children flag is true when sub-modules exist
+    given: spec-cli has sub-module spec-cli/cmd-new
+    when: GET /api/modules is requested
+    then: the ModuleSummary for spec-cli has children true
+  - id: AC-003
+    description: children flag is false for leaf modules
+    given: spec-cli/cmd-new has no sub-modules
+    when: GET /api/modules is requested
+    then: the ModuleSummary for spec-cli/cmd-new has children false
+  - id: AC-004
+    description: GET /api/modules/*path returns full projection
+    given: module spec-cli/cmd-new exists with a valid spec.yaml
+    when: GET /api/modules/spec-cli/cmd-new is requested
+    then: response contains the full SpecModule JSON including acceptance_criteria
+  - id: AC-005
+    description: GET /api/modules/*path/events returns ordered events
+    given: module spec-cli has two events with sequences 1 and 2
+    when: GET /api/modules/spec-cli/events is requested
+    then: response contains both events in ascending sequence order
+  - id: AC-006
+    description: unknown module returns 404
+    given: no module exists at path nonexistent
+    when: GET /api/modules/nonexistent is requested
+    then: response status is 404 with a JSON error body
+dependencies: []
+technology: {}
+last_event: evt-001
+events_count: 1
