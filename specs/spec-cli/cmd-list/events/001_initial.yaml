@@ -1,0 +1,30 @@
+id: evt-001
+sequence: 1
+timestamp: 2026-03-20T21:00:00Z
+author: alexander
+type: created
+summary: Initial spec for eigen spec list
+reason: |
+  Extracted from the monolithic spec-cli spec.
+changes:
+  title: "spec list"
+  owner: eigen
+  status: draft
+  description: |
+    The spec list command prints a table of all known spec modules with
+    their path, owner, status, and title.
+  behavior: |
+    Walks the specs root recursively and prints one row per module. Accepts
+    an optional path prefix argument to filter results to a subtree
+    (e.g. spec-cli lists spec-cli and all its sub-modules).
+  acceptance_criteria:
+    - id: AC-001
+      description: Prints all modules with path, owner, status, and title
+      given: Multiple modules exist
+      when: eigen spec list is run
+      then: Prints a table with one row per module showing path, owner, status, title
+    - id: AC-002
+      description: Accepts an optional path prefix to filter results
+      given: Modules exist at spec-cli and spec-cli/cmd-new
+      when: eigen spec list spec-cli is run
+      then: Only modules whose path starts with spec-cli are listed

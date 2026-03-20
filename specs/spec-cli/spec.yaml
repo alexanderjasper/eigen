@@ -1,0 +1,35 @@
+id: spec-cli
+domain: spec-cli
+module: spec-cli
+owner: eigen
+title: Spec CLI
+status: draft
+description: |
+  The spec CLI is a single static Go binary providing the eigen spec
+  subcommands. It defines the entry point, specs-root resolution, and
+  the shared command structure. Individual commands are specified as
+  sub-modules.
+behavior: |
+  The specs root is resolved in order: --specs flag, EIGEN_SPECS environment
+  variable, ../specs relative to the binary location. All commands share
+  this resolution.
+acceptance_criteria:
+  - id: AC-001
+    description: Specs root is taken from the --specs flag when provided
+    given: The --specs flag is set to an explicit path
+    when: Any eigen spec command is run
+    then: That path is used as the specs root
+  - id: AC-002
+    description: Specs root falls back to EIGEN_SPECS env var
+    given: --specs is not set and EIGEN_SPECS is set in the environment
+    when: Any eigen spec command is run
+    then: EIGEN_SPECS is used as the specs root
+  - id: AC-003
+    description: Specs root falls back to ../specs relative to the binary
+    given: Neither --specs nor EIGEN_SPECS is set
+    when: Any eigen spec command is run
+    then: ../specs relative to the binary path is used as the specs root
+dependencies: []
+technology: {}
+last_event: evt-002
+events_count: 2

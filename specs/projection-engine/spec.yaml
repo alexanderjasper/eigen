@@ -1,5 +1,5 @@
-id: eigen.projection-engine
-domain: eigen
+id: projection-engine
+domain: projection-engine
 module: projection-engine
 owner: eigen
 title: Projection Engine
