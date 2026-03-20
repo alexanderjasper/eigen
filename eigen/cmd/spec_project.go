@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -38,11 +39,19 @@ func runSpecProject(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// reprojectModule reads all events for path, projects, and writes spec.yaml.
+// reprojectModule reads all events for path, validates for no-op changes,
+// projects, and writes spec.yaml.
 func reprojectModule(path string) error {
 	events, err := storage.ReadEvents(specsRoot, path)
 	if err != nil {
 		return fmt.Errorf("reading events for %s: %w", path, err)
+	}
+	if errs := spec.ValidateEventLog(path, events); len(errs) > 0 {
+		var msgs []string
+		for _, e := range errs {
+			msgs = append(msgs, "  "+e.Error())
+		}
+		return fmt.Errorf("no-op changes detected in %s:\n%s", path, strings.Join(msgs, "\n"))
 	}
 	s := spec.Project(path, events)
 	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
