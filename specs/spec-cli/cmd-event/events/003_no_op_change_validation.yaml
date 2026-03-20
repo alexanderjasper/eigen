@@ -1,15 +1,15 @@
-id: spec-cli/cmd-event
-domain: spec-cli
-module: cmd-event
-owner: eigen
-title: spec event
-status: draft
-description: |
-    The spec event command records a new change event against an existing
-    spec module. By default it writes the event template to the events/
-    directory and exits, printing the path so the caller can edit it.
-    Pass --edit to open $EDITOR instead (human terminal workflow).
-behavior: |
+id: evt-003
+sequence: 3
+timestamp: 2026-03-20T20:00:00Z
+author: alexander
+type: updated
+summary: Reject event fields that are identical to current spec state
+reason: |
+  An event that repeats existing values provides no information and
+  pollutes the event log. Catching this at write time gives immediate
+  feedback rather than requiring a post-hoc audit.
+changes:
+  behavior: |
     Accepts a single slash-delimited path argument identifying the target
     module. Assigns the next sequence number automatically. The event file
     is named NNN_<slug>.yaml where the slug is derived from the event summary.
@@ -27,22 +27,7 @@ behavior: |
     state (e.g. an acceptance criterion with the same id and identical
     given/when/then/description), the command exits non-zero and reports
     each redundant field without writing anything.
-acceptance_criteria:
-    - id: AC-001
-      description: Default run writes template and exits without opening editor
-      given: A valid existing module
-      when: eigen spec event <path> is run without --edit
-      then: Writes NNN_initial.yaml to events/, reprojects spec.yaml, prints the file path, exits 0
-    - id: AC-002
-      description: Assigns the next sequence number automatically
-      given: A module that already has N events
-      when: eigen spec event completes
-      then: The new event file is named NNN_<slug>.yaml with sequence N+1
-    - id: AC-003
-      description: --edit flag opens $EDITOR
-      given: A valid existing module and EDITOR set
-      when: eigen spec event <path> --edit is run
-      then: Opens a pre-filled template in $EDITOR; on save appends the event file and rewrites spec.yaml
+  acceptance_criteria:
     - id: AC-004
       description: Rejects an event whose AC is identical to the current state
       given: A module with AC-001 already projected
@@ -58,7 +43,3 @@ acceptance_criteria:
       given: A module with title "Foo" and AC-001 already projected
       when: eigen spec event writes a changeset that updates AC-001 but leaves title unchanged
       then: The event is accepted; only the changed AC-001 need be in the changeset
-dependencies: []
-technology: {}
-last_event: evt-003
-events_count: 3
