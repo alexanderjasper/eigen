@@ -1,0 +1,35 @@
+id: chg-002
+sequence: 2
+timestamp: 2026-03-21T06:34:05Z
+author: alexander
+type: updated
+summary: Rename /events endpoint to /changes and update terminology
+reason: |
+  Align the API terminology with the broader "event" → "change" refactoring.
+  The /events endpoint is renamed to /changes, and ChangeEvents type is renamed
+  to Changes to reflect the updated system terminology.
+changes:
+  description: |
+    The spec navigator API is a set of JSON endpoints served by eigen serve.
+    It exposes module listings and per-module detail (projection + changes)
+    so the frontend can render the spec tree and detail pane.
+  behavior: |
+    GET /api/modules returns a flat list of ModuleSummary objects for all
+    modules under the specs root. Each summary includes path, title, owner,
+    status, and a children flag indicating whether any other module path
+    starts with this path followed by a slash.
+
+    GET /api/modules/*path returns the full SpecModule projection for the
+    module at the given path.
+
+    GET /api/modules/*path/changes returns the ordered slice of Changes
+    for the module at the given path.
+
+    All endpoints return JSON with Content-Type application/json. Errors
+    return a JSON object with an "error" key and an appropriate HTTP status.
+  acceptance_criteria:
+    - id: AC-005
+      description: GET /api/modules/*path/changes returns ordered changes
+      given: module spec-cli has two changes with sequences 1 and 2
+      when: GET /api/modules/spec-cli/changes is requested
+      then: response contains both changes in ascending sequence order
