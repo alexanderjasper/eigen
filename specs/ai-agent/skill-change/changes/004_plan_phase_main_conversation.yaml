@@ -1,0 +1,38 @@
+summary: Fix Phase 2 — plan mode must run in main conversation, not inside plan-agent subagent
+reason: |-
+  ExitPlanMode (and EnterPlanMode) only work in the main conversation thread. A subagent
+  cannot enter or exit plan mode on behalf of the user — the tool calls are silently ignored
+  or error. The current spec describes plan-agent entering plan mode internally, which means
+  the user never sees the plan mode UI and approval is never collected. The correct design
+  splits Phase 2: plan-agent is a read-only research subagent that returns a draft plan as
+  text, and eigen-change (main conversation) owns the plan mode lifecycle.
+type: updated
+changes:
+  acceptance_criteria:
+    - id: AC-003
+      description: |-
+        Phase 2 — Plan — runs as follows:
+        (1) eigen-change launches plan-agent (read-only subagent) with SPEC_PATH, MODULE_PATH,
+            and BRANCH. plan-agent explores the codebase and returns a comprehensive draft plan
+            as text output. plan-agent does NOT enter plan mode or write any files.
+        (2) eigen-change (main conversation) calls EnterPlanMode, presenting the draft plan
+            text to the user via the plan mode UI.
+        (3) User reviews the plan in plan mode UI and either approves or comments/rejects.
+        (4) eigen-change calls ExitPlanMode to collect approval status.
+        (5) On approval: eigen-change writes the plan to `.claude/plans/<BRANCH>/plan.md`,
+            commits `plan(<module>): <summary>`, and proceeds to Phase 3.
+        (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
+            Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
+            step (1).
+    - id: AC-011
+      description: |-
+        plan-agent subagent is strictly read-only during Phase 2: it uses only Glob, Grep,
+        Read, and Bash (read-only commands) to research the codebase. It does not call
+        EnterPlanMode, ExitPlanMode, Write, Edit, or any git commands. Its sole output is
+        a draft plan as text returned to eigen-change.
+    - id: AC-012
+      description: |-
+        EnterPlanMode and ExitPlanMode are called exclusively by eigen-change (the main
+        conversation skill), never by any subagent. Any agent definition file
+        (`.claude/agents/*.md`) must not instruct the agent to call EnterPlanMode or
+        ExitPlanMode.
