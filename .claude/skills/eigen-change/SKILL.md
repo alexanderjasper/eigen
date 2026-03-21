@@ -49,9 +49,10 @@ Agent(
 After the agent completes:
 
 1. Tell the user: "Spec phase complete. Review with `git diff HEAD~1` or in your editor."
-2. Ask: **"Approve the spec? (yes / no + feedback)"**
-   - **yes** → proceed to Phase 2
-   - **no** → collect their feedback, then run **Spec Feedback Loop** below, then retry Phase 2
+2. Use AskUserQuestion to ask:
+   - Question: "Approve the spec?"
+   - Options: "Approve" (proceed to Phase 2), "Reject" (provide feedback to refine)
+   - If rejected, prompt for feedback text via a follow-up AskUserQuestion, then run **Spec Feedback Loop** below, then re-show approval.
 
 ### Spec Feedback Loop
 
@@ -103,9 +104,10 @@ The plan-agent will enter plan mode internally — you will see the plan mode UI
 After plan-agent completes and reports the plan file path:
 
 1. Tell the user: "Plan phase complete. Plan written to `.claude/plans/<BRANCH>/plan.md`."
-2. Ask: **"Proceed to implementation? (yes / no + feedback)"**
-   - **yes** → proceed to Phase 3
-   - **no** → collect feedback, run **Spec Feedback Loop** to update spec, then restart Phase 2
+2. Use AskUserQuestion to ask:
+   - Question: "Proceed to implementation?"
+   - Options: "Proceed" (go to Phase 3), "Reject" (provide feedback to revise plan)
+   - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, then restart Phase 2.
 
 ---
 
@@ -135,9 +137,10 @@ Agent(
 After compile-agent completes:
 
 1. Tell the user: "Implementation complete."
-2. Ask: **"Looks good? (yes / no + feedback)"**
-   - **yes** → done. Summarize: branch, spec path, plan path, commits made.
-   - **no** → collect feedback, run **Spec Feedback Loop** to update spec, restart Phase 2 (re-plan from updated spec), then re-run Phase 3
+2. Use AskUserQuestion to ask:
+   - Question: "Implementation looks good?"
+   - Options: "Approve" (done — summarize branch, spec path, plan path, commits made), "Reject" (provide feedback)
+   - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phase 3.
 
 ---
 
