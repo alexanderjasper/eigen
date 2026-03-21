@@ -9,6 +9,7 @@ reason: |
     a human reviewer (the spec-navigator UI) and then block until the reviewer
     submits their decision. A dedicated sub-module cleanly separates this
     request/response review contract from the general module-listing API.
+status: approved
 changes:
     title: Change Review
     owner: eigen
@@ -55,6 +56,15 @@ changes:
         Review sessions are held only in memory. They are not persisted to disk and
         are lost when the server restarts. This is intentional — sessions are
         short-lived and tied to a single eigen-change invocation.
+    technology:
+        DecisionValues: approved, rejected
+        Endpoints: POST /api/reviews, GET /api/reviews/<change-id>, POST /api/reviews/<change-id>/submit
+        PollingInterval: 3 seconds
+        SessionStorage: in-memory only (no disk persistence)
+    dependencies:
+        - spec-navigator/api
+        - spec-navigator/ui
+        - ai-agent/skill-change
     acceptance_criteria:
         - id: AC-001
           description: POST /api/reviews creates a pending review session
@@ -106,12 +116,3 @@ changes:
           given: a pending review session exists
           when: the spec-navigator UI is open
           then: an active review panel is displayed showing the change YAML; Approve and Reject buttons are present
-    dependencies:
-        - spec-navigator/api
-        - spec-navigator/ui
-        - ai-agent/skill-change
-    technology:
-        Endpoints: "POST /api/reviews, GET /api/reviews/<change-id>, POST /api/reviews/<change-id>/submit"
-        PollingInterval: 3 seconds
-        SessionStorage: in-memory only (no disk persistence)
-        DecisionValues: approved, rejected
