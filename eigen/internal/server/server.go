@@ -27,6 +27,16 @@ func Start(specsRoot string, port int, open bool) error {
 		}
 	})
 
+	mux.HandleFunc("/api/reviews/pending", pendingReviewHandler())
+	mux.HandleFunc("/api/reviews", createReviewHandler())
+	mux.HandleFunc("/api/reviews/", func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/submit") {
+			submitReviewHandler()(w, r)
+		} else {
+			getReviewHandler()(w, r)
+		}
+	})
+
 	// Static UI
 	sub, err := fs.Sub(uiFS, "ui")
 	if err != nil {
