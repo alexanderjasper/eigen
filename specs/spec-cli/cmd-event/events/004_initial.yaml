@@ -1,15 +1,21 @@
-id: spec-cli/cmd-event
-domain: spec-cli
-module: cmd-event
-owner: eigen
-title: spec change
-status: draft
-description: |
+id: evt-004
+sequence: 4
+timestamp: 2026-03-21T06:33:11Z
+author: alexander
+type: updated
+summary: Rename "spec event" command to "spec change"
+reason: |
+  As part of the "event" → "change" terminology refactoring, this command
+  is renamed from "spec event" to "spec change" to align with updated
+  projection engine terminology and make the user-facing API consistent.
+changes:
+  title: spec change
+  description: |
     The spec change command records a new change against an existing
     spec module. By default it writes the change template to the changes/
     directory and exits, printing the path so the caller can edit it.
     Pass --edit to open $EDITOR instead (human terminal workflow).
-behavior: |
+  behavior: |
     Accepts a single slash-delimited path argument identifying the target
     module. Assigns the next sequence number automatically. The change file
     is named NNN_<slug>.yaml where the slug is derived from the change summary.
@@ -27,7 +33,7 @@ behavior: |
     state (e.g. an acceptance criterion with the same id and identical
     given/when/then/description), the command exits non-zero and reports
     each redundant field without writing anything.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Default run writes template and exits without opening editor
       given: A valid existing module
@@ -58,7 +64,3 @@ acceptance_criteria:
       given: A module with title "Foo" and AC-001 already projected
       when: eigen spec change writes a changeset that updates AC-001 but leaves title unchanged
       then: The change is accepted; only the changed AC-001 need be in the changeset
-dependencies: []
-technology: {}
-last_event: evt-004
-events_count: 4

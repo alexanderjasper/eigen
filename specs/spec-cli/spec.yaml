@@ -37,5 +37,5 @@ acceptance_criteria:
       then: ../specs relative to the binary path is used as the specs root
 dependencies: []
 technology: {}
-last_event: evt-003
-events_count: 3
+last_event: evt-004
+events_count: 4
