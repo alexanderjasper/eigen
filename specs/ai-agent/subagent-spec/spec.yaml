@@ -10,6 +10,69 @@ description: |-
     (eigen spec new, eigen spec change, eigen spec project, eigen spec validate) are
     retained — these are the framework tooling, not the target codebase.
 behavior: ""
+acceptance_criteria:
+    - id: AC-001
+      description: |-
+        spec-subagent reads feature description and optional short-name, explores codebase
+        to understand scope, and identifies clarifying questions based on inconsistencies,
+        scope boundaries, and edge cases.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-002
+      description: |-
+        Asks up to 5 clarifying questions (one at a time) using AskUserQuestion. Questions focus on
+        scope, rules, affected areas, and edge cases. Stops early if spec is already clear.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-003
+      description: |-
+        After clarifications, produces complete spec in eigen-spec format: creates changes/
+        directory with change file(s), calls `eigen spec project` to generate spec.yaml.
+        Spec file contains all fields: domain, module, owner, title, description, acceptanceCriteria,
+        dependencies, technology, affected areas.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-004
+      description: |-
+        Spec file includes explicit acceptance criteria (given/when/then) that can be tested
+        during compilation. Criteria describe observable behavior and success conditions.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-005
+      description: |-
+        Makes small atomic commits: one for initial spec, one per clarification round.
+        Uses conventional commit format: `spec(<module>): <summary>`.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-006
+      description: |-
+        When invoked to incorporate feedback, spec-subagent:
+        (1) reads current spec.yaml and changes/ to find the next sequence number,
+        (2) writes changes/NNN_feedback.yaml with the feedback incorporated,
+        (3) runs `eigen spec project` to reproject spec.yaml,
+        (4) commits with `spec(<module>): incorporate feedback on <aspect>`
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-007
+      description: |-
+        The change file captures the feedback reason and which spec fields were modified.
+        This creates an audit trail of how the spec evolved through feedback loops.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-008
+      description: |-
+        spec-agent does not reference any project-specific directories or file patterns
+        in its definition. Codebase exploration is open-ended using Glob/Grep/Read.
+      given: ""
+      when: ""
+      then: ""
 dependencies:
     - feature description (input)
     - eigen-spec format and conventions

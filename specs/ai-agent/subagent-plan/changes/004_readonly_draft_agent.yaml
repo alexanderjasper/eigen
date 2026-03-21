@@ -15,7 +15,7 @@ changes:
     write any files, and does NOT commit. The orchestrating skill (eigen-change) is responsible
     for receiving the draft, presenting it to the user for review via plan mode, writing plan.md,
     and committing the plan file.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-009
       description: |-
         plan-agent does not call EnterPlanMode, ExitPlanMode, or any plan mode tool.

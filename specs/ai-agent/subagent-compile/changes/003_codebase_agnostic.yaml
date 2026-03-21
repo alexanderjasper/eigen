@@ -11,7 +11,7 @@ changes:
     or codebase structure. It discovers how to build the project (Makefile, package.json,
     go.mod, etc.) and which patterns to follow by reading existing code. All implementation
     guidance comes from the spec and plan files, not from baked-in codebase knowledge.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-008
       description: |-
         compile-agent does not reference any project-specific paths, frameworks, or tools

@@ -17,7 +17,7 @@ changes:
     plan with file locations and specific changes, (3) architectural decisions and trade-offs considered,
     (4) testing strategy and acceptance criteria mapping. The plan is detailed enough for a compile-subagent
     to implement exactly as specified.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-001
       description: |-
         plan-subagent reads approved spec.yaml and changes/, explores codebase to identify affected

@@ -16,7 +16,7 @@ changes:
     standard eigen-spec format: changes/ directory with change files and auto-generated spec.yaml.
     The subagent has full codebase access (Glob, Grep, Read, etc.) and uses that to understand
     existing patterns, affected areas, and dependencies.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-001
       description: |-
         spec-subagent reads feature description and optional short-name, explores codebase

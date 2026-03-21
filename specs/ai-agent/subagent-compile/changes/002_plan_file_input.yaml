@@ -10,7 +10,7 @@ changes:
     as input. It reads the plan file first to understand the step-by-step implementation strategy,
     then implements code following the plan exactly. The plan file is the contract between
     planning and implementation.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-006
       description: |-
         compile-subagent accepts plan.md file path in its invocation prompt.
