@@ -5,13 +5,10 @@ owner: alexander
 title: compile-subagent — implements code changes following approved plan
 status: ""
 description: |-
-    A subagent invoked by the `change` skill during the compile phase. It receives an approved plan
-    (markdown file) and spec (spec.yaml). It follows the plan step-by-step: reads each step,
-    makes the specified code changes using Edit/Write tools, tests changes locally if applicable,
-    makes small atomic commits, and verifies that acceptance criteria from the spec are met.
-    The subagent does exactly what the plan says, no more, no less. It makes decisions only for
-    implementation details not covered by the plan. It commits frequently (after each logical step),
-    uses conventional commit format, and reports completion status.
+    Clarify that compile-subagent receives path to plan.md file (e.g., .claude/plans/<branch>/plan.md)
+    as input. It reads the plan file first to understand the step-by-step implementation strategy,
+    then implements code following the plan exactly. The plan file is the contract between
+    planning and implementation.
 behavior: ""
 dependencies:
     - approved plan (markdown)
@@ -26,4 +23,4 @@ technology:
     TestFramework: project-specific (go test, npm test, pytest, etc.)
     Tools: Glob, Grep, Read, Edit, Write, Bash, Git
 last_change: ""
-changes_count: 1
+changes_count: 2
