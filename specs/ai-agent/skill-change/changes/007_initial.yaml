@@ -12,7 +12,7 @@ reason: |
     git commits; eigen-change (the orchestrator) commits the spec files only after the
     review UI returns "approved". This keeps the commit history clean and ensures every
     spec commit in git represents an approved state.
-status: approved
+status: compiled
 changes:
     description: |-
         Refine the feedback loop: when user rejects output at any phase and provides feedback,
