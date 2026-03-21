@@ -1,0 +1,29 @@
+id: ai-agent/subagent-compile
+domain: ai-agent
+module: subagent-compile
+owner: alexander
+title: compile-subagent — implements code changes following approved plan
+status: ""
+description: |-
+    A subagent invoked by the `change` skill during the compile phase. It receives an approved plan
+    (markdown file) and spec (spec.yaml). It follows the plan step-by-step: reads each step,
+    makes the specified code changes using Edit/Write tools, tests changes locally if applicable,
+    makes small atomic commits, and verifies that acceptance criteria from the spec are met.
+    The subagent does exactly what the plan says, no more, no less. It makes decisions only for
+    implementation details not covered by the plan. It commits frequently (after each logical step),
+    uses conventional commit format, and reports completion status.
+behavior: ""
+dependencies:
+    - approved plan (markdown)
+    - approved spec (spec.yaml)
+    - codebase with ability to edit/write files
+    - git commands for commits
+    - test running capability (optional)
+technology:
+    CommitPattern: 'feat/fix/refactor/docs/test(<area>): <summary>'
+    Input: plan.md path, spec.yaml path
+    Output: git commits on feature branch
+    TestFramework: project-specific (go test, npm test, pytest, etc.)
+    Tools: Glob, Grep, Read, Edit, Write, Bash, Git
+last_change: ""
+changes_count: 1

@@ -1,0 +1,52 @@
+summary: spec-subagent — asks clarifying questions and produces eigen-spec format specs
+reason: |-
+  The spec phase requires domain expertise and clarifying questions to produce complete, consistent specs.
+  A spec-subagent automates this, asking clarifying questions based on the feature description,
+  exploring the codebase for context, and producing spec files in the standard eigen-spec format.
+type: created
+changes:
+  domain: ai-agent
+  module: subagent-spec
+  owner: alexander
+  title: spec-subagent — asks clarifying questions and produces eigen-spec format specs
+  description: |-
+    A subagent invoked by the `change` skill during the spec phase. It receives a feature description
+    and optional hints, explores the codebase to understand context, asks clarifying questions
+    (following the eigen-spec skill's question patterns), and produces a complete spec in the
+    standard eigen-spec format: changes/ directory with change files and auto-generated spec.yaml.
+    The subagent has full codebase access (Glob, Grep, Read, etc.) and uses that to understand
+    existing patterns, affected areas, and dependencies.
+  acceptanceCriteria:
+    - id: AC-001
+      description: |-
+        spec-subagent reads feature description and optional short-name, explores codebase
+        to understand scope, and identifies clarifying questions based on inconsistencies,
+        scope boundaries, and edge cases.
+    - id: AC-002
+      description: |-
+        Asks up to 5 clarifying questions (one at a time) using AskUserQuestion. Questions focus on
+        scope, rules, affected areas, and edge cases. Stops early if spec is already clear.
+    - id: AC-003
+      description: |-
+        After clarifications, produces complete spec in eigen-spec format: creates changes/
+        directory with change file(s), calls `eigen spec project` to generate spec.yaml.
+        Spec file contains all fields: domain, module, owner, title, description, acceptanceCriteria,
+        dependencies, technology, affected areas.
+    - id: AC-004
+      description: |-
+        Spec file includes explicit acceptance criteria (given/when/then) that can be tested
+        during compilation. Criteria describe observable behavior and success conditions.
+    - id: AC-005
+      description: |-
+        Makes small atomic commits: one for initial spec, one per clarification round.
+        Uses conventional commit format: `spec(<module>): <summary>`.
+  dependencies:
+    - feature description (input)
+    - eigen-spec format and conventions
+    - eigen spec project command capability
+    - Codebase access (Glob, Grep, Read, etc.)
+  technology:
+    Input: feature description string
+    Output: changes/*.yaml files + spec.yaml (eigen-spec format)
+    Tools: Glob, Grep, Read, Bash (for eigen spec project), Git
+    CommitPattern: "spec(<module>): <summary>"
