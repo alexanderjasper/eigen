@@ -142,19 +142,19 @@ async function loadDetail(path) {
   activePath = path;
   highlightActive(path);
 
-  const [specRes, eventsRes] = await Promise.all([
+  const [specRes, changesRes] = await Promise.all([
     fetch('/api/modules/' + path),
-    fetch('/api/modules/' + path + '/events'),
+    fetch('/api/modules/' + path + '/changes'),
   ]);
 
   if (!specRes.ok) return;
   const spec = await specRes.json();
-  const events = eventsRes.ok ? await eventsRes.json() : [];
+  const changes = changesRes.ok ? await changesRes.json() : [];
 
-  renderDetail(spec, events);
+  renderDetail(spec, changes);
 }
 
-function renderDetail(spec, events) {
+function renderDetail(spec, changes) {
   document.getElementById('detail-empty').style.display = 'none';
   const el = document.getElementById('detail');
   el.style.display = 'block';
@@ -216,15 +216,15 @@ function renderDetail(spec, events) {
   }
 
   // History
-  if (events && events.length) {
+  if (changes && changes.length) {
     const list = h('ul', 'timeline');
-    for (const ev of events) {
+    for (const ch of changes) {
       const item = h('li', 'timeline-item');
-      const seq = h('span', 'tl-seq'); seq.textContent = String(ev.sequence).padStart(3, '0');
+      const seq = h('span', 'tl-seq'); seq.textContent = String(ch.sequence).padStart(3, '0');
       const body = h('div', 'tl-body');
-      const summary = h('div', 'tl-summary'); summary.textContent = ev.summary || ev.type;
+      const summary = h('div', 'tl-summary'); summary.textContent = ch.summary || ch.type;
       const meta = h('div', 'tl-meta');
-      meta.textContent = [ev.timestamp, ev.author].filter(Boolean).join(' · ');
+      meta.textContent = [ch.timestamp, ch.author].filter(Boolean).join(' · ');
       body.append(summary, meta);
       item.append(seq, body);
       list.appendChild(item);
