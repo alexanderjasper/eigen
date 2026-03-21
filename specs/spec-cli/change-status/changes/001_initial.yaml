@@ -1,0 +1,80 @@
+id: chg-001
+sequence: 1
+timestamp: "2026-03-21T12:42:16Z"
+author: alexander
+type: created
+summary: Initial spec for change status field on change files
+reason: |
+    During the spec and compile phases of the AI agent workflow, there is no
+    machine-readable way to know which changes have been reviewed and approved
+    by the user, and which have already been compiled into code. Adding a
+    status field to each change file enables the compile phase to select only
+    approved-but-not-yet-compiled changes, and gives tooling and the web UI a
+    stable signal for displaying per-change state.
+changes:
+    title: Change Status
+    owner: eigen
+    status: draft
+    description: |
+        Each change file (NNN_*.yaml in a module's changes/ directory) carries
+        an optional `status` field that records where that change is in its
+        lifecycle. This field is managed by the CLI and the AI agent workflow;
+        users should not need to edit it by hand.
+    behavior: |
+        The `status` field on a change file takes one of three values:
+
+          draft      — the change has been written but not yet reviewed by the
+                       user. This is the default when the field is absent.
+          approved   — the user has explicitly approved the change (spec output
+                       accepted). The compile phase may act on it.
+          compiled   — the change has been compiled into code. The compile phase
+                       skips changes with this status.
+
+        Absent status is treated identically to `draft`.
+
+        The compile phase (eigen-change-compile / compile-agent) reads the
+        changes/ directory, filters to changes whose status is `approved`, and
+        compiles only those. After successful compilation it updates each
+        compiled change file's status to `compiled` and commits the updated
+        files alongside the generated code.
+
+        The spec phase (eigen-change-spec / spec-agent) writes new change files
+        without a status field (defaulting to draft). When the user approves the
+        spec output, the orchestrating skill (eigen-change) sets each newly
+        written change file's status to `approved` before invoking the compile
+        phase.
+
+        The projection engine ignores the `status` field when computing
+        spec.yaml — it is metadata about the change itself, not a mutation of
+        the projected module.
+    acceptance_criteria:
+        - id: AC-001
+          description: New change files are written without a status field (draft by default)
+          given: The spec phase writes a new NNN_*.yaml change file
+          when: The file is created
+          then: The file contains no `status` field; absence is treated as draft
+        - id: AC-002
+          description: Approval sets status to approved on affected change files
+          given: The user approves the spec output in the eigen-change workflow
+          when: The orchestrating skill records the approval
+          then: Each change file written during that spec phase has its `status` field set to `approved`
+        - id: AC-003
+          description: Compile phase only processes approved changes
+          given: A module with some changes in draft, approved, and compiled status
+          when: The compile phase runs
+          then: Only changes with status `approved` are compiled; draft and compiled changes are skipped
+        - id: AC-004
+          description: Compile phase marks changes compiled after successful compilation
+          given: A set of approved changes has been successfully compiled into code
+          when: The compile phase completes
+          then: Each compiled change file's status is updated to `compiled` and the updated files are committed
+        - id: AC-005
+          description: Projection engine ignores the status field
+          given: A change file with status `approved` or `compiled`
+          when: eigen spec project runs
+          then: The status field does not appear in spec.yaml and does not affect the projected module state
+        - id: AC-006
+          description: Absent status is treated as draft
+          given: A change file with no `status` key
+          when: Any tooling reads the change file's status
+          then: The effective status is `draft`
