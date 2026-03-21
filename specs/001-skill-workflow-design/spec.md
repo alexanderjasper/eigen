@@ -3,7 +3,7 @@
 **Created**: 2026-03-21
 **Released**: false
 
-Create a new `change` skill that orchestrates a three-phase workflow for feature development. When invoked, it launches specialized subagents: (1) spec subagent asks clarifying questions and produces spec, (2) plan subagent designs the implementation, (3) compile subagent implements the code. User reviews and approves after each phase.
+Create a new `change` skill that orchestrates a three-phase workflow for feature development. When invoked, it launches specialized subagents: (1) spec subagent asks clarifying questions and produces spec in eigen-spec format (changes/ + spec.yaml), (2) plan subagent designs the implementation in markdown, (3) compile subagent implements the code. User reviews and approves after each phase.
 
 ## Rules
 - Each phase is invoked via the Agent tool with a distinct subagent_type
