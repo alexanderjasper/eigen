@@ -71,16 +71,16 @@ func Validate(s SpecModule, specsRoot string) []ValidationError {
 	return errs
 }
 
-// ValidateEventLog replays changes in order and returns a ValidationError for each
+// ValidateChangeLog replays changes in order and returns a ValidationError for each
 // field in a changeset that is identical to the spec state just before that change.
 // path is passed through to Project for the initial state.
-func ValidateEventLog(path string, changes []*Change) []ValidationError {
+func ValidateChangeLog(path string, changes []*Change) []ValidationError {
 	var errs []ValidationError
 	current := SpecModule{Dependencies: []string{}, Technology: map[string]string{}}
 	for _, ch := range changes {
 		for _, e := range ValidateChanges(current, ch.Changes) {
 			errs = append(errs, ValidationError{
-				Field:   fmt.Sprintf("event %s: %s", ch.ID, e.Field),
+				Field:   fmt.Sprintf("change %s: %s", ch.ID, e.Field),
 				Message: e.Message,
 			})
 		}

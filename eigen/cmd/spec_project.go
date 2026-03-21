@@ -51,7 +51,7 @@ func reprojectModule(path string) error {
 	for i := range changes {
 		changePtrs[i] = &changes[i]
 	}
-	if errs := spec.ValidateEventLog(path, changePtrs); len(errs) > 0 {
+	if errs := spec.ValidateChangeLog(path, changePtrs); len(errs) > 0 {
 		var msgs []string
 		for _, e := range errs {
 			msgs = append(msgs, "  "+e.Error())
