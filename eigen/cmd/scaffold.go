@@ -18,6 +18,18 @@ var eigenPlanSkill []byte
 //go:embed skills/eigen-compile.md
 var eigenCompileSkill []byte
 
+//go:embed skills/eigen-change.md
+var eigenChangeSkill []byte
+
+//go:embed agents/spec-agent.md
+var specAgentDef []byte
+
+//go:embed agents/plan-agent.md
+var planAgentDef []byte
+
+//go:embed agents/compile-agent.md
+var compileAgentDef []byte
+
 func init() {
 	rootCmd.AddCommand(scaffoldCmd)
 }
@@ -42,6 +54,16 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		{"eigen-spec", eigenSpecSkill},
 		{"eigen-plan", eigenPlanSkill},
 		{"eigen-compile", eigenCompileSkill},
+		{"eigen-change", eigenChangeSkill},
+	}
+
+	agents := []struct {
+		name    string
+		content []byte
+	}{
+		{"spec-agent", specAgentDef},
+		{"plan-agent", planAgentDef},
+		{"compile-agent", compileAgentDef},
 	}
 
 	// AC-004: check for existing files before writing anything
@@ -52,11 +74,17 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 			existing = append(existing, p)
 		}
 	}
+	for _, a := range agents {
+		p := filepath.Join(target, ".claude", "agents", a.name+".md")
+		if _, err := os.Stat(p); err == nil {
+			existing = append(existing, p)
+		}
+	}
 	if len(existing) > 0 {
 		for _, p := range existing {
 			fmt.Fprintf(os.Stderr, "already exists: %s\n", p)
 		}
-		return fmt.Errorf("skill files already exist; remove them first to re-scaffold")
+		return fmt.Errorf("skill/agent files already exist; remove them first to re-scaffold")
 	}
 
 	// AC-001: write skill files
@@ -68,6 +96,18 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		}
 		if err := os.WriteFile(p, s.content, 0644); err != nil {
 			return fmt.Errorf("writing skill file: %w", err)
+		}
+		created = append(created, p)
+	}
+
+	// write agent definition files
+	for _, a := range agents {
+		p := filepath.Join(target, ".claude", "agents", a.name+".md")
+		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+			return fmt.Errorf("creating agents directory: %w", err)
+		}
+		if err := os.WriteFile(p, a.content, 0644); err != nil {
+			return fmt.Errorf("writing agent file: %w", err)
 		}
 		created = append(created, p)
 	}
