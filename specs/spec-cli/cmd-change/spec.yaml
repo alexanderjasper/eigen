@@ -1,6 +1,6 @@
-id: spec-cli/cmd-event
+id: spec-cli/cmd-change
 domain: spec-cli
-module: cmd-event
+module: cmd-change
 owner: eigen
 title: spec change
 status: draft
@@ -60,5 +60,5 @@ acceptance_criteria:
       then: The change is accepted; only the changed AC-001 need be in the changeset
 dependencies: []
 technology: {}
-last_change: chg-004
-changes_count: 4
+last_change: chg-005
+changes_count: 5
