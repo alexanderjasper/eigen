@@ -13,6 +13,9 @@ async function init() {
   document.getElementById('search').addEventListener('input', e => {
     filterTree(e.target.value.trim().toLowerCase());
   });
+
+  injectReviewPanel();
+  startReviewPoller();
 }
 
 // ── Tree ──────────────────────────────────────────────────────────────────────
@@ -269,6 +272,128 @@ function statusBadge(status) {
 
 function esc(str) {
   return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ── Review Panel ──────────────────────────────────────────────────────────────
+
+let reviewPollerTimer = null;
+let activeReviewSessionId = null;
+
+function injectReviewPanel() {
+  const panel = document.createElement('div');
+  panel.id = 'review-panel';
+  panel.style.display = 'none';
+  panel.innerHTML =
+    '<h2>Spec Review</h2>' +
+    '<div id="review-changes"></div>' +
+    '<div class="review-actions">' +
+      '<button class="btn-approve">Approve</button>' +
+      '<button class="btn-reject">Reject</button>' +
+    '</div>';
+
+  panel.querySelector('.btn-approve').addEventListener('click', () => {
+    submitReview('approved');
+  });
+  panel.querySelector('.btn-reject').addEventListener('click', () => {
+    submitReview('rejected');
+  });
+
+  document.body.appendChild(panel);
+}
+
+function startReviewPoller() {
+  reviewPollerTimer = setInterval(async () => {
+    try {
+      const res = await fetch('/api/reviews/pending');
+      if (res.status === 204 || !res.ok) {
+        hideReviewPanel();
+        return;
+      }
+      const data = await res.json();
+      showReviewPanel(data.session_id);
+    } catch (_) {
+      hideReviewPanel();
+    }
+  }, 3000);
+}
+
+async function showReviewPanel(sessionId) {
+  try {
+    const res = await fetch('/api/reviews/' + sessionId);
+    if (!res.ok) {
+      hideReviewPanel();
+      return;
+    }
+    const session = await res.json();
+    if (session.status === 'submitted') {
+      hideReviewPanel();
+      return;
+    }
+
+    activeReviewSessionId = sessionId;
+
+    const changesEl = document.getElementById('review-changes');
+    changesEl.innerHTML = '';
+
+    for (const change of (session.changes || [])) {
+      const card = document.createElement('div');
+      card.className = 'review-change-card';
+
+      const heading = document.createElement('div');
+      heading.className = 'review-change-heading';
+      heading.textContent = change.change_id + ' — ' + change.file_path;
+
+      const yamlPre = document.createElement('pre');
+      yamlPre.className = 'review-yaml';
+      yamlPre.textContent = change.change_yaml || '';
+
+      const commentLabel = document.createElement('label');
+      commentLabel.textContent = 'Comment (optional)';
+
+      const textarea = document.createElement('textarea');
+      textarea.className = 'review-comments';
+      textarea.dataset.changeId = change.change_id;
+      textarea.rows = 3;
+
+      card.append(heading, yamlPre, commentLabel, textarea);
+      changesEl.appendChild(card);
+    }
+
+    document.getElementById('review-panel').style.display = 'block';
+  } catch (_) {
+    hideReviewPanel();
+  }
+}
+
+function hideReviewPanel() {
+  const panel = document.getElementById('review-panel');
+  if (panel) panel.style.display = 'none';
+  activeReviewSessionId = null;
+}
+
+async function submitReview(decision) {
+  if (!activeReviewSessionId) return;
+
+  const changeComments = {};
+  const textareas = document.querySelectorAll('.review-comments');
+  for (const ta of textareas) {
+    if (ta.value.trim()) {
+      changeComments[ta.dataset.changeId] = ta.value.trim();
+    }
+  }
+
+  try {
+    const res = await fetch('/api/reviews/' + activeReviewSessionId + '/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decision, change_comments: changeComments }),
+    });
+    if (res.ok) {
+      hideReviewPanel();
+    }
+  } catch (_) {
+    // ignore, poller will retry
+  }
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
