@@ -1,10 +1,17 @@
-id: spec-cli/cmd-scaffold
-domain: spec-cli
-module: cmd-scaffold
-owner: eigen
-title: scaffold
-status: draft
-description: |
+id: chg-003
+sequence: 3
+timestamp: 2026-03-21T11:30:24Z
+author: alexander
+type: updated
+summary: Remove eigen-plan; rename eigen-spec→eigen-change-spec and eigen-compile→eigen-change-compile
+reason: |
+  eigen-plan is fully superseded by the eigen-change Phase 2 plan workflow and should be removed to
+  avoid confusion. The remaining standalone skills (eigen-spec and eigen-compile) are renamed to
+  eigen-change-spec and eigen-change-compile to make their relationship to eigen-change explicit and
+  to clarify they invoke the corresponding subagents rather than containing the workflow inline.
+  scaffold.go must drop the eigen-plan embed and rename the two skill distribution entries to match.
+changes:
+  description: |
     The scaffold command initializes a project directory with the eigen Claude
     skills and agent definitions. It writes SKILL.md files for eigen-change-spec,
     eigen-change-compile, and eigen-change under .claude/skills/, writes agent
@@ -12,7 +19,7 @@ description: |
     .claude/agents/, and creates the specs/ directory. It is the intended
     starting point for any new project that will use eigen, and can be re-run
     with --force to update an existing project after an eigen upgrade.
-behavior: |
+  behavior: |
     Accepts an optional path argument (defaults to the current working directory)
     and an optional --force flag. Creates .claude/skills/eigen-change-spec/SKILL.md,
     .claude/skills/eigen-change-compile/SKILL.md, and
@@ -24,7 +31,7 @@ behavior: |
     listing each conflicting path, and writes nothing. With --force, removes any
     existing skill and agent files before writing, then proceeds normally. Prints a
     success message listing all created files and a next-step hint to run eigen spec new.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Creates all three skill files and three agent files in the target directory
       given: A target directory containing no existing eigen skill or agent files
@@ -34,16 +41,6 @@ acceptance_criteria:
         .claude/skills/eigen-change-compile/SKILL.md, and
         .claude/skills/eigen-change/SKILL.md, and .claude/agents/spec-agent.md,
         .claude/agents/plan-agent.md, and .claude/agents/compile-agent.md under <path>
-    - id: AC-002
-      description: Creates the specs directory if absent
-      given: A target directory with no specs/ subdirectory
-      when: eigen scaffold is run
-      then: specs/ is created under the target directory
-    - id: AC-003
-      description: Defaults to current working directory
-      given: No path argument is provided
-      when: eigen scaffold is run
-      then: All files are written relative to the current working directory
     - id: AC-004
       description: Fails without --force if any skill or agent file already exists
       given: At least one eigen skill or agent file already exists in the target directory
@@ -52,11 +49,6 @@ acceptance_criteria:
         Exits with a non-zero code and prints each conflicting path to stderr
         (including eigen-change-spec, eigen-change-compile, eigen-change, and agent
         paths); no files are written or removed
-    - id: AC-005
-      description: Prints created files and next-step hint on success
-      given: Scaffold completes successfully
-      when: eigen scaffold is run
-      then: Prints the paths of each created file and suggests running eigen spec new
     - id: AC-006
       description: --force removes existing skill and agent files before re-scaffolding
       given: One or more eigen skill or agent files already exist in the target directory
@@ -66,12 +58,3 @@ acceptance_criteria:
         eigen-change-compile, eigen-change, and all three agents), then writes all
         files with the current embedded content; exits zero and prints the recreated
         file paths
-    - id: AC-007
-      description: --force does not affect the specs/ directory
-      given: A specs/ directory already exists containing spec files
-      when: eigen scaffold --force is run
-      then: The specs/ directory and its contents are left unchanged
-dependencies: []
-technology: {}
-last_change: chg-003
-changes_count: 3
