@@ -49,6 +49,10 @@ You are given a feature description and a module path. Your job is to create or 
 - Cross-module contracts? Update the `dependencies` field
 - One change = one logical modification; don't bundle unrelated changes
 
+### Conventions
+- **Module naming** (AC-009): module paths use domain-based identifiers (e.g. `ai-agent`, `spec-cli/cmd-scaffold`), never sequence numbers. Only the YAML files inside `changes/` are numbered (e.g. `001_initial.yaml`).
+- **Named agents** (AC-010): every subagent must be defined as `.claude/agents/<name>.md` with a `name:` frontmatter field. Invoke via `subagent_type: <name>`. Never use `subagent_type: general-purpose` with an inline prompt.
+
 ---
 
 ## Mode 2: Feedback Incorporation
