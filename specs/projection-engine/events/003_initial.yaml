@@ -1,15 +1,21 @@
-id: projection-engine
-domain: projection-engine
-module: projection-engine
-owner: eigen
-title: Projection Engine
-status: draft
-description: |
+id: evt-003
+sequence: 3
+timestamp: 2026-03-21T06:32:25Z
+author: alexander
+type: updated
+summary: Rename "event" terminology to "change" throughout
+reason: |
+  "Change" is a more fitting term than "event" for mutations in the spec system.
+  The projection engine applies changes (not events) to compute the projection.
+  This refactoring updates all terminology: directories, IDs, metadata fields,
+  and documentation.
+changes:
+  description: |
     The projection engine folds an ordered sequence of changes into a
     SpecModule projection. It is the change-sourcing core of Eigen — every
     spec.yaml is a deterministic result of replaying all changes in the
     module's changes/ directory.
-behavior: |
+  behavior: |
     Changes are applied in ascending sequence order. Simple fields (title, owner,
     status, description, behavior, technology) use last-write-wins semantics.
     Acceptance criteria are merged by id: new ids are added, existing ids are
@@ -23,7 +29,7 @@ behavior: |
     state. For acceptance criteria, identity is checked per-criterion by id:
     an AC in changes is a no-op if an AC with the same id already exists in
     the projection with identical description, given, when, and then.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Simple fields use last-write-wins across changes
       given: A module with two changes that both set the title field
@@ -49,27 +55,3 @@ acceptance_criteria:
       given: A module with three changes
       when: The projection engine runs
       then: spec.yaml shows last_change as the id of change 3 and changes_count as 3
-    - id: AC-006
-      description: ValidateChanges flags a simple field equal to current state
-      given: A projected SpecModule with title "Foo"
-      when: ValidateChanges is called with a ChangeSet setting title to "Foo"
-      then: Returns a ValidationError naming the title field as a no-op
-    - id: AC-007
-      description: ValidateChanges flags an AC identical to current state
-      given: A projected SpecModule containing AC-001 with specific given/when/then
-      when: ValidateChanges is called with a ChangeSet containing AC-001 with identical fields
-      then: Returns a ValidationError naming AC-001 as a no-op
-    - id: AC-008
-      description: ValidateChanges allows an AC that differs in any field
-      given: A projected SpecModule containing AC-001
-      when: ValidateChanges is called with AC-001 where only the then field differs
-      then: Returns no error for that AC
-    - id: AC-009
-      description: ValidateChanges allows a new AC id not present in current state
-      given: A projected SpecModule with no AC-002
-      when: ValidateChanges is called with a ChangeSet introducing AC-002
-      then: Returns no error for AC-002
-dependencies: []
-technology: {}
-last_event: evt-003
-events_count: 3
