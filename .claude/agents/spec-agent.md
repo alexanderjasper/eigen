@@ -35,7 +35,9 @@ You are given a feature description and a module path. Your job is to create or 
    - `eigen spec project <module-path>` to write/update spec.yaml
    - `eigen spec validate` to confirm no errors
 
-6. **Commit**: `spec(<module>): <summary>` — one commit per logical spec unit.
+6. **Report**: State the spec.yaml path, the list of change file paths written (relative to
+   repo root), and a one-line summary of what was specced. Do NOT make any git commit —
+   eigen-change commits the spec files after the user approves via the review UI.
 
 ### Change file guidelines
 - `summary`: one-line description of this change's modification
@@ -75,6 +77,7 @@ You are given user feedback on a previously produced spec output (plan or implem
    - `eigen spec project <module-path>` to reproject spec.yaml
    - `eigen spec validate`
 
-5. **Commit**: `spec(<module>): incorporate feedback on <aspect>`
+5. **Report**: State the change file path written and what was updated. Do NOT commit —
+   eigen-change commits the feedback change file after this agent returns.
 
 The change file must capture enough context that a fresh planning agent could produce the correct output from spec.yaml alone, without needing the conversation history.

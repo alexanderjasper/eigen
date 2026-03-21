@@ -49,7 +49,7 @@ Format your findings as a structured markdown plan and return it as your text ou
 
 The plan must be detailed enough for a compile-agent to implement without asking clarifying questions. If anything is ambiguous in the spec, note it in the plan rather than guessing.
 
-Return the full plan text as your response. The calling skill (eigen-change) will present it for user review, write it to disk, and commit it.
+Return the full plan text as your response. The calling skill (eigen-change) will present it for user review via plan mode UI and pass it inline to compile-agent on approval. No file is written and no commit is made for the plan.
 
 ---
 
