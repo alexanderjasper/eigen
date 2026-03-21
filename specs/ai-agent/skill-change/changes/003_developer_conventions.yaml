@@ -1,0 +1,29 @@
+summary: Document spec naming convention and named-agent invocation pattern
+reason: |-
+  Two developer-experience conventions are in use across the repo but not documented
+  in any spec: (1) spec modules are named by domain path, not by number — only the
+  change files inside changes/ carry sequence numbers; (2) subagents must be defined
+  as named .md files in .claude/agents/ and invoked via subagent_type: <name>, never
+  via subagent_type: general-purpose with inline prompts. Without explicit documentation
+  a contributor or AI agent could produce the wrong structure, breaking the pattern
+  that the rest of the toolchain depends on.
+type: updated
+changes:
+  acceptance_criteria:
+    - id: AC-009
+      description: |-
+        Spec module naming convention: module paths use domain-based identifiers
+        (e.g. `ai-agent`, `spec-cli/cmd-scaffold`), never sequence numbers.
+        Only the YAML files inside `changes/` are numbered
+        (e.g. `001_initial.yaml`, `002_add_feature.yaml`).
+        A contributor creating a new spec module uses a human-readable path that
+        reflects the domain, not an auto-incremented integer.
+    - id: AC-010
+      description: |-
+        Named-agent invocation pattern: every subagent used by the change skill is
+        defined as a separate Markdown file in `.claude/agents/<name>.md` with a
+        `name:` frontmatter field (e.g. `name: spec-agent`).
+        The skill invokes each agent via `subagent_type: <name>` in the Agent tool
+        call, where `<name>` matches the frontmatter field exactly.
+        Using `subagent_type: general-purpose` with an inline system prompt is
+        explicitly prohibited — inline prompts must be migrated to named agent files.

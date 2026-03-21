@@ -12,6 +12,30 @@ description: |-
     compile agent could run from spec alone and produce the correct output without needing
     conversation context.
 behavior: ""
+acceptance_criteria:
+    - id: AC-009
+      description: |-
+        Spec module naming convention: module paths use domain-based identifiers
+        (e.g. `ai-agent`, `spec-cli/cmd-scaffold`), never sequence numbers.
+        Only the YAML files inside `changes/` are numbered
+        (e.g. `001_initial.yaml`, `002_add_feature.yaml`).
+        A contributor creating a new spec module uses a human-readable path that
+        reflects the domain, not an auto-incremented integer.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-010
+      description: |-
+        Named-agent invocation pattern: every subagent used by the change skill is
+        defined as a separate Markdown file in `.claude/agents/<name>.md` with a
+        `name:` frontmatter field (e.g. `name: spec-agent`).
+        The skill invokes each agent via `subagent_type: <name>` in the Agent tool
+        call, where `<name>` matches the frontmatter field exactly.
+        Using `subagent_type: general-purpose` with an inline system prompt is
+        explicitly prohibited — inline prompts must be migrated to named agent files.
+      given: ""
+      when: ""
+      then: ""
 dependencies:
     - Agent tool (with subagent_type parameter)
     - spec-subagent definition
@@ -26,4 +50,4 @@ technology:
         Plans: markdown file
         Code: git commits
 last_change: ""
-changes_count: 2
+changes_count: 3
