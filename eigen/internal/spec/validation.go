@@ -1,10 +1,105 @@
 package spec
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// LintError describes a YAML authoring error found in a change file.
+type LintError struct {
+	File    string
+	Line    int
+	Message string
+}
+
+func (e LintError) Error() string {
+	return fmt.Sprintf("%s:%d: %s", e.File, e.Line, e.Message)
+}
+
+// LintChangeFile scans a change file's raw bytes for common YAML authoring errors:
+//   - A backtick character inside an unquoted scalar value
+//   - A bare ": " or trailing ":" inside an unquoted scalar value
+//
+// It skips lines that are part of a block scalar (introduced by | or >).
+func LintChangeFile(filePath string, data []byte) []LintError {
+	var errs []LintError
+
+	lines := bytes.Split(data, []byte("\n"))
+	blockScalarIndent := -1 // indent level of the block scalar header; -1 means not in block scalar
+
+	for lineNum, rawLine := range lines {
+		lineNo := lineNum + 1
+		line := string(rawLine)
+
+		// Determine current line's indentation.
+		trimmed := strings.TrimLeft(line, " \t")
+		indent := len(line) - len(trimmed)
+
+		// If we're inside a block scalar, check whether this line exits it.
+		if blockScalarIndent >= 0 {
+			// A non-empty line at indent <= block scalar header indent exits the block scalar.
+			// Empty / whitespace-only lines remain inside.
+			if len(strings.TrimSpace(line)) > 0 && indent <= blockScalarIndent {
+				blockScalarIndent = -1
+			} else {
+				continue // still inside block scalar — skip lint
+			}
+		}
+
+		// Look for a YAML key: value pattern on this line.
+		// We only care about the value portion of a mapping line.
+		colonIdx := strings.Index(trimmed, ": ")
+		var valuePart string
+		if colonIdx >= 0 {
+			valuePart = strings.TrimSpace(trimmed[colonIdx+2:])
+		} else if strings.HasSuffix(strings.TrimSpace(trimmed), ":") {
+			// Key with no inline value — no value to lint.
+			continue
+		} else {
+			// Not a mapping line (list item or continuation) — skip.
+			continue
+		}
+
+		// Detect block scalar start: value is "|" or ">" with optional chomping/indent indicators.
+		stripped := strings.TrimRight(valuePart, " \t")
+		if stripped == "|" || stripped == ">" ||
+			strings.HasPrefix(stripped, "|+") || strings.HasPrefix(stripped, "|-") ||
+			strings.HasPrefix(stripped, ">+") || strings.HasPrefix(stripped, ">-") {
+			blockScalarIndent = indent
+			continue
+		}
+
+		// Skip empty values and quoted / flow values — handled by the YAML parser.
+		if len(valuePart) == 0 {
+			continue
+		}
+		first := valuePart[0]
+		if first == '"' || first == '\'' || first == '[' || first == '{' {
+			continue
+		}
+
+		// valuePart is an unquoted scalar. Apply lint rules.
+		if strings.ContainsRune(valuePart, '`') {
+			errs = append(errs, LintError{
+				File:    filePath,
+				Line:    lineNo,
+				Message: "backtick character in unquoted scalar (wrap the value in double quotes)",
+			})
+		}
+		if strings.Contains(valuePart, ": ") || strings.HasSuffix(strings.TrimRight(valuePart, " \t"), ":") {
+			errs = append(errs, LintError{
+				File:    filePath,
+				Line:    lineNo,
+				Message: "bare colon in unquoted scalar would be parsed as a YAML key separator (wrap the value in double quotes)",
+			})
+		}
+	}
+
+	return errs
+}
 
 // ValidationError describes a single validation failure.
 type ValidationError struct {
