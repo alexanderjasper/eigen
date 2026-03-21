@@ -41,9 +41,9 @@ acceptance_criteria:
         (2) eigen-change (main conversation) calls EnterPlanMode, presenting the draft plan
             text to the user via the plan mode UI.
         (3) User reviews the plan in plan mode UI and either approves or comments/rejects.
-        (4) eigen-change calls ExitPlanMode to collect approval status.
-        (5) On approval: eigen-change writes the plan to `.claude/plans/<BRANCH>/plan.md`,
-            commits `plan(<module>): <summary>`, and proceeds to Phase 3.
+        (4) eigen-change calls ExitPlanMode to collect approval status and the approved plan text.
+        (5) On approval: eigen-change proceeds directly to Phase 3, passing the approved plan
+            text inline to compile-agent. No plan.md file is written and no plan commit is made.
         (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
             Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
             step (1).
@@ -52,9 +52,10 @@ acceptance_criteria:
       then: ""
     - id: AC-004
       description: |-
-        After plan approval, compile-subagent is called with access to approved plan and codebase.
-        Implements code, makes small atomic commits. After completion, user can review diff,
-        approve final result.
+        After plan approval, compile-agent is called with the approved plan text passed as
+        inline content (not a file path) alongside SPEC_PATH and MODULE_PATH.
+        Compile-agent implements code and makes small atomic commits. After completion, user
+        can review diff and approve final result.
       given: ""
       when: ""
       then: ""
@@ -76,9 +77,7 @@ acceptance_criteria:
       when: ""
       then: ""
     - id: AC-007
-      description: |-
-        Plan-subagent writes plan.md as a persistent file artifact to .claude/plans/<branch>/plan.md
-        (not just conversation output). Compile-subagent reads from this file.
+      description: REMOVED — plan.md file artifact is no longer produced. The plan exists only as transient content in plan mode and is passed inline to compile-agent.
       given: ""
       when: ""
       then: ""
@@ -141,7 +140,7 @@ technology:
     Invocation: /change "feature description" [--short-name "name"]
     OutputFormats: |-
         Specs: changes/*.yaml + spec.yaml (eigen-spec format)
-        Plans: markdown file
+        Plans: temporary plan mode UI only (no file written)
         Code: git commits
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6
