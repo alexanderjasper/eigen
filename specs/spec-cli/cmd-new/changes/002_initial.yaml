@@ -1,30 +1,25 @@
-id: spec-cli/cmd-new
-domain: spec-cli
-module: cmd-new
-owner: eigen
-title: spec new
-status: draft
-description: |
+id: chg-002
+sequence: 2
+timestamp: 2026-03-21T06:33:41Z
+author: alexander
+type: updated
+summary: Update terminology from "event" to "change"
+reason: |
+  Update the spec new command's documentation to use "change" instead of
+  "event" terminology, aligning with the broader refactoring.
+changes:
+  description: |
     The spec new command scaffolds a new spec module at a given path under
     the specs root. It creates the changes/ directory, writes a templated
     first change file, and computes the initial spec.yaml projection.
-behavior: |
+  behavior: |
     Accepts a single slash-delimited path argument (e.g. spec-cli/cmd-new).
     Creates specs/<path>/changes/001_initial.yaml from a template and writes
     specs/<path>/spec.yaml. Fails with a non-zero exit code if the module
     directory already exists.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Creates the module directory and first change file
       given: A path that does not yet exist under specs/
       when: eigen spec new <path> is run
       then: Creates specs/<path>/changes/001_initial.yaml with a template and writes spec.yaml
-    - id: AC-002
-      description: Fails if the module already exists
-      given: A module directory that already exists
-      when: eigen spec new <path> is run
-      then: Exits with a non-zero code and prints an error message
-dependencies: []
-technology: {}
-last_change: chg-002
-changes_count: 2

@@ -1,21 +1,29 @@
-id: spec-navigator
-domain: spec-navigator
-module: spec-navigator
-owner: eigen
-title: Spec Navigator
-status: draft
-description: |
+id: chg-001
+sequence: 1
+timestamp: 2026-03-20T20:00:00Z
+author: alexander
+type: created
+summary: Initial spec for the spec navigator
+reason: |
+  Phase 2 of Eigen adds a browser-based spec navigator. The serve command
+  provides a self-contained local HTTP server so users can browse specs
+  visually without any external tooling.
+changes:
+  title: Spec Navigator
+  owner: eigen
+  status: draft
+  description: |
     The spec navigator is a local HTTP server that serves a browser-based
     UI for exploring specs. It is started with `eigen serve` and requires
     no external dependencies — the frontend assets are embedded in the
     binary via go:embed.
-behavior: |
+  behavior: |
     eigen serve starts an HTTP server on a configurable port (default 7171).
     On start it optionally opens the browser automatically. The server exposes
     a JSON API for modules and serves embedded static assets for the UI.
     The specs root is resolved using the same --specs / EIGEN_SPECS / default
     logic as all other commands.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: serve starts on the configured port
       given: eigen serve is run with --port 8080
@@ -41,9 +49,6 @@ acceptance_criteria:
       given: eigen serve --open=false is run
       when: the server starts
       then: no browser is opened
-dependencies:
+  dependencies:
     - spec-navigator/api
     - spec-navigator/ui
-technology: {}
-last_change: chg-001
-changes_count: 1

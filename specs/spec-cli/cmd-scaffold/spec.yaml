@@ -48,5 +48,5 @@ acceptance_criteria:
       then: Prints the paths of each created file and suggests running eigen spec new
 dependencies: []
 technology: {}
-last_event: evt-001
-events_count: 1
+last_change: chg-001
+changes_count: 1

@@ -1,18 +1,24 @@
-id: spec-cli/cmd-validate
-domain: spec-cli
-module: cmd-validate
-owner: eigen
-title: spec validate
-status: draft
-description: |
+id: chg-001
+sequence: 1
+timestamp: 2026-03-20T21:00:00Z
+author: alexander
+type: created
+summary: Initial spec for eigen spec validate
+reason: |
+  Extracted from the monolithic spec-cli spec.
+changes:
+  title: "spec validate"
+  owner: eigen
+  status: draft
+  description: |
     The spec validate command checks spec modules for required fields,
     acceptance criteria completeness, and dependency existence.
-behavior: |
+  behavior: |
     Accepts an optional path argument. With a path, validates that single
     module. With no argument, validates all modules under the specs root.
     Prints a check mark for each passing module and lists errors for
     failing ones. Exits non-zero if any errors are found.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Exits 0 and prints no errors for a valid module
       given: A module with all required fields and complete acceptance criteria
@@ -28,7 +34,3 @@ acceptance_criteria:
       given: Multiple modules exist, one of which is invalid
       when: eigen spec validate is run with no arguments
       then: Reports errors for all invalid modules and exits non-zero
-dependencies: []
-technology: {}
-last_change: chg-001
-changes_count: 1

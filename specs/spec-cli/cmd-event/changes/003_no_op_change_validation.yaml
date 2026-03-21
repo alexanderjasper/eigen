@@ -1,0 +1,45 @@
+id: chg-003
+sequence: 3
+timestamp: 2026-03-20T20:00:00Z
+author: alexander
+type: updated
+summary: Reject event fields that are identical to current spec state
+reason: |
+  An event that repeats existing values provides no information and
+  pollutes the event log. Catching this at write time gives immediate
+  feedback rather than requiring a post-hoc audit.
+changes:
+  behavior: |
+    Accepts a single slash-delimited path argument identifying the target
+    module. Assigns the next sequence number automatically. The event file
+    is named NNN_<slug>.yaml where the slug is derived from the event summary.
+
+    Default (non-interactive): writes the template to events/, reprojects
+    spec.yaml, and prints the file path. The caller edits the file and runs
+    eigen spec project <path> to reproject after their edits.
+
+    With --edit: writes a temp file, opens $EDITOR, and on save parses,
+    writes the event, and reprojects — the original human workflow.
+
+    Before writing the event file, eigen spec event validates the changes
+    against the current spec state using ValidateChanges from the projection
+    engine. If any field in the changeset is identical to the current spec
+    state (e.g. an acceptance criterion with the same id and identical
+    given/when/then/description), the command exits non-zero and reports
+    each redundant field without writing anything.
+  acceptance_criteria:
+    - id: AC-004
+      description: Rejects an event whose AC is identical to the current state
+      given: A module with AC-001 already projected
+      when: eigen spec event writes a changeset containing an identical AC-001
+      then: Exits non-zero and reports AC-001 as a no-op change; no file is written
+    - id: AC-005
+      description: Rejects an event whose simple field matches current state
+      given: A module with title "Foo" already projected
+      when: eigen spec event writes a changeset setting title to "Foo"
+      then: Exits non-zero and reports title as a no-op change; no file is written
+    - id: AC-006
+      description: Allows an event that changes at least one field
+      given: A module with title "Foo" and AC-001 already projected
+      when: eigen spec event writes a changeset that updates AC-001 but leaves title unchanged
+      then: The event is accepted; only the changed AC-001 need be in the changeset

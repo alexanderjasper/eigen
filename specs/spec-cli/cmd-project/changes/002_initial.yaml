@@ -1,36 +1,26 @@
-id: spec-cli/cmd-project
-domain: spec-cli
-module: cmd-project
-owner: eigen
-title: spec project
-status: draft
-description: |
+id: chg-002
+sequence: 2
+timestamp: 2026-03-21T06:33:41Z
+author: alexander
+type: updated
+summary: Update terminology from "event" to "change"
+reason: |
+  Update the spec project command's documentation to use "change" instead of
+  "event" terminology, aligning with the broader refactoring.
+changes:
+  description: |
     The spec project command recomputes and overwrites spec.yaml for a module
     by replaying all changes in its changes/ directory. It is the manual
     trigger for re-projection, used after directly editing a change file.
-behavior: |
+  behavior: |
     Accepts a single slash-delimited path argument. Reads all changes from
     the module's changes/ directory, applies them in sequence order via the
     projection engine, and writes the resulting SpecModule to spec.yaml.
     Accepts an optional path prefix to reproject all matching modules at once.
     Prints the path of each updated spec.yaml.
-acceptance_criteria:
+  acceptance_criteria:
     - id: AC-001
       description: Reprojects spec.yaml from current changes
       given: A module whose change file has been edited since the last projection
       when: eigen spec project <path> is run
       then: spec.yaml reflects the updated change content
-    - id: AC-002
-      description: Fails with a clear error if the module does not exist
-      given: A path that has no events/ directory
-      when: eigen spec project <path> is run
-      then: Exits non-zero and prints an error identifying the missing module
-    - id: AC-003
-      description: Reprojects all modules when called with no arguments
-      given: Multiple modules exist under the specs root
-      when: eigen spec project is run with no arguments
-      then: spec.yaml is rewritten for every module and each path is printed
-dependencies: []
-technology: {}
-last_change: chg-002
-changes_count: 2
