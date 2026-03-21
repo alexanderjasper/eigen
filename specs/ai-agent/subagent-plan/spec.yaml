@@ -5,19 +5,22 @@ owner: alexander
 title: plan-subagent — designs implementation strategy based on approved spec
 status: ""
 description: |-
-    plan-agent must not assume any specific codebase structure, framework, language,
-    or build system. It discovers the codebase by using Glob, Grep, and Read to find
-    relevant files and understand conventions. Build commands are discovered from the
-    project (Makefile, package.json, go.mod, etc.) rather than hardcoded.
+    plan-agent is a read-only research and drafting agent. It receives a spec module path,
+    reads spec.yaml and all changes/, explores the codebase using Glob, Grep, and Read to
+    understand affected files and existing patterns, then produces a structured markdown draft
+    plan as its text output. It does NOT enter plan mode, does NOT call ExitPlanMode, does NOT
+    write any files, and does NOT commit. The orchestrating skill (eigen-change) is responsible
+    for receiving the draft, presenting it to the user for review via plan mode, writing plan.md,
+    and committing the plan file.
 behavior: ""
 dependencies:
     - approved spec (spec.yaml + changes/)
     - codebase access (Glob, Grep, Read, etc.)
     - understanding of existing patterns and conventions in codebase
 technology:
-    CommitPattern: 'plan(<module>): <summary>'
-    Input: spec.yaml path and changes/ directory
-    Output: markdown file (e.g., plan.md in .claude/ or feature branch)
-    Tools: Glob, Grep, Read, Bash, Git
+    CommitPattern: N/A — committing is done by eigen-change skill, not by plan-agent
+    Input: spec.yaml path, changes/ directory, current git branch name
+    Output: structured markdown draft plan as agent text response (not written to disk)
+    Tools: Glob, Grep, Read, Bash (read-only codebase exploration only)
 last_change: ""
-changes_count: 3
+changes_count: 4
