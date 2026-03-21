@@ -54,18 +54,18 @@ Specifications are organized by domain and feature — the way humans think abou
 
 Technical concerns (data models, APIs, infrastructure) are expressed within domain modules, not as top-level architectural axes. Cross-cutting concerns (authentication, logging, error handling, observability) live in dedicated cross-domain modules that other specifications can reference but do not need to restate.
 
-### 4. Event-Sourced Specification History
+### 4. Change-Sourced Specification History
 
-Specifications are never edited in place. A specification change is appended as an immutable **change event** — a semantic, human-readable description of what changed and why. The **current specification state** is a projection of all accumulated change events.
+Specifications are never edited in place. A specification change is appended as an immutable **change** — a semantic, human-readable description of what changed and why. The **current specification state** is a projection of all accumulated changes.
 
 This gives Eigen several properties that matter at enterprise scale:
 
 - The full rationale for every decision is preserved, not just the outcome.
 - You can reconstruct the state of specifications at any point in history.
-- When working on a change, a developer can inspect recent change events to understand the context they are working within.
-- Specification history and code history are related but independent — a single logical change produces a spec event and a corresponding code commit, linked but separately legible.
+- When working on a change, a developer can inspect recent changes to understand the context they are working within.
+- Specification history and code history are related but independent — a single logical change produces a spec change and a corresponding code commit, linked but separately legible.
 
-This is directly inspired by event sourcing in software architecture. The insight is that the same pattern that makes event-sourced systems auditable and reversible applies equally well to the specifications that describe them.
+This is directly inspired by change sourcing in software architecture. The insight is that the same pattern that makes change-sourced systems auditable and reversible applies equally well to the specifications that describe them.
 
 ### 5. Minimal Technology Commitment
 
@@ -87,9 +87,9 @@ We are deliberately cautious about how much formal structure to impose on accept
 
 When a specification changes, the following occurs:
 
-1. **Spec authoring**: A developer writes a change event describing the new or modified behavior.
-2. **Spec review**: Another developer (or the same developer after reflection) reviews the change event and the resulting projection. This is the primary human review step — reviewing intent, not implementation.
-3. **Compilation**: The AI model reads the full specification projection (and optionally the recent change events for context) and produces code changes.
+1. **Spec authoring**: A developer writes a change describing the new or modified behavior.
+2. **Spec review**: Another developer (or the same developer after reflection) reviews the change and the resulting projection. This is the primary human review step — reviewing intent, not implementation.
+3. **Compilation**: The AI model reads the full specification projection (and optionally the recent changes for context) and produces code changes.
 4. **Verification**: Generated tests derived from acceptance criteria run. Additional static analysis and security scanning run.
 5. **Commit**: Passing compilation produces a linked pair: a spec commit and a code commit.
 
@@ -179,7 +179,7 @@ Eigen development happens in three steps, each driven by a Claude Code skill.
 /eigen-spec [description of what you want to build]
 ```
 
-Claude will identify which spec modules are affected, create or update them by writing change events, project the current state, and validate. Each change event records not just *what* changed but *why*.
+Claude will identify which spec modules are affected, create or update them by writing changes, project the current state, and validate. Each change records not just *what* changed but *why*.
 
 After this step you have a reviewed, validated spec. That is the human review checkpoint — you are approving intent, not implementation.
 
@@ -209,8 +209,8 @@ Claude implements exactly what the spec says — no more, no less. Each acceptan
 eigen spec list [prefix]          List all spec modules
 eigen spec new <path>             Create a new spec module
 eigen spec show <path>            Print the current spec projection
-eigen spec event <path>           Record a new change event
-eigen spec project [path]         Reproject spec.yaml from events
+eigen spec change <path>          Record a new change
+eigen spec project [path]         Reproject spec.yaml from changes
 eigen spec validate [path]        Validate completeness and dependencies
 
 eigen serve [--port 7171] [--open]   Browse specs in a web UI
