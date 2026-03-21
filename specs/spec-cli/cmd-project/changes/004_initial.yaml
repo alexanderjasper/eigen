@@ -1,17 +1,29 @@
-id: spec-cli/cmd-project
-domain: spec-cli
-module: cmd-project
-owner: eigen
-title: spec project
-status: draft
-description: |
+id: chg-004
+sequence: 4
+timestamp: 2026-03-21T08:44:31Z
+author: alexander
+type: updated
+summary: "Add YAML syntax pre-validation and explicit --all flag to spec project"
+reason: |
+  Two usability improvements were identified for `eigen spec project`:
+  1. Authors frequently make YAML authoring mistakes (backticks inside unquoted
+     strings, bare colons that YAML interprets as key-value pairs) that produce
+     silent mis-projections or confusing parse errors. Pre-validating change files
+     before projection gives clear, actionable error messages pointing to the exact
+     file and line.
+  2. The existing no-argument behaviour that reprojects all modules was not
+     discoverable. An explicit `eigen spec project-all` subcommand and
+     `eigen spec project --all` flag make the intent unambiguous and improve
+     shell-script composability.
+changes:
+  description: |
     The spec project command recomputes and overwrites spec.yaml for a module
     by replaying all changes in its changes/ directory. It is the manual
     trigger for re-projection, used after directly editing a change file.
     Before projecting, it validates each change file for common YAML authoring
     errors and reports them with file path and line number. A dedicated
     `project-all` subcommand and `--all` flag project every module in one pass.
-behavior: |
+  behavior: |
     Accepts a single slash-delimited path argument. Reads all changes from
     the module's changes/ directory, applies them in sequence order via the
     projection engine, and writes the resulting SpecModule to spec.yaml.
@@ -30,17 +42,7 @@ behavior: |
     every module found under the specs root in a single pass. Each updated
     spec.yaml path is printed. Pre-validation runs for all change files before
     any module is projected.
-acceptance_criteria:
-    - id: AC-001
-      description: Reprojects spec.yaml from current changes
-      given: A module whose change file has been edited since the last projection
-      when: eigen spec project <path> is run
-      then: spec.yaml reflects the updated change content
-    - id: AC-002
-      description: Fails with a clear error if the module does not exist
-      given: A path that has no changes/ directory
-      when: eigen spec project <path> is run
-      then: Exits non-zero and prints an error identifying the missing module
+  acceptance_criteria:
     - id: AC-003
       description: Reprojects all modules when --all flag is passed
       given: Multiple modules exist under the specs root
@@ -55,7 +57,8 @@ acceptance_criteria:
         the backtick error; no spec.yaml is written
     - id: AC-005
       description: Aborts and reports error for bare colon in unquoted scalar
-      given: A change file whose unquoted string value contains a bare colon that would be parsed as a YAML key separator
+      given: A change file whose unquoted string value contains a bare colon that
+        would be parsed as a YAML key separator
       when: eigen spec project <path> is run
       then: |
         Exits non-zero, prints the file path and line number, and describes
@@ -72,7 +75,3 @@ acceptance_criteria:
       given: All change files in scope are free of backticks and bare colons in unquoted scalars
       when: eigen spec project <path> is run
       then: Pre-validation succeeds silently and projection proceeds normally
-dependencies: []
-technology: {}
-last_change: chg-004
-changes_count: 4
