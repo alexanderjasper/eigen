@@ -1,0 +1,26 @@
+id: ai-agent/subagent-spec
+domain: ai-agent
+module: subagent-spec
+owner: alexander
+title: spec-subagent — asks clarifying questions and produces eigen-spec format specs
+status: ""
+description: |-
+    A subagent invoked by the `change` skill during the spec phase. It receives a feature description
+    and optional hints, explores the codebase to understand context, asks clarifying questions
+    (following the eigen-spec skill's question patterns), and produces a complete spec in the
+    standard eigen-spec format: changes/ directory with change files and auto-generated spec.yaml.
+    The subagent has full codebase access (Glob, Grep, Read, etc.) and uses that to understand
+    existing patterns, affected areas, and dependencies.
+behavior: ""
+dependencies:
+    - feature description (input)
+    - eigen-spec format and conventions
+    - eigen spec project command capability
+    - Codebase access (Glob, Grep, Read, etc.)
+technology:
+    CommitPattern: 'spec(<module>): <summary>'
+    Input: feature description string
+    Output: changes/*.yaml files + spec.yaml (eigen-spec format)
+    Tools: Glob, Grep, Read, Bash (for eigen spec project), Git
+last_change: ""
+changes_count: 1

@@ -1,0 +1,57 @@
+summary: Unified `change` skill — orchestrates spec → plan → compile workflow
+reason: |-
+  The current separate eigen-spec, eigen-plan, eigen-compile skills require multiple invocations and manual
+  coordination. A unified `change` skill provides seamless orchestration, approval gates between phases,
+  and feedback-driven iteration, eliminating context switching and improving UX.
+type: created
+changes:
+  domain: ai-agent
+  module: skill-change
+  owner: alexander
+  title: Unified `change` skill — orchestrates spec → plan → compile workflow
+  description: |-
+    A single `change` skill that orchestrates feature development via three agent-driven phases:
+    (1) spec-subagent asks clarifying questions and produces spec in eigen-spec format (changes/ + spec.yaml),
+    (2) plan-subagent designs implementation in markdown format,
+    (3) compile-subagent implements code with atomic commits.
+    After each phase, outputs are written to filesystem for user review via git diff/editor,
+    user approves via yes/no prompt. If rejected, user provides feedback and the phase re-runs.
+    Each phase produces small atomic commits.
+  acceptanceCriteria:
+    - id: AC-001
+      description: |-
+        `change` skill can be invoked with feature description and optional short-name hint.
+        Skill creates feature branch and calls spec-subagent with the description.
+    - id: AC-002
+      description: |-
+        After spec-subagent finishes, outputs are written to specs/ (changes/ + spec.yaml).
+        User can review via `git diff`. Approval prompt asks yes/no. On yes, progress to planning.
+        On no, user provides feedback comments, spec-subagent re-runs with feedback as context.
+    - id: AC-003
+      description: |-
+        After spec approval, plan-subagent is called with access to approved spec and codebase.
+        Produces markdown implementation plan in .claude/ or similar accessible location.
+        User reviews, approves via prompt, or provides feedback for re-run.
+    - id: AC-004
+      description: |-
+        After plan approval, compile-subagent is called with access to approved plan and codebase.
+        Implements code, makes small atomic commits. After completion, user can review diff,
+        approve final result.
+    - id: AC-005
+      description: |-
+        Skill handles all Agent tool invocation, approval prompts, feedback loops, and branch
+        creation/management. User only needs to invoke once with a description.
+  dependencies:
+    - Agent tool (with subagent_type parameter)
+    - spec-subagent definition
+    - plan-subagent definition
+    - compile-subagent definition
+    - Integration with .claude/skills/ infrastructure
+  technology:
+    Invocation: |-
+      /change "feature description" [--short-name "name"]
+    AgentTypes: spec-subagent, plan-subagent, compile-subagent
+    OutputFormats: |-
+      Specs: changes/*.yaml + spec.yaml (eigen-spec format)
+      Plans: markdown file
+      Code: git commits

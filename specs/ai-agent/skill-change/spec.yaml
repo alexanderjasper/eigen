@@ -1,0 +1,30 @@
+id: ai-agent/skill-change
+domain: ai-agent
+module: skill-change
+owner: alexander
+title: Unified `change` skill — orchestrates spec → plan → compile workflow
+status: ""
+description: |-
+    A single `change` skill that orchestrates feature development via three agent-driven phases:
+    (1) spec-subagent asks clarifying questions and produces spec in eigen-spec format (changes/ + spec.yaml),
+    (2) plan-subagent designs implementation in markdown format,
+    (3) compile-subagent implements code with atomic commits.
+    After each phase, outputs are written to filesystem for user review via git diff/editor,
+    user approves via yes/no prompt. If rejected, user provides feedback and the phase re-runs.
+    Each phase produces small atomic commits.
+behavior: ""
+dependencies:
+    - Agent tool (with subagent_type parameter)
+    - spec-subagent definition
+    - plan-subagent definition
+    - compile-subagent definition
+    - Integration with .claude/skills/ infrastructure
+technology:
+    AgentTypes: spec-subagent, plan-subagent, compile-subagent
+    Invocation: /change "feature description" [--short-name "name"]
+    OutputFormats: |-
+        Specs: changes/*.yaml + spec.yaml (eigen-spec format)
+        Plans: markdown file
+        Code: git commits
+last_change: ""
+changes_count: 1

@@ -1,0 +1,26 @@
+id: ai-agent/subagent-plan
+domain: ai-agent
+module: subagent-plan
+owner: alexander
+title: plan-subagent — designs implementation strategy based on approved spec
+status: ""
+description: |-
+    A subagent invoked by the `change` skill during the plan phase. It receives an approved spec
+    (spec.yaml and changes/), explores the codebase to understand existing patterns, conventions,
+    file structure, and implementation details. It produces a detailed step-by-step implementation plan
+    in markdown format that covers: (1) overview of the feature and affected areas, (2) step-by-step
+    plan with file locations and specific changes, (3) architectural decisions and trade-offs considered,
+    (4) testing strategy and acceptance criteria mapping. The plan is detailed enough for a compile-subagent
+    to implement exactly as specified.
+behavior: ""
+dependencies:
+    - approved spec (spec.yaml + changes/)
+    - codebase access (Glob, Grep, Read, etc.)
+    - understanding of existing patterns and conventions in codebase
+technology:
+    CommitPattern: 'plan(<module>): <summary>'
+    Input: spec.yaml path and changes/ directory
+    Output: markdown file (e.g., plan.md in .claude/ or feature branch)
+    Tools: Glob, Grep, Read, Bash, Git
+last_change: ""
+changes_count: 1
