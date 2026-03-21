@@ -1,0 +1,43 @@
+summary: Multi-phase change workflow with subagent orchestration
+reason: Enable users to create features through a structured three-phase workflow (spec → plan → implement) with automated subagent coordination and user approval gates
+type: created
+changes:
+  domain: claude-code
+  module: skill-workflow-design
+  owner: alexander
+  title: Multi-phase change workflow with subagent orchestration
+  description: |-
+    Create a new `change` skill that orchestrates a three-phase workflow for feature development.
+    When invoked with a feature description, it launches specialized subagents:
+    (1) spec subagent asks clarifying questions and produces spec in eigen-spec format (changes/ + spec.yaml),
+    (2) plan subagent designs the implementation in markdown,
+    (3) compile subagent implements the code.
+    User reviews outputs and approves after each phase. If rejected, user provides feedback and subagent re-runs with the comments.
+  acceptanceCriteria:
+    - id: AC-001
+      description: |-
+        When invoked with feature description, the skill launches spec subagent that asks clarifying questions,
+        produces spec files (changes/ directory), generates spec.yaml, and writes to filesystem for user review
+    - id: AC-002
+      description: |-
+        After spec approval, skill launches plan subagent with access to approved spec and codebase,
+        produces detailed implementation plan in markdown, and presents to user for review
+    - id: AC-003
+      description: |-
+        After plan approval, skill launches compile subagent with access to approved plan and codebase,
+        implements code, makes atomic commits, and reports completion
+    - id: AC-004
+      description: |-
+        User can reject any phase output and provide comments on what should be changed;
+        subagent re-runs with the feedback and produces revised output
+    - id: AC-005
+      description: |-
+        Each phase produces a small atomic commit. All subagents have full codebase access (Glob, Grep, Read, etc.)
+  dependencies:
+    - Agent tool (for subagent orchestration)
+    - Existing eigen-spec format (for spec output)
+    - Existing eigen-plan format (for plan output)
+  technology:
+    Claude-API: Claude Opus 4.6 (or latest)
+    SubagentTypes: spec-subagent, plan-subagent, compile-subagent
+    OutputFormats: changes/*.yaml, spec.yaml, markdown
