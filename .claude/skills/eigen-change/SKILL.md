@@ -20,7 +20,7 @@ Before starting, collect context that all agents will need:
 git branch --show-current
 ```
 
-Store as `BRANCH`. The plan file path will be `.claude/plans/<BRANCH>/plan.md`.
+Store as `BRANCH`.
 
 Ask the user which module path to use (e.g. `ai-agent/skill-change`) or derive it from the description if obvious.
 
@@ -103,13 +103,9 @@ Call `EnterPlanMode` presenting the draft to the user for review.
 Call `ExitPlanMode` to collect the approval decision.
 
 On approval:
-1. Write the draft to `.claude/plans/<BRANCH>/plan.md`
-2. Commit: `plan(<module>): <one-line summary>`
-3. Tell the user: "Plan phase complete. Plan written to `.claude/plans/<BRANCH>/plan.md`."
-4. Use AskUserQuestion to ask:
-   - Question: "Proceed to implementation?"
-   - Options: "Proceed" (go to Phase 3), "Reject" (provide feedback to revise plan)
-   - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, then restart Phase 2.
+1. Store the approved plan text from ExitPlanMode.
+2. Tell the user: "Plan approved. Proceeding to implementation."
+3. Proceed to Phase 3, passing the approved plan text inline to compile-agent.
 
 On rejection: use AskUserQuestion to collect feedback text, run **Spec Feedback Loop** to update the spec, then restart Phase 2.
 
@@ -125,9 +121,10 @@ Agent(
   prompt: |
     SPEC_PATH: specs/<module-path>/spec.yaml
     MODULE_PATH: <module-path>
-    PLAN_PATH: .claude/plans/<BRANCH>/plan.md
+    PLAN_CONTENT:
+    <approved plan text>
 
-    Read the spec and plan completely before writing any code.
+    Read the spec and the PLAN_CONTENT above completely before writing any code. The plan text is provided inline — it is not a file.
     Implement following the plan step by step.
     Build with `cd eigen && go build ./...`.
     Verify each acceptance criterion.
@@ -143,7 +140,7 @@ After compile-agent completes:
 1. Tell the user: "Implementation complete."
 2. Use AskUserQuestion to ask:
    - Question: "Implementation looks good?"
-   - Options: "Approve" (done — summarize branch, spec path, plan path, commits made), "Reject" (provide feedback)
+   - Options: "Approve" (done — summarize branch, spec path, commits made), "Reject" (provide feedback)
    - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phase 3.
 
 ---
