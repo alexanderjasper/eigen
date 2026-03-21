@@ -6,7 +6,7 @@ title: Spec Navigator API
 status: draft
 description: |
     The spec navigator API is a set of JSON endpoints served by eigen serve.
-    It exposes module listings and per-module detail (projection + events)
+    It exposes module listings and per-module detail (projection + changes)
     so the frontend can render the spec tree and detail pane.
 behavior: |
     GET /api/modules returns a flat list of ModuleSummary objects for all
@@ -17,7 +17,7 @@ behavior: |
     GET /api/modules/*path returns the full SpecModule projection for the
     module at the given path.
 
-    GET /api/modules/*path/events returns the ordered slice of ChangeEvents
+    GET /api/modules/*path/changes returns the ordered slice of Changes
     for the module at the given path.
 
     All endpoints return JSON with Content-Type application/json. Errors
@@ -44,10 +44,10 @@ acceptance_criteria:
       when: GET /api/modules/spec-cli/cmd-new is requested
       then: response contains the full SpecModule JSON including acceptance_criteria
     - id: AC-005
-      description: GET /api/modules/*path/events returns ordered events
-      given: module spec-cli has two events with sequences 1 and 2
-      when: GET /api/modules/spec-cli/events is requested
-      then: response contains both events in ascending sequence order
+      description: GET /api/modules/*path/changes returns ordered changes
+      given: module spec-cli has two changes with sequences 1 and 2
+      when: GET /api/modules/spec-cli/changes is requested
+      then: response contains both changes in ascending sequence order
     - id: AC-006
       description: unknown module returns 404
       given: no module exists at path nonexistent
@@ -55,5 +55,5 @@ acceptance_criteria:
       then: response status is 404 with a JSON error body
 dependencies: []
 technology: {}
-last_event: evt-001
-events_count: 1
+last_event: evt-002
+events_count: 2
