@@ -1,0 +1,45 @@
+summary: AI agent framework for Claude Code — orchestration model and core concepts
+reason: Introduce AI agents as a first-class concept in Claude Code, providing a structured framework for multi-phase workflows. This enables consolidating separate skills (eigen-spec, eigen-plan, eigen-compile) into unified agent-orchestrated experiences.
+type: created
+changes:
+  domain: ai-agent
+  module: ai-agent
+  owner: alexander
+  title: AI agent framework for Claude Code
+  description: |-
+    Define the AI agent framework for Claude Code. An AI agent (or "subagent") is a specialized Claude instance
+    invoked via the Agent tool with a specific task, access to the codebase, and structured inputs/outputs.
+    This framework enables multi-phase workflows where agents collaborate in sequence, with user approval gates
+    between phases. The framework supports: (1) agent invocation and orchestration, (2) file-based review with
+    approval prompts, (3) feedback-driven re-runs on rejection, (4) small atomic commits after each phase.
+    Agents have full codebase access (Glob, Grep, Read, Bash, etc.) and can ask clarifying questions or
+    produce complex outputs like specs or implementation plans.
+  acceptanceCriteria:
+    - id: AC-001
+      description: |-
+        Agent tool can invoke subagents with subagent_type parameter (e.g., subagent_type: spec-agent).
+        Each subagent has full codebase access (Glob, Grep, Read, Bash, Edit, Write, etc.).
+    - id: AC-002
+      description: |-
+        Multi-phase workflow: agents produce outputs to files, outputs are displayed to user,
+        user approves via yes/no prompt, progression to next phase depends on approval.
+    - id: AC-003
+      description: |-
+        If user rejects output, they can provide feedback/comments. The workflow supports re-running
+        the same subagent with user feedback as context for improvement.
+    - id: AC-004
+      description: |-
+        Each agent phase produces one or more small atomic commits. Commits are made by the agent
+        as part of its execution, following the "commit as you go" pattern.
+    - id: AC-005
+      description: |-
+        Framework documentation describes how to build skills that use agents, including:
+        how to invoke agents, structure approval gates, handle feedback loops, and manage commits.
+  dependencies:
+    - Agent tool (for subagent orchestration)
+    - Existing eigen-spec format (for spec output)
+    - Existing eigen-plan format (for plan output)
+  technology:
+    Claude-API: Claude Opus 4.6 (or latest)
+    SubagentTypes: spec-subagent, plan-subagent, compile-subagent
+    OutputFormats: changes/*.yaml, spec.yaml, markdown

@@ -1,0 +1,29 @@
+summary: Planned first implementation — unified `change` skill using ai-agent framework
+reason: |-
+  The ai-agent framework enables consolidating the current eigen-spec/eigen-plan/eigen-compile skill model
+  into a single `change` skill. This demonstrates the framework's value, eliminates separate skill invocations,
+  and improves UX. This is the first implementation built on top of the framework.
+type: updated
+changes:
+  description: |-
+    Using the ai-agent framework, implement a unified `change` skill that orchestrates feature development
+    across three phases: spec (via spec-subagent), plan (via plan-subagent), and compile (via compile-subagent).
+    This skill replaces the current separate eigen-spec, eigen-plan, and eigen-compile skills, providing a
+    seamless workflow where users invoke one skill, approve outputs after each phase, and provide feedback
+    on rejections. The skill handles all agent invocation, approval prompts, feedback loops, and commits.
+  acceptanceCriteria:
+    - id: AC-006
+      description: |-
+        The `change` skill completely subsumes the functionality of eigen-spec, eigen-plan, and
+        eigen-compile. A user creating a feature no longer invokes three separate skills.
+    - id: AC-007
+      description: |-
+        After `change` skill launches, deprecate eigen-spec, eigen-plan, and eigen-compile skills
+        or mark them as legacy. Determine if they should remain available or be removed entirely.
+    - id: AC-008
+      description: |-
+        The spec-subagent used by `change` skill should be able to ask the same clarifying
+        questions that human using eigen-spec would ask (based on current eigen-spec skill definition).
+  dependencies:
+    - Analysis of which parts of eigen-spec/plan/compile skill definitions can be reused in subagent prompts
+    - Decision on whether to keep legacy skills available or deprecate them

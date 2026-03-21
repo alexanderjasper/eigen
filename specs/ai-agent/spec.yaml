@@ -1,0 +1,22 @@
+id: ai-agent
+domain: ai-agent
+module: ai-agent
+owner: alexander
+title: AI agent framework for Claude Code
+status: ""
+description: |-
+    Using the ai-agent framework, implement a unified `change` skill that orchestrates feature development
+    across three phases: spec (via spec-subagent), plan (via plan-subagent), and compile (via compile-subagent).
+    This skill replaces the current separate eigen-spec, eigen-plan, and eigen-compile skills, providing a
+    seamless workflow where users invoke one skill, approve outputs after each phase, and provide feedback
+    on rejections. The skill handles all agent invocation, approval prompts, feedback loops, and commits.
+behavior: ""
+dependencies:
+    - Analysis of which parts of eigen-spec/plan/compile skill definitions can be reused in subagent prompts
+    - Decision on whether to keep legacy skills available or deprecate them
+technology:
+    Claude-API: Claude Opus 4.6 (or latest)
+    OutputFormats: changes/*.yaml, spec.yaml, markdown
+    SubagentTypes: spec-subagent, plan-subagent, compile-subagent
+last_change: ""
+changes_count: 2
