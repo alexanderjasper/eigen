@@ -15,6 +15,11 @@ description: |-
     Companion standalone skills: eigen-change-spec (invokes spec-agent directly) and
     eigen-change-compile (invokes compile-agent directly) are available for manual phase
     invocation. eigen-plan has been removed; plan phase is owned by eigen-change.
+
+    Spec commit ownership: spec-agent writes and validates change files but does NOT commit.
+    eigen-change commits the spec files after the review UI approves them. On feedback
+    rejection, eigen-change commits the feedback change file after the next spec-agent run
+    completes.
 behavior: ""
 acceptance_criteria:
     - id: AC-001
@@ -26,9 +31,14 @@ acceptance_criteria:
       then: ""
     - id: AC-002
       description: |-
-        After spec-subagent finishes, outputs are written to specs/ (changes/ + spec.yaml).
-        User can review via `git diff`. Approval prompt asks yes/no. On yes, progress to planning.
-        On no, user provides feedback comments, spec-subagent re-runs with feedback as context.
+        After spec-agent finishes writing change files and running `eigen spec project`,
+        outputs are written to specs/ (changes/ + spec.yaml) but NOT yet committed.
+        eigen-change posts the changes to the review API and waits for browser approval.
+        On approval: eigen-change commits the spec files with `spec(<module>): <summary>`,
+        then marks changes approved and commits `chore(<module>): approve spec changes`.
+        On rejection: eigen-change runs the Spec Feedback Loop; spec-agent writes the
+        feedback change file (no commit); eigen-change commits all pending spec files
+        after the next approval.
       given: ""
       when: ""
       then: ""
@@ -71,8 +81,9 @@ acceptance_criteria:
     - id: AC-006
       description: |-
         On rejection at any phase: (1) collect user feedback via AskUserQuestion,
-        (2) launch spec-agent with feedback to write changes/*.yaml update,
-        (3) commit spec(...) change, (4) re-run the failed phase using updated spec.yaml
+        (2) launch spec-agent with feedback to write changes/*.yaml update (no commit),
+        (3) eigen-change commits all uncommitted spec files with spec(<module>): incorporate
+        feedback on <aspect>, (4) re-run the failed phase using updated spec.yaml.
       given: ""
       when: ""
       then: ""
@@ -142,5 +153,5 @@ technology:
         Specs: changes/*.yaml + spec.yaml (eigen-spec format)
         Plans: temporary plan mode UI only (no file written)
         Code: git commits
-last_change: chg-006
-changes_count: 6
+last_change: chg-007
+changes_count: 7

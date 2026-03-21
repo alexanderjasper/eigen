@@ -44,18 +44,22 @@ acceptance_criteria:
       then: ""
     - id: AC-005
       description: |-
-        Makes small atomic commits: one for initial spec, one per clarification round.
-        Uses conventional commit format: `spec(<module>): <summary>`.
+        spec-agent writes change files and runs `eigen spec project` + `eigen spec validate`,
+        but does NOT make any git commit. After the agent returns, the orchestrator
+        (eigen-change) is responsible for committing the spec files once the user approves
+        them via the review UI.
       given: ""
       when: ""
       then: ""
     - id: AC-006
       description: |-
-        When invoked to incorporate feedback, spec-subagent:
+        When invoked to incorporate feedback, spec-agent:
         (1) reads current spec.yaml and changes/ to find the next sequence number,
         (2) writes changes/NNN_feedback.yaml with the feedback incorporated,
         (3) runs `eigen spec project` to reproject spec.yaml,
-        (4) commits with `spec(<module>): incorporate feedback on <aspect>`
+        (4) runs `eigen spec validate` to confirm no errors,
+        (5) reports the change file written and what was updated — does NOT commit.
+        The orchestrator commits the feedback change file after this agent returns.
       given: ""
       when: ""
       then: ""
@@ -79,9 +83,9 @@ dependencies:
     - eigen spec project command capability
     - Codebase access (Glob, Grep, Read, etc.)
 technology:
-    CommitPattern: 'spec(<module>): <summary>'
+    CommitPattern: N/A — spec-agent does not commit; orchestrator commits after approval
     Input: feature description string
-    Output: changes/*.yaml files + spec.yaml (eigen-spec format)
-    Tools: Glob, Grep, Read, Bash (for eigen spec project), Git
-last_change: ""
-changes_count: 3
+    Output: changes/*.yaml files + spec.yaml (eigen-spec format); no git commits
+    Tools: Glob, Grep, Read, Bash (for eigen spec project/validate)
+last_change: chg-004
+changes_count: 4

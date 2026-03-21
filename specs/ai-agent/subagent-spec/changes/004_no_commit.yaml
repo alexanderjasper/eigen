@@ -1,0 +1,34 @@
+id: chg-004
+sequence: 4
+timestamp: 2026-03-21T13:23:19Z
+author: alexander
+type: updated
+summary: spec-agent no longer commits — writes and validates only, orchestrator commits after approval
+reason: |
+  Committing spec files before the user approves them via the review UI produces
+  dangling commits when the spec is rejected. Responsibility is now split: spec-agent
+  writes and validates change files; eigen-change (the orchestrator) commits them after
+  the review UI returns "approved". Both Mode 1 (initial spec) and Mode 2 (feedback
+  incorporation) are affected — neither mode should produce a git commit.
+changes:
+  acceptance_criteria:
+    - id: AC-005
+      description: |-
+        spec-agent writes change files and runs `eigen spec project` + `eigen spec validate`,
+        but does NOT make any git commit. After the agent returns, the orchestrator
+        (eigen-change) is responsible for committing the spec files once the user approves
+        them via the review UI.
+    - id: AC-006
+      description: |-
+        When invoked to incorporate feedback, spec-agent:
+        (1) reads current spec.yaml and changes/ to find the next sequence number,
+        (2) writes changes/NNN_feedback.yaml with the feedback incorporated,
+        (3) runs `eigen spec project` to reproject spec.yaml,
+        (4) runs `eigen spec validate` to confirm no errors,
+        (5) reports the change file written and what was updated — does NOT commit.
+        The orchestrator commits the feedback change file after this agent returns.
+  technology:
+    CommitPattern: 'N/A — spec-agent does not commit; orchestrator commits after approval'
+    Input: feature description string
+    Output: changes/*.yaml files + spec.yaml (eigen-spec format); no git commits
+    Tools: Glob, Grep, Read, Bash (for eigen spec project/validate)
