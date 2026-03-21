@@ -12,7 +12,7 @@ changes:
     It uses Glob, Grep, and Read to discover relevant files. The eigen spec CLI commands
     (eigen spec new, eigen spec change, eigen spec project, eigen spec validate) are
     retained — these are the framework tooling, not the target codebase.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-008
       description: |-
         spec-agent does not reference any project-specific directories or file patterns

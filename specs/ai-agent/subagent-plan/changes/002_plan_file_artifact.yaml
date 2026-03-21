@@ -10,7 +10,7 @@ changes:
     Clarify that plan-subagent writes the plan.md file to .claude/plans/<branch>/plan.md
     (or similar persistent location accessible to compile-subagent). The file is committed
     with the plan(...) commit. Compile-subagent reads from this file path when invoked.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-006
       description: |-
         plan-subagent writes plan.md to .claude/plans/<branch-name>/plan.md.

@@ -14,7 +14,7 @@ changes:
     approval prompts, (3) feedback-driven re-runs on rejection, (4) small atomic commits after each phase.
     Agents have full codebase access (Glob, Grep, Read, Bash, etc.) and can ask clarifying questions or
     produce complex outputs like specs or implementation plans.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-001
       description: |-
         Agent tool can invoke subagents with subagent_type parameter (e.g., subagent_type: spec-agent).

@@ -10,7 +10,7 @@ changes:
     (e.g., 002_feedback.yaml, 003_additional_clarification.yaml) when writing updates.
     It runs `eigen spec project` to update spec.yaml after each change. The skill
     commits each change separately with `spec(<module>): <summary>`.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-006
       description: |-
         When invoked to incorporate feedback, spec-subagent:

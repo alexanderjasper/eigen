@@ -17,7 +17,7 @@ changes:
     The subagent does exactly what the plan says, no more, no less. It makes decisions only for
     implementation details not covered by the plan. It commits frequently (after each logical step),
     uses conventional commit format, and reports completion status.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-001
       description: |-
         compile-subagent reads approved plan and spec, and executes the plan step-by-step.
