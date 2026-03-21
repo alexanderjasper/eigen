@@ -81,7 +81,7 @@ After spec-agent commits the feedback change, re-show the approval prompt.
 
 ## Phase 2 — Plan
 
-Launch the plan-agent to design the implementation:
+Launch the plan-agent to research the codebase and return a draft plan:
 
 ```
 Agent(
@@ -90,24 +90,28 @@ Agent(
     SPEC_PATH: specs/<module-path>/spec.yaml
     MODULE_PATH: <module-path>
     BRANCH: <BRANCH>
-    PLAN_OUTPUT_PATH: .claude/plans/<BRANCH>/plan.md
 
-    Read the spec, explore the codebase, enter plan mode for user review,
-    write the approved plan to PLAN_OUTPUT_PATH, and commit plan(<module>): <summary>.
-
-    Report the path to the written plan file when done.
+    Read the spec, explore the codebase, and return a structured markdown draft plan
+    as your text output. Do not write any files or make any commits.
 )
 ```
 
-The plan-agent will enter plan mode internally — you will see the plan mode UI for review and inline commenting. Plan mode approval/rejection is handled there.
+Capture the returned draft plan text.
 
-After plan-agent completes and reports the plan file path:
+Call `EnterPlanMode` presenting the draft to the user for review.
 
-1. Tell the user: "Plan phase complete. Plan written to `.claude/plans/<BRANCH>/plan.md`."
-2. Use AskUserQuestion to ask:
+Call `ExitPlanMode` to collect the approval decision.
+
+On approval:
+1. Write the draft to `.claude/plans/<BRANCH>/plan.md`
+2. Commit: `plan(<module>): <one-line summary>`
+3. Tell the user: "Plan phase complete. Plan written to `.claude/plans/<BRANCH>/plan.md`."
+4. Use AskUserQuestion to ask:
    - Question: "Proceed to implementation?"
    - Options: "Proceed" (go to Phase 3), "Reject" (provide feedback to revise plan)
    - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, then restart Phase 2.
+
+On rejection: use AskUserQuestion to collect feedback text, run **Spec Feedback Loop** to update the spec, then restart Phase 2.
 
 ---
 
@@ -148,4 +152,4 @@ After compile-agent completes:
 
 - **Spec is always updated first on rejection**: feedback becomes a new change file in `changes/` before re-running any phase. This ensures the spec stays authoritative — a fresh agent could re-plan or re-implement from spec.yaml alone.
 - **Legacy skills remain**: `/eigen-spec`, `/eigen-plan`, `/eigen-compile` are still available for manual use.
-- **Plan mode UI is preserved**: plan-agent uses Claude Code's built-in plan mode, so you get the familiar review UI with inline commenting.
+- **Plan mode UI is preserved**: eigen-change enters plan mode after plan-agent returns the draft, so plan mode UI is presented in the main conversation thread.
