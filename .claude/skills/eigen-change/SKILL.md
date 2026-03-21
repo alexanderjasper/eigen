@@ -40,7 +40,7 @@ Agent(
     Module path: <module-path>
 
     Ask the user clarifying questions, explore the codebase, write the spec change files,
-    run `eigen spec project <module-path>`, validate, and commit spec(<module>): <summary>.
+    run `eigen spec project <module-path>`, and validate.
 
     When done, report: the spec.yaml path, the list of change file paths written (relative
     to the repo root, e.g. specs/<module-path>/changes/001_initial.yaml), and a one-line
@@ -50,7 +50,7 @@ Agent(
 
 After the agent completes:
 
-1. Tell the user: "Spec phase complete. Review with `git diff HEAD~1` or in your editor."
+1. Tell the user: "Spec phase complete. Review in your editor or with `git diff`."
 2. Read each change file's raw YAML and POST the batch to the review API:
    Build a JSON array of change entries (change_id, file_path, change_yaml) for all
    change files reported by spec-agent.
@@ -82,6 +82,9 @@ After the agent completes:
    DECISION=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['decision'])")
    ```
    - "approved":
+       Commit the spec files:
+         git add specs/<module-path>/
+         git commit -m "spec(<module>): <summary from spec-agent report>"
        For each change file, run: `eigen spec change-status <module-path> <filename> approved`
        Commit: `chore(<module>): approve spec changes`
        Proceed to Phase 2.
@@ -112,14 +115,17 @@ Agent(
     User feedback: <feedback text>
 
     Write a new change file (next sequence number) incorporating this feedback.
-    Run `eigen spec project <module-path>`, validate, and commit
-    spec(<module>): incorporate feedback on <aspect>.
+    Run `eigen spec project <module-path>` and validate.
 
     When done, report the change file written and what was updated.
 )
 ```
 
-After spec-agent commits the feedback change, re-show the approval prompt.
+After spec-agent returns, commit all pending spec files:
+  git add specs/<module-path>/
+  git commit -m "spec(<module>): incorporate feedback on <aspect>"
+(Use the aspect/summary from spec-agent's report.)
+Then re-enter the review cycle (re-post to the review API from step 2).
 
 ---
 
