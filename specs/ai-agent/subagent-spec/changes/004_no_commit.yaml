@@ -10,7 +10,7 @@ reason: |
     writes and validates change files; eigen-change (the orchestrator) commits them after
     the review UI returns "approved". Both Mode 1 (initial spec) and Mode 2 (feedback
     incorporation) are affected — neither mode should produce a git commit.
-status: approved
+status: compiled
 changes:
     technology:
         CommitPattern: N/A — spec-agent does not commit; orchestrator commits after approval
