@@ -33,14 +33,14 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("module %q already exists at %s", path, modulePath)
 	}
 
-	eventsDir := storage.EventsPath(specsRoot, path)
-	if err := os.MkdirAll(eventsDir, 0755); err != nil {
-		return fmt.Errorf("creating events directory: %w", err)
+	changesDir := storage.ChangesPath(specsRoot, path)
+	if err := os.MkdirAll(changesDir, 0755); err != nil {
+		return fmt.Errorf("creating changes directory: %w", err)
 	}
 
 	_, module := splitPath(path)
-	ev := spec.ChangeEvent{
-		ID:        "evt-001",
+	ch := spec.Change{
+		ID:        "chg-001",
 		Sequence:  1,
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Author:    "",
@@ -65,26 +65,31 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 		},
 	}
 
-	data, err := yaml.Marshal(ev)
+	data, err := yaml.Marshal(ch)
 	if err != nil {
-		return fmt.Errorf("marshaling initial event: %w", err)
+		return fmt.Errorf("marshaling initial change: %w", err)
 	}
-	eventPath := filepath.Join(eventsDir, "001_initial.yaml")
-	if err := os.WriteFile(eventPath, data, 0644); err != nil {
-		return fmt.Errorf("writing initial event: %w", err)
+	changePath := filepath.Join(changesDir, "001_initial.yaml")
+	if err := os.WriteFile(changePath, data, 0644); err != nil {
+		return fmt.Errorf("writing initial change: %w", err)
 	}
 
-	events, err := storage.ReadEvents(specsRoot, path)
+	changes, err := storage.ReadChanges(specsRoot, path)
 	if err != nil {
-		return fmt.Errorf("reading events: %w", err)
+		return fmt.Errorf("reading changes: %w", err)
 	}
-	s := spec.Project(path, events)
+	// Convert []Change to []*Change
+	changePtrs := make([]*spec.Change, len(changes))
+	for i := range changes {
+		changePtrs[i] = &changes[i]
+	}
+	s := spec.Project(path, changePtrs)
 	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml: %w", err)
 	}
 
 	fmt.Printf("Created %s\n", path)
-	fmt.Printf("  %s\n", eventPath)
+	fmt.Printf("  %s\n", changePath)
 	fmt.Printf("  %s\n", storage.SpecPath(specsRoot, path))
 	return nil
 }

@@ -16,21 +16,21 @@ import (
 	"github.com/alexanderjasper/eigen/internal/storage"
 )
 
-var specEventEdit bool
+var specChangeEdit bool
 
 func init() {
-	specEventCmd.Flags().BoolVar(&specEventEdit, "edit", false, "open $EDITOR after writing the template")
-	specCmd.AddCommand(specEventCmd)
+	specChangeCmd.Flags().BoolVar(&specChangeEdit, "edit", false, "open $EDITOR after writing the template")
+	specCmd.AddCommand(specChangeCmd)
 }
 
-var specEventCmd = &cobra.Command{
-	Use:   "event <path>",
-	Short: "Record a new change event for a spec module",
+var specChangeCmd = &cobra.Command{
+	Use:   "change <path>",
+	Short: "Record a new change for a spec module",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runSpecEvent,
+	RunE:  runSpecChange,
 }
 
-func runSpecEvent(cmd *cobra.Command, args []string) error {
+func runSpecChange(cmd *cobra.Command, args []string) error {
 	path := args[0]
 
 	modulePath := storage.ModulePath(specsRoot, path)
@@ -43,31 +43,31 @@ func runSpecEvent(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	template := buildEventTemplate(seq)
+	template := buildChangeTemplate(seq)
 
-	if !specEventEdit {
-		return writeEventDirect(path, seq, template)
+	if !specChangeEdit {
+		return writeChangeDirect(path, seq, template)
 	}
-	return writeEventViaEditor(path, seq, template)
+	return writeChangeViaEditor(path, seq, template)
 }
 
-// writeEventDirect writes the template straight to events/ and reprojects.
-func writeEventDirect(path string, seq int, template string) error {
+// writeChangeDirect writes the template straight to changes/ and reprojects.
+func writeChangeDirect(path string, seq int, template string) error {
 	filename := fmt.Sprintf("%03d_initial.yaml", seq)
-	eventPath := filepath.Join(storage.EventsPath(specsRoot, path), filename)
-	if err := os.WriteFile(eventPath, []byte(template), 0644); err != nil {
-		return fmt.Errorf("writing event file: %w", err)
+	changePath := filepath.Join(storage.ChangesPath(specsRoot, path), filename)
+	if err := os.WriteFile(changePath, []byte(template), 0644); err != nil {
+		return fmt.Errorf("writing change file: %w", err)
 	}
 	if err := reprojectModule(path); err != nil {
 		return err
 	}
-	fmt.Println(eventPath)
+	fmt.Println(changePath)
 	return nil
 }
 
-// writeEventViaEditor opens $EDITOR, then writes and reprojects on save.
-func writeEventViaEditor(path string, seq int, template string) error {
-	tmpFile, err := os.CreateTemp("", "eigen-event-*.yaml")
+// writeChangeViaEditor opens $EDITOR, then writes and reprojects on save.
+func writeChangeViaEditor(path string, seq int, template string) error {
+	tmpFile, err := os.CreateTemp("", "eigen-change-*.yaml")
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
@@ -97,35 +97,35 @@ func writeEventViaEditor(path string, seq int, template string) error {
 		return fmt.Errorf("reading edited file: %w", err)
 	}
 
-	var ev spec.ChangeEvent
-	if err := yaml.Unmarshal(data, &ev); err != nil {
-		return fmt.Errorf("parsing event: %w", err)
+	var ch spec.Change
+	if err := yaml.Unmarshal(data, &ch); err != nil {
+		return fmt.Errorf("parsing change: %w", err)
 	}
-	if ev.ID == "" {
-		return fmt.Errorf("event id is required")
+	if ch.ID == "" {
+		return fmt.Errorf("change id is required")
 	}
-	ev.Sequence = seq
+	ch.Sequence = seq
 
-	slug := slugify(ev.Summary)
+	slug := slugify(ch.Summary)
 	if slug == "" {
-		slug = "event"
+		slug = "change"
 	}
 
 	filename := fmt.Sprintf("%03d_%s.yaml", seq, slug)
-	eventPath := filepath.Join(storage.EventsPath(specsRoot, path), filename)
-	if err := os.WriteFile(eventPath, data, 0644); err != nil {
-		return fmt.Errorf("writing event file: %w", err)
+	changePath := filepath.Join(storage.ChangesPath(specsRoot, path), filename)
+	if err := os.WriteFile(changePath, data, 0644); err != nil {
+		return fmt.Errorf("writing change file: %w", err)
 	}
 
 	if err := reprojectModule(path); err != nil {
 		return err
 	}
-	fmt.Printf("Recorded event %d for %s\n", seq, path)
+	fmt.Printf("Recorded change %d for %s\n", seq, path)
 	return nil
 }
 
-func buildEventTemplate(seq int) string {
-	return fmt.Sprintf(`id: evt-%03d
+func buildChangeTemplate(seq int) string {
+	return fmt.Sprintf(`id: chg-%03d
 sequence: %d
 timestamp: %s
 author: ""

@@ -1,6 +1,6 @@
 package spec
 
-// SpecModule is the projection — the current state of a module derived from all its events.
+// SpecModule is the projection — the current state of a module derived from all its changes.
 type SpecModule struct {
 	ID          string            `yaml:"id"           json:"id"`
 	Domain      string            `yaml:"domain"       json:"domain"`
@@ -14,8 +14,8 @@ type SpecModule struct {
 	Dependencies []string         `yaml:"dependencies" json:"dependencies"`
 	Technology  map[string]string `yaml:"technology"   json:"technology"`
 	// metadata
-	LastEvent   string `yaml:"last_event"   json:"last_event"`
-	EventsCount int    `yaml:"events_count" json:"events_count"`
+	LastChange  string `yaml:"last_change"  json:"last_change"`
+	ChangesCount int    `yaml:"changes_count" json:"changes_count"`
 }
 
 // AcceptanceCriterion is a single verifiable behavior assertion.
@@ -28,8 +28,8 @@ type AcceptanceCriterion struct {
 	Removed     bool   `yaml:"removed,omitempty" json:"removed,omitempty"`
 }
 
-// ChangeEvent represents a single immutable change recorded against a module.
-type ChangeEvent struct {
+// Change represents a single immutable change recorded against a module.
+type Change struct {
 	ID        string    `yaml:"id"        json:"id"`
 	Sequence  int       `yaml:"sequence"  json:"sequence"`
 	Timestamp string    `yaml:"timestamp" json:"timestamp"`
@@ -40,7 +40,7 @@ type ChangeEvent struct {
 	Changes   ChangeSet `yaml:"changes"   json:"changes"`
 }
 
-// ChangeSet holds the fields that may change in a single event.
+// ChangeSet holds the fields that may change in a single change.
 // All fields are pointers / omitempty so absent fields are distinguishable from zero values.
 type ChangeSet struct {
 	Title       string            `yaml:"title,omitempty"       json:"title,omitempty"`
