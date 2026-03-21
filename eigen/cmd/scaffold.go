@@ -9,14 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:embed skills/eigen-spec.md
-var eigenSpecSkill []byte
+//go:embed skills/eigen-change-spec.md
+var eigenChangeSpecSkill []byte
 
-//go:embed skills/eigen-plan.md
-var eigenPlanSkill []byte
-
-//go:embed skills/eigen-compile.md
-var eigenCompileSkill []byte
+//go:embed skills/eigen-change-compile.md
+var eigenChangeCompileSkill []byte
 
 //go:embed skills/eigen-change.md
 var eigenChangeSkill []byte
@@ -54,9 +51,8 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		name    string
 		content []byte
 	}{
-		{"eigen-spec", eigenSpecSkill},
-		{"eigen-plan", eigenPlanSkill},
-		{"eigen-compile", eigenCompileSkill},
+		{"eigen-change-spec", eigenChangeSpecSkill},
+		{"eigen-change-compile", eigenChangeCompileSkill},
 		{"eigen-change", eigenChangeSkill},
 	}
 

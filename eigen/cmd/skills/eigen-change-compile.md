@@ -1,12 +1,12 @@
 ---
-name: eigen-compile
-description: Implement (compile) an eigen spec into working code
+name: eigen-change-compile
+description: Companion to eigen-change — invoke compile-agent directly to implement a spec
 ---
 
 Compile a spec into code for the eigen project. Specs are the source of truth — implement exactly what the spec says, no more, no less.
 
 ## Arguments
-`/eigen-compile <module-path>`
+`/eigen-change-compile <module-path>`
 
 ## Workflow
 
