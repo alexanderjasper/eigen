@@ -5,10 +5,10 @@ owner: alexander
 title: spec-subagent — asks clarifying questions and produces eigen-spec format specs
 status: ""
 description: |-
-    Clarify that spec-subagent always generates the next sequential change file
-    (e.g., 002_feedback.yaml, 003_additional_clarification.yaml) when writing updates.
-    It runs `eigen spec project` to update spec.yaml after each change. The skill
-    commits each change separately with `spec(<module>): <summary>`.
+    spec-agent does not assume any specific codebase structure when exploring for context.
+    It uses Glob, Grep, and Read to discover relevant files. The eigen spec CLI commands
+    (eigen spec new, eigen spec change, eigen spec project, eigen spec validate) are
+    retained — these are the framework tooling, not the target codebase.
 behavior: ""
 dependencies:
     - feature description (input)
@@ -21,4 +21,4 @@ technology:
     Output: changes/*.yaml files + spec.yaml (eigen-spec format)
     Tools: Glob, Grep, Read, Bash (for eigen spec project), Git
 last_change: ""
-changes_count: 2
+changes_count: 3

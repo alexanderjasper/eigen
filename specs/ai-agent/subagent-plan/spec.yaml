@@ -5,9 +5,10 @@ owner: alexander
 title: plan-subagent — designs implementation strategy based on approved spec
 status: ""
 description: |-
-    Clarify that plan-subagent writes the plan.md file to .claude/plans/<branch>/plan.md
-    (or similar persistent location accessible to compile-subagent). The file is committed
-    with the plan(...) commit. Compile-subagent reads from this file path when invoked.
+    plan-agent must not assume any specific codebase structure, framework, language,
+    or build system. It discovers the codebase by using Glob, Grep, and Read to find
+    relevant files and understand conventions. Build commands are discovered from the
+    project (Makefile, package.json, go.mod, etc.) rather than hardcoded.
 behavior: ""
 dependencies:
     - approved spec (spec.yaml + changes/)
@@ -19,4 +20,4 @@ technology:
     Output: markdown file (e.g., plan.md in .claude/ or feature branch)
     Tools: Glob, Grep, Read, Bash, Git
 last_change: ""
-changes_count: 2
+changes_count: 3
