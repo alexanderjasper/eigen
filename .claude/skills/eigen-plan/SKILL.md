@@ -12,7 +12,7 @@ Plan the implementation of a spec for the eigen project.
 
 1. **Read the spec**: `specs/<module-path>/spec.yaml` — this is the source of truth.
 
-2. **Read recent events**: the latest event file(s) in `specs/<module-path>/events/` for context on what changed and why.
+2. **Read recent changes**: the latest change file(s) in `specs/<module-path>/changes/` for context on what changed and why.
 
 3. **Explore existing patterns**: look at `eigen/cmd/` (cobra command files) and `eigen/internal/` (spec, storage packages) to understand what to reuse.
 

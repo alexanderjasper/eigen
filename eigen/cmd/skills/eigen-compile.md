@@ -12,7 +12,7 @@ Compile a spec into code for the eigen project. Specs are the source of truth â€
 
 1. **Read the spec**: `specs/<module-path>/spec.yaml`. This defines correctness.
 
-2. **Read recent events**: `specs/<module-path>/events/` for context on the change.
+2. **Read recent changes**: `specs/<module-path>/changes/` for context on the change.
 
 3. **Explore the codebase**: understand existing patterns in `eigen/cmd/` and `eigen/internal/` before writing anything.
 

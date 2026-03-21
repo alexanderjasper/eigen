@@ -1,9 +1,9 @@
 ---
 name: eigen-spec
-description: Spec a feature by authoring events across one or more eigen modules
+description: Spec a feature by authoring changes across one or more eigen modules
 ---
 
-Spec a change for the eigen project. This could be a small single-event tweak to one module, or a large feature spanning multiple new and existing modules. Scale your effort to the scope — don't over-engineer a one-line fix, but don't under-spec a major feature.
+Spec a change for the eigen project. This could be a small single-change tweak to one module, or a large feature spanning multiple new and existing modules. Scale your effort to the scope — don't over-engineer a one-line fix, but don't under-spec a major feature.
 
 ## Arguments
 `/eigen-spec [description]`
@@ -16,7 +16,7 @@ If the description is missing or too vague to proceed, ask the user what they wa
 
 2. **Survey existing specs**: run `eigen spec list` and read the relevant `spec.yaml` files to understand current state before making changes. Skip modules that clearly aren't affected.
 
-3. **Plan the spec changes**: decide which modules to create/update and what each event should contain. Think like an architect — the spec tree should reflect how a human thinks about the system, not how the code is structured. For a small change this is just one event in one module.
+3. **Plan the spec changes**: decide which modules to create/update and what each change should contain. Think like an architect — the spec tree should reflect how a human thinks about the system, not how the code is structured. For a small change this is just one change in one module.
 
 4. **For each new module**:
    - `eigen spec new <module-path>` to scaffold it
@@ -24,7 +24,7 @@ If the description is missing or too vague to proceed, ask the user what they wa
    - `eigen spec project <module-path>` to write spec.yaml
 
 5. **For each existing module being updated**:
-   - `eigen spec event <module-path>` to generate the next event template (prints path)
+   - `eigen spec change <module-path>` to generate the next change template (prints path)
    - Edit the template — include only the fields that are changing
    - `eigen spec project <module-path>` to reproject
 
@@ -32,8 +32,8 @@ If the description is missing or too vague to proceed, ask the user what they wa
 
 7. **Commit**: one commit per logical spec unit: `spec(<module>): <summary>`
 
-## Event file guidelines
-- `summary`: one-line description of this event's change
+## Change file guidelines
+- `summary`: one-line description of this change's modification
 - `reason`: *why* this change is being made — motivation, not restatement
 - `type`: `created`, `updated`, or `removed`
 - `changes`: only fields that are actually changing. Never include fields identical to current state.
@@ -42,4 +42,4 @@ If the description is missing or too vague to proceed, ask the user what they wa
 ## Scope guidelines
 - New top-level domain? Create a parent module first, then sub-modules
 - Cross-module contracts (dependencies)? Update the `dependencies` field
-- One event = one logical change; don't bundle unrelated changes into a single event
+- One change = one logical modification; don't bundle unrelated changes into a single change
