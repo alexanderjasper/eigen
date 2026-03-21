@@ -1,0 +1,32 @@
+id: chg-005
+sequence: 5
+timestamp: 2026-03-21T11:30:24Z
+author: alexander
+type: updated
+summary: Remove eigen-plan reference; update legacy skill names to eigen-change-spec and eigen-change-compile
+reason: |
+  eigen-plan no longer exists — its role is fully covered by the eigen-change Phase 2 plan workflow.
+  The remaining standalone skills have been renamed: eigen-spec → eigen-change-spec,
+  eigen-change-compile → eigen-change-compile. The SKILL.md notes section still references
+  the old names and eigen-plan, which would mislead users or agents reading the skill file.
+  Updating the description ensures the spec stays authoritative and accurately reflects
+  the current set of available companion skills.
+changes:
+  description: |-
+    Refine the feedback loop: when user rejects output at any phase and provides feedback,
+    the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
+    runs `eigen spec project` to update spec.yaml, commits the change, THEN re-runs the failed phase.
+    This ensures the spec grows to capture all requirements and feedback — a fresh planning or
+    compile agent could run from spec alone and produce the correct output without needing
+    conversation context.
+
+    Companion standalone skills: eigen-change-spec (invokes spec-agent directly) and
+    eigen-change-compile (invokes compile-agent directly) are available for manual phase
+    invocation. eigen-plan has been removed; plan phase is owned by eigen-change.
+  acceptance_criteria:
+    - id: AC-005
+      description: |-
+        Skill handles all Agent tool invocation, approval prompts, feedback loops, and branch
+        creation/management. User only needs to invoke once with a description.
+        Companion skills eigen-change-spec and eigen-change-compile are available for manual
+        use; eigen-plan no longer exists.
