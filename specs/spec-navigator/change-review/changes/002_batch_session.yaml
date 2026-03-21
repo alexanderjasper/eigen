@@ -1,0 +1,38 @@
+id: chg-002
+sequence: 2
+timestamp: "2026-03-21T00:00:00Z"
+author: alexander
+type: updated
+summary: Implement batch-session model diverging from single-change-file spec
+reason: |
+    The approved spec described a single-change-file model where POST /api/reviews
+    accepts a single change_id + change_yaml and returns {"review_id":"<change-id>"}.
+    The implementation adopts a batch model so that all change files produced in one
+    spec phase are grouped into a single review session, reducing the number of
+    browser interactions per eigen-change invocation.
+status: compiled
+changes:
+    behavior: |
+        POST /api/reviews now accepts a batch request body:
+          { "module_path": string, "changes": [ { "change_id", "file_path", "change_yaml" } ] }
+        Response: 201 Created with body { "session_id": "<uuid>" }.
+        The session_id is a server-generated UUID (not the caller-supplied change_id).
+        No 409 Conflict on duplicate: each POST creates a new independent session.
+
+        GET /api/reviews/<session-id> returns the session state keyed by session_id.
+          Response fields: session_id, module_path, changes (array), status, decision,
+          change_comments (map keyed by change_id). Otherwise unchanged.
+
+        POST /api/reviews/<session-id>/submit body is:
+          { "decision": "approved" | "rejected", "change_comments": { "<change_id>": "<comment>" } }
+        (replaces the single "comments" string with a per-change map)
+
+        GET /api/reviews/pending (new endpoint) returns { "session_id": "<uuid>" } for
+        the first pending session, or 204 No Content when none exist. The UI polls this
+        endpoint to discover new sessions without knowing session IDs in advance.
+    technology:
+        Endpoints: POST /api/reviews, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit, GET /api/reviews/pending
+        SessionID: server-generated UUID (crypto/rand)
+        SessionStorage: in-memory only (no disk persistence)
+        DecisionValues: approved, rejected
+        PollingInterval: 3 seconds
