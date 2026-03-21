@@ -104,7 +104,7 @@ Eigen is designed for teams of 10–50 engineers working on software that spans 
 - **Specification ownership**: Modules have owners. Changes to a module require review from its owner.
 - **Cross-module contracts**: When one module depends on behavior defined in another, that dependency is explicit in the specification — not inferred from the code.
 - **Parallel compilation**: Independent modules can be compiled in parallel. The specification hierarchy defines the dependency graph that makes this safe.
-- **Conflict detection**: If two pending change events affect overlapping parts of the specification, this is a merge conflict at the spec level, resolved before compilation begins.
+- **Conflict detection**: If two pending changes affect overlapping parts of the specification, this is a merge conflict at the spec level, resolved before compilation begins.
 
 ---
 
@@ -189,7 +189,7 @@ After this step you have a reviewed, validated spec. That is the human review ch
 /eigen-plan <module-path>
 ```
 
-Claude reads the spec and recent events, explores the existing codebase, and produces a detailed implementation plan mapped to each acceptance criterion. No code is written yet.
+Claude reads the spec and recent changes, explores the existing codebase, and produces a detailed implementation plan mapped to each acceptance criterion. No code is written yet.
 
 Use this step when the change is non-trivial and you want to align on approach before compilation begins.
 
