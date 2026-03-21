@@ -37,6 +37,7 @@ type Change struct {
 	Type      string    `yaml:"type"      json:"type"` // created | updated | deprecated
 	Summary   string    `yaml:"summary"   json:"summary"`
 	Reason    string    `yaml:"reason"    json:"reason"`
+	Status    string    `yaml:"status,omitempty" json:"status,omitempty"`
 	Changes   ChangeSet `yaml:"changes"   json:"changes"`
 }
 
