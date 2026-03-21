@@ -1,8 +1,8 @@
 id: ai-agent/skill-change
 domain: ai-agent
 module: skill-change
-owner: ""
-title: ""
+owner: alexander
+title: Unified `change` skill — orchestrates spec → plan → compile workflow
 status: ""
 description: |-
     Refine the feedback loop: when user rejects output at any phase and provides feedback,
@@ -13,6 +13,76 @@ description: |-
     conversation context.
 behavior: ""
 acceptance_criteria:
+    - id: AC-001
+      description: |-
+        `change` skill can be invoked with feature description and optional short-name hint.
+        Skill creates feature branch and calls spec-subagent with the description.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-002
+      description: |-
+        After spec-subagent finishes, outputs are written to specs/ (changes/ + spec.yaml).
+        User can review via `git diff`. Approval prompt asks yes/no. On yes, progress to planning.
+        On no, user provides feedback comments, spec-subagent re-runs with feedback as context.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-003
+      description: |-
+        Phase 2 — Plan — runs as follows:
+        (1) eigen-change launches plan-agent (read-only subagent) with SPEC_PATH, MODULE_PATH,
+            and BRANCH. plan-agent explores the codebase and returns a comprehensive draft plan
+            as text output. plan-agent does NOT enter plan mode or write any files.
+        (2) eigen-change (main conversation) calls EnterPlanMode, presenting the draft plan
+            text to the user via the plan mode UI.
+        (3) User reviews the plan in plan mode UI and either approves or comments/rejects.
+        (4) eigen-change calls ExitPlanMode to collect approval status.
+        (5) On approval: eigen-change writes the plan to `.claude/plans/<BRANCH>/plan.md`,
+            commits `plan(<module>): <summary>`, and proceeds to Phase 3.
+        (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
+            Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
+            step (1).
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-004
+      description: |-
+        After plan approval, compile-subagent is called with access to approved plan and codebase.
+        Implements code, makes small atomic commits. After completion, user can review diff,
+        approve final result.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-005
+      description: |-
+        Skill handles all Agent tool invocation, approval prompts, feedback loops, and branch
+        creation/management. User only needs to invoke once with a description.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-006
+      description: |-
+        On rejection at any phase: (1) collect user feedback via AskUserQuestion,
+        (2) launch spec-agent with feedback to write changes/*.yaml update,
+        (3) commit spec(...) change, (4) re-run the failed phase using updated spec.yaml
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-007
+      description: |-
+        Plan-subagent writes plan.md as a persistent file artifact to .claude/plans/<branch>/plan.md
+        (not just conversation output). Compile-subagent reads from this file.
+      given: ""
+      when: ""
+      then: ""
+    - id: AC-008
+      description: |-
+        Agents are defined as `.claude/agents/<name>.md` files with frontmatter name: field
+        matching subagent_type invocations (spec-agent, plan-agent, compile-agent).
+      given: ""
+      when: ""
+      then: ""
     - id: AC-009
       description: |-
         Spec module naming convention: module paths use domain-based identifiers
@@ -36,24 +106,6 @@ acceptance_criteria:
       given: ""
       when: ""
       then: ""
-    - id: AC-003
-      description: |-
-        Phase 2 — Plan — runs as follows:
-        (1) eigen-change launches plan-agent (read-only subagent) with SPEC_PATH, MODULE_PATH,
-            and BRANCH. plan-agent explores the codebase and returns a comprehensive draft plan
-            as text output. plan-agent does NOT enter plan mode or write any files.
-        (2) eigen-change (main conversation) calls EnterPlanMode, presenting the draft plan
-            text to the user via the plan mode UI.
-        (3) User reviews the plan in plan mode UI and either approves or comments/rejects.
-        (4) eigen-change calls ExitPlanMode to collect approval status.
-        (5) On approval: eigen-change writes the plan to `.claude/plans/<BRANCH>/plan.md`,
-            commits `plan(<module>): <summary>`, and proceeds to Phase 3.
-        (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
-            Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
-            step (1).
-      given: ""
-      when: ""
-      then: ""
     - id: AC-011
       description: |-
         plan-agent subagent is strictly read-only during Phase 2: it uses only Glob, Grep,
@@ -72,7 +124,18 @@ acceptance_criteria:
       given: ""
       when: ""
       then: ""
-dependencies: []
-technology: {}
-last_change: chg-001
+dependencies:
+    - Agent tool (with subagent_type parameter)
+    - spec-subagent definition
+    - plan-subagent definition
+    - compile-subagent definition
+    - Integration with .claude/skills/ infrastructure
+technology:
+    AgentTypes: spec-subagent, plan-subagent, compile-subagent
+    Invocation: /change "feature description" [--short-name "name"]
+    OutputFormats: |-
+        Specs: changes/*.yaml + spec.yaml (eigen-spec format)
+        Plans: markdown file
+        Code: git commits
+last_change: ""
 changes_count: 4
