@@ -12,7 +12,7 @@ changes:
     This ensures the spec grows to capture all requirements and feedback — a fresh planning or
     compile agent could run from spec alone and produce the correct output without needing
     conversation context.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-006
       description: |-
         On rejection at any phase: (1) collect user feedback via AskUserQuestion,

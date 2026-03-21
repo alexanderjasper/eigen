@@ -17,7 +17,7 @@ changes:
     After each phase, outputs are written to filesystem for user review via git diff/editor,
     user approves via yes/no prompt. If rejected, user provides feedback and the phase re-runs.
     Each phase produces small atomic commits.
-  acceptanceCriteria:
+  acceptance_criteria:
     - id: AC-001
       description: |-
         `change` skill can be invoked with feature description and optional short-name hint.
