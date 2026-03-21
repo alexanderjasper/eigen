@@ -13,39 +13,23 @@ description: |
     (approved or rejected with optional comments), at which point the skill
     reads the result and continues the workflow.
 behavior: |
-    POST /api/reviews creates a new review session.
-      Request body: JSON with fields change_id (string), module_path (string),
-      and change_yaml (string — the raw YAML content of the change file).
-      Response: 201 Created with JSON body { "review_id": "<change-id>" }.
-      The server stores the session in memory keyed by change_id. If a session
-      for that change_id already exists the server returns 409 Conflict.
+    POST /api/reviews now accepts a batch request body:
+      { "module_path": string, "changes": [ { "change_id", "file_path", "change_yaml" } ] }
+    Response: 201 Created with body { "session_id": "<uuid>" }.
+    The session_id is a server-generated UUID (not the caller-supplied change_id).
+    No 409 Conflict on duplicate: each POST creates a new independent session.
 
-    GET /api/reviews/<change-id> returns the current state of a review session.
-      Response fields: review_id (string), status ("pending" | "submitted"),
-      decision ("" | "approved" | "rejected"), comments (string, may be empty).
-      While the reviewer has not yet acted, status is "pending". Once the
-      reviewer submits, status becomes "submitted".
-      Returns 404 if no session exists for the given change_id.
+    GET /api/reviews/<session-id> returns the session state keyed by session_id.
+      Response fields: session_id, module_path, changes (array), status, decision,
+      change_comments (map keyed by change_id). Otherwise unchanged.
 
-    The spec-navigator UI renders an active review panel when a pending session
-    exists. The panel shows the change YAML with syntax highlighting. The
-    reviewer clicks Approve or Reject (with an optional comment text field),
-    which issues a POST /api/reviews/<change-id>/submit with JSON body
-    { "decision": "approved" | "rejected", "comments": "<string>" }.
-    After submission the panel shows a confirmation and the session status
-    transitions to "submitted".
+    POST /api/reviews/<session-id>/submit body is:
+      { "decision": "approved" | "rejected", "change_comments": { "<change_id>": "<comment>" } }
+    (replaces the single "comments" string with a per-change map)
 
-    eigen-change polls GET /api/reviews/<change-id> every 3 seconds. When
-    status becomes "submitted" it reads the decision field:
-      - "approved": proceed to the compile phase.
-      - "rejected": collect comments, run the spec feedback loop
-        (spec-agent writes a new change file), then restart from the spec phase.
-    Polling stops as soon as status is "submitted"; eigen-change does not
-    continue polling after receiving a submitted response.
-
-    Review sessions are held only in memory. They are not persisted to disk and
-    are lost when the server restarts. This is intentional — sessions are
-    short-lived and tied to a single eigen-change invocation.
+    GET /api/reviews/pending (new endpoint) returns { "session_id": "<uuid>" } for
+    the first pending session, or 204 No Content when none exist. The UI polls this
+    endpoint to discover new sessions without knowing session IDs in advance.
 acceptance_criteria:
     - id: AC-001
       description: POST /api/reviews creates a pending review session
@@ -103,8 +87,9 @@ dependencies:
     - ai-agent/skill-change
 technology:
     DecisionValues: approved, rejected
-    Endpoints: POST /api/reviews, GET /api/reviews/<change-id>, POST /api/reviews/<change-id>/submit
+    Endpoints: POST /api/reviews, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit, GET /api/reviews/pending
     PollingInterval: 3 seconds
+    SessionID: server-generated UUID (crypto/rand)
     SessionStorage: in-memory only (no disk persistence)
-last_change: chg-001
-changes_count: 1
+last_change: chg-002
+changes_count: 2
