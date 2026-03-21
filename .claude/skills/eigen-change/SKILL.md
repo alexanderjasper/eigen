@@ -42,7 +42,9 @@ Agent(
     Ask the user clarifying questions, explore the codebase, write the spec change files,
     run `eigen spec project <module-path>`, validate, and commit spec(<module>): <summary>.
 
-    When done, report: the spec.yaml path and a one-line summary of what was specced.
+    When done, report: the spec.yaml path, the list of change file paths written (relative
+    to the repo root, e.g. specs/<module-path>/changes/001_initial.yaml), and a one-line
+    summary of what was specced.
 )
 ```
 
@@ -53,6 +55,11 @@ After the agent completes:
    - Question: "Approve the spec?"
    - Options: "Approve" (proceed to Phase 2), "Reject" (provide feedback to refine)
    - If rejected, prompt for feedback text via a follow-up AskUserQuestion, then run **Spec Feedback Loop** below, then re-show approval.
+3. On approval, for each change file reported by spec-agent, run:
+   ```bash
+   eigen spec change-status <module-path> <filename> approved
+   ```
+   Then commit: `chore(<module>): approve spec changes`
 
 ### Spec Feedback Loop
 
@@ -129,6 +136,10 @@ Agent(
     Build with `cd eigen && go build ./...`.
     Verify each acceptance criterion.
     Commit atomically: feat(<domain>): implement <title>.
+
+    Only compile changes whose status is `approved`; skip draft and compiled changes.
+    After successful build and commit, run `eigen spec change-status <module-path> <filename> compiled`
+    for each compiled change file, then commit: `chore(<module>): mark changes compiled`.
 
     If spec or plan is ambiguous, stop and report — do not guess.
     Report what was implemented and any deviations from the plan when done.
