@@ -1,0 +1,117 @@
+id: chg-001
+sequence: 1
+timestamp: "2026-03-21T12:58:27Z"
+author: alexander
+type: created
+summary: Initial spec for change-review — HTTP review handoff and polling flow
+reason: |
+    The eigen-change skill needs a way to hand off a newly written change file to
+    a human reviewer (the spec-navigator UI) and then block until the reviewer
+    submits their decision. A dedicated sub-module cleanly separates this
+    request/response review contract from the general module-listing API.
+changes:
+    title: Change Review
+    owner: eigen
+    status: draft
+    description: |
+        spec-navigator/change-review defines the HTTP API and server-side session
+        management for the change-file review handoff. When eigen-change finishes
+        writing a spec change, it POSTs the change to the navigator, which creates
+        a review session and exposes it in the browser UI. The skill then polls
+        GET /api/reviews/<change-id> until the reviewer submits their decision
+        (approved or rejected with optional comments), at which point the skill
+        reads the result and continues the workflow.
+    behavior: |
+        POST /api/reviews creates a new review session.
+          Request body: JSON with fields change_id (string), module_path (string),
+          and change_yaml (string — the raw YAML content of the change file).
+          Response: 201 Created with JSON body { "review_id": "<change-id>" }.
+          The server stores the session in memory keyed by change_id. If a session
+          for that change_id already exists the server returns 409 Conflict.
+
+        GET /api/reviews/<change-id> returns the current state of a review session.
+          Response fields: review_id (string), status ("pending" | "submitted"),
+          decision ("" | "approved" | "rejected"), comments (string, may be empty).
+          While the reviewer has not yet acted, status is "pending". Once the
+          reviewer submits, status becomes "submitted".
+          Returns 404 if no session exists for the given change_id.
+
+        The spec-navigator UI renders an active review panel when a pending session
+        exists. The panel shows the change YAML with syntax highlighting. The
+        reviewer clicks Approve or Reject (with an optional comment text field),
+        which issues a POST /api/reviews/<change-id>/submit with JSON body
+        { "decision": "approved" | "rejected", "comments": "<string>" }.
+        After submission the panel shows a confirmation and the session status
+        transitions to "submitted".
+
+        eigen-change polls GET /api/reviews/<change-id> every 3 seconds. When
+        status becomes "submitted" it reads the decision field:
+          - "approved": proceed to the compile phase.
+          - "rejected": collect comments, run the spec feedback loop
+            (spec-agent writes a new change file), then restart from the spec phase.
+        Polling stops as soon as status is "submitted"; eigen-change does not
+        continue polling after receiving a submitted response.
+
+        Review sessions are held only in memory. They are not persisted to disk and
+        are lost when the server restarts. This is intentional — sessions are
+        short-lived and tied to a single eigen-change invocation.
+    acceptance_criteria:
+        - id: AC-001
+          description: POST /api/reviews creates a pending review session
+          given: eigen-change POSTs a new review with change_id "chg-003", module_path "spec-cli/cmd-new", and change_yaml content
+          when: POST /api/reviews is received
+          then: server responds 201 with body {"review_id":"chg-003"} and internally stores a session with status "pending"
+        - id: AC-002
+          description: GET /api/reviews/<change-id> returns pending status before submission
+          given: a review session for "chg-003" was created and the reviewer has not yet acted
+          when: GET /api/reviews/chg-003 is requested
+          then: response is 200 with status "pending", decision "", comments ""
+        - id: AC-003
+          description: reviewer submits approval via POST /api/reviews/<change-id>/submit
+          given: a pending review session for "chg-003" exists
+          when: POST /api/reviews/chg-003/submit is sent with {"decision":"approved","comments":""}
+          then: response is 200; subsequent GET /api/reviews/chg-003 returns status "submitted", decision "approved"
+        - id: AC-004
+          description: reviewer submits rejection with comments
+          given: a pending review session for "chg-003" exists
+          when: POST /api/reviews/chg-003/submit is sent with {"decision":"rejected","comments":"needs clearer AC"}
+          then: subsequent GET /api/reviews/chg-003 returns status "submitted", decision "rejected", comments "needs clearer AC"
+        - id: AC-005
+          description: eigen-change polls until status is submitted
+          given: eigen-change created a review session and polls every 3 seconds
+          when: the reviewer submits after 9 seconds
+          then: eigen-change detects the submitted status on the next poll and stops polling
+        - id: AC-006
+          description: GET for unknown change-id returns 404
+          given: no review session exists for "chg-999"
+          when: GET /api/reviews/chg-999 is requested
+          then: response is 404 with JSON error body
+        - id: AC-007
+          description: duplicate POST for same change-id returns 409
+          given: a review session for "chg-003" already exists
+          when: POST /api/reviews is sent again with change_id "chg-003"
+          then: response is 409 Conflict
+        - id: AC-008
+          description: approved decision causes eigen-change to proceed to compile
+          given: eigen-change is polling and receives status "submitted" with decision "approved"
+          when: the poll result is read
+          then: eigen-change proceeds to the compile phase without asking the user an additional question
+        - id: AC-009
+          description: rejected decision causes eigen-change to run the spec feedback loop
+          given: eigen-change is polling and receives status "submitted" with decision "rejected" and non-empty comments
+          when: the poll result is read
+          then: eigen-change uses the comments as feedback, invokes spec-agent to write a new change file, then restarts the spec phase
+        - id: AC-010
+          description: review panel is visible in the UI for pending sessions
+          given: a pending review session exists
+          when: the spec-navigator UI is open
+          then: an active review panel is displayed showing the change YAML; Approve and Reject buttons are present
+    dependencies:
+        - spec-navigator/api
+        - spec-navigator/ui
+        - ai-agent/skill-change
+    technology:
+        Endpoints: "POST /api/reviews, GET /api/reviews/<change-id>, POST /api/reviews/<change-id>/submit"
+        PollingInterval: 3 seconds
+        SessionStorage: in-memory only (no disk persistence)
+        DecisionValues: approved, rejected

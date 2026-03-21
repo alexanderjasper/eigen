@@ -44,6 +44,7 @@ acceptance_criteria:
 dependencies:
     - spec-navigator/api
     - spec-navigator/ui
+    - spec-navigator/change-review
 technology: {}
-last_change: chg-001
-changes_count: 1
+last_change: chg-002
+changes_count: 2
