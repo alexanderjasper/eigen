@@ -117,6 +117,45 @@ func ReadSpec(specsRoot, path string) (spec.SpecModule, error) {
 	return s, nil
 }
 
+// SetChangeStatus reads a change file by filename, sets its Status field, and writes it back.
+func SetChangeStatus(specsRoot, modulePath, filename, status string) error {
+	dir := ChangesPath(specsRoot, modulePath)
+	path := filepath.Join(dir, filename)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("reading change file %s: %w", filename, err)
+	}
+	var ch spec.Change
+	if err := yaml.Unmarshal(data, &ch); err != nil {
+		return fmt.Errorf("parsing change file %s: %w", filename, err)
+	}
+	ch.Status = status
+	out, err := yaml.Marshal(ch)
+	if err != nil {
+		return fmt.Errorf("marshaling change file %s: %w", filename, err)
+	}
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		return fmt.Errorf("writing change file %s: %w", filename, err)
+	}
+	return nil
+}
+
+// FilterChangesByStatus returns changes whose effective status matches the given status.
+// An absent (empty string) status is treated as "draft" (AC-006).
+func FilterChangesByStatus(changes []spec.Change, status string) []spec.Change {
+	var out []spec.Change
+	for _, ch := range changes {
+		effective := ch.Status
+		if effective == "" {
+			effective = "draft"
+		}
+		if effective == status {
+			out = append(out, ch)
+		}
+	}
+	return out
+}
+
 // WalkModules returns all ModuleRefs found under specsRoot at arbitrary depth.
 // A directory is a module if it contains a changes/ subdirectory.
 // An optional prefix filters results to paths that start with the given prefix.
