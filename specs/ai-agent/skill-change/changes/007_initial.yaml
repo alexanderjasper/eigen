@@ -1,48 +1,55 @@
 id: chg-007
 sequence: 7
-timestamp: 2026-03-21T13:23:19Z
+timestamp: "2026-03-21T13:23:19Z"
 author: alexander
 type: updated
 summary: Defer spec commit until after approval — orchestrator commits, not spec-agent
 reason: |
-  Currently spec-agent commits the spec files immediately after writing them, before
-  the user has reviewed and approved them via the review UI. This means rejected specs
-  produce dangling commits that must be amended or reverted. The new behavior splits
-  responsibility clearly: spec-agent writes and validates change files but makes no
-  git commits; eigen-change (the orchestrator) commits the spec files only after the
-  review UI returns "approved". This keeps the commit history clean and ensures every
-  spec commit in git represents an approved state.
+    Currently spec-agent commits the spec files immediately after writing them, before
+    the user has reviewed and approved them via the review UI. This means rejected specs
+    produce dangling commits that must be amended or reverted. The new behavior splits
+    responsibility clearly: spec-agent writes and validates change files but makes no
+    git commits; eigen-change (the orchestrator) commits the spec files only after the
+    review UI returns "approved". This keeps the commit history clean and ensures every
+    spec commit in git represents an approved state.
+status: approved
 changes:
-  description: |-
-    Refine the feedback loop: when user rejects output at any phase and provides feedback,
-    the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
-    runs `eigen spec project` to update spec.yaml, commits the change, THEN re-runs the failed phase.
-    This ensures the spec grows to capture all requirements and feedback — a fresh planning or
-    compile agent could run from spec alone and produce the correct output without needing
-    conversation context.
+    description: |-
+        Refine the feedback loop: when user rejects output at any phase and provides feedback,
+        the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
+        runs `eigen spec project` to update spec.yaml, commits the change, THEN re-runs the failed phase.
+        This ensures the spec grows to capture all requirements and feedback — a fresh planning or
+        compile agent could run from spec alone and produce the correct output without needing
+        conversation context.
 
-    Companion standalone skills: eigen-change-spec (invokes spec-agent directly) and
-    eigen-change-compile (invokes compile-agent directly) are available for manual phase
-    invocation. eigen-plan has been removed; plan phase is owned by eigen-change.
+        Companion standalone skills: eigen-change-spec (invokes spec-agent directly) and
+        eigen-change-compile (invokes compile-agent directly) are available for manual phase
+        invocation. eigen-plan has been removed; plan phase is owned by eigen-change.
 
-    Spec commit ownership: spec-agent writes and validates change files but does NOT commit.
-    eigen-change commits the spec files after the review UI approves them. On feedback
-    rejection, eigen-change commits the feedback change file after the next spec-agent run
-    completes.
-  acceptance_criteria:
-    - id: AC-002
-      description: |-
-        After spec-agent finishes writing change files and running `eigen spec project`,
-        outputs are written to specs/ (changes/ + spec.yaml) but NOT yet committed.
-        eigen-change posts the changes to the review API and waits for browser approval.
-        On approval: eigen-change commits the spec files with `spec(<module>): <summary>`,
-        then marks changes approved and commits `chore(<module>): approve spec changes`.
-        On rejection: eigen-change runs the Spec Feedback Loop; spec-agent writes the
-        feedback change file (no commit); eigen-change commits all pending spec files
-        after the next approval.
-    - id: AC-006
-      description: |-
-        On rejection at any phase: (1) collect user feedback via AskUserQuestion,
-        (2) launch spec-agent with feedback to write changes/*.yaml update (no commit),
-        (3) eigen-change commits all uncommitted spec files with spec(<module>): incorporate
-        feedback on <aspect>, (4) re-run the failed phase using updated spec.yaml.
+        Spec commit ownership: spec-agent writes and validates change files but does NOT commit.
+        eigen-change commits the spec files after the review UI approves them. On feedback
+        rejection, eigen-change commits the feedback change file after the next spec-agent run
+        completes.
+    acceptance_criteria:
+        - id: AC-002
+          description: |-
+            After spec-agent finishes writing change files and running `eigen spec project`,
+            outputs are written to specs/ (changes/ + spec.yaml) but NOT yet committed.
+            eigen-change posts the changes to the review API and waits for browser approval.
+            On approval: eigen-change commits the spec files with `spec(<module>): <summary>`,
+            then marks changes approved and commits `chore(<module>): approve spec changes`.
+            On rejection: eigen-change runs the Spec Feedback Loop; spec-agent writes the
+            feedback change file (no commit); eigen-change commits all pending spec files
+            after the next approval.
+          given: ""
+          when: ""
+          then: ""
+        - id: AC-006
+          description: |-
+            On rejection at any phase: (1) collect user feedback via AskUserQuestion,
+            (2) launch spec-agent with feedback to write changes/*.yaml update (no commit),
+            (3) eigen-change commits all uncommitted spec files with spec(<module>): incorporate
+            feedback on <aspect>, (4) re-run the failed phase using updated spec.yaml.
+          given: ""
+          when: ""
+          then: ""
