@@ -72,24 +72,24 @@ func moduleDetailHandler(specsRoot string) http.HandlerFunc {
 	}
 }
 
-func moduleEventsHandler(specsRoot string) http.HandlerFunc {
+func moduleChangesHandler(specsRoot string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := modulePath(r)
-		events, err := storage.ReadEvents(specsRoot, path)
+		changes, err := storage.ReadChanges(specsRoot, path)
 		if err != nil {
-			jsonError(w, "events not found: "+err.Error(), http.StatusNotFound)
+			jsonError(w, "changes not found: "+err.Error(), http.StatusNotFound)
 			return
 		}
-		writeJSON(w, events)
+		writeJSON(w, changes)
 	}
 }
 
-// modulePath extracts the module path from /api/modules/<path> or /api/modules/<path>/events.
+// modulePath extracts the module path from /api/modules/<path> or /api/modules/<path>/changes.
 func modulePath(r *http.Request) string {
 	// Strip leading /api/modules/
 	p := strings.TrimPrefix(r.URL.Path, "/api/modules/")
-	// Strip trailing /events
-	p = strings.TrimSuffix(p, "/events")
+	// Strip trailing /changes
+	p = strings.TrimSuffix(p, "/changes")
 	return p
 }
 

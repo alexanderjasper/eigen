@@ -16,7 +16,7 @@ func init() {
 
 var specProjectCmd = &cobra.Command{
 	Use:   "project [path]",
-	Short: "Reproject spec.yaml from events",
+	Short: "Reproject spec.yaml from changes",
 	Long:  "Recompute and overwrite spec.yaml for one module (or all modules when no path is given).",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runSpecProject,
@@ -39,21 +39,26 @@ func runSpecProject(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// reprojectModule reads all events for path, validates for no-op changes,
+// reprojectModule reads all changes for path, validates for no-op changes,
 // projects, and writes spec.yaml.
 func reprojectModule(path string) error {
-	events, err := storage.ReadEvents(specsRoot, path)
+	changes, err := storage.ReadChanges(specsRoot, path)
 	if err != nil {
-		return fmt.Errorf("reading events for %s: %w", path, err)
+		return fmt.Errorf("reading changes for %s: %w", path, err)
 	}
-	if errs := spec.ValidateEventLog(path, events); len(errs) > 0 {
+	// Convert []Change to []*Change
+	changePtrs := make([]*spec.Change, len(changes))
+	for i := range changes {
+		changePtrs[i] = &changes[i]
+	}
+	if errs := spec.ValidateEventLog(path, changePtrs); len(errs) > 0 {
 		var msgs []string
 		for _, e := range errs {
 			msgs = append(msgs, "  "+e.Error())
 		}
 		return fmt.Errorf("no-op changes detected in %s:\n%s", path, strings.Join(msgs, "\n"))
 	}
-	s := spec.Project(path, events)
+	s := spec.Project(path, changePtrs)
 	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml for %s: %w", path, err)
 	}

@@ -71,31 +71,31 @@ func Validate(s SpecModule, specsRoot string) []ValidationError {
 	return errs
 }
 
-// ValidateEventLog replays events in order and returns a ValidationError for each
-// field in a changeset that is identical to the spec state just before that event.
+// ValidateEventLog replays changes in order and returns a ValidationError for each
+// field in a changeset that is identical to the spec state just before that change.
 // path is passed through to Project for the initial state.
-func ValidateEventLog(path string, events []ChangeEvent) []ValidationError {
+func ValidateEventLog(path string, changes []*Change) []ValidationError {
 	var errs []ValidationError
 	current := SpecModule{Dependencies: []string{}, Technology: map[string]string{}}
-	for _, ev := range events {
-		for _, e := range ValidateChanges(current, ev.Changes) {
+	for _, ch := range changes {
+		for _, e := range ValidateChanges(current, ch.Changes) {
 			errs = append(errs, ValidationError{
-				Field:   fmt.Sprintf("event %s: %s", ev.ID, e.Field),
+				Field:   fmt.Sprintf("event %s: %s", ch.ID, e.Field),
 				Message: e.Message,
 			})
 		}
-		current = Project(path, events[:indexOf(events, ev)+1])
+		current = Project(path, changes[:indexOf(changes, *ch)+1])
 	}
 	return errs
 }
 
-func indexOf(events []ChangeEvent, target ChangeEvent) int {
-	for i, ev := range events {
-		if ev.ID == target.ID && ev.Sequence == target.Sequence {
+func indexOf(changes []*Change, target Change) int {
+	for i, ch := range changes {
+		if ch.ID == target.ID && ch.Sequence == target.Sequence {
 			return i
 		}
 	}
-	return len(events) - 1
+	return len(changes) - 1
 }
 
 // ValidateChanges checks a ChangeSet against the current SpecModule projection and

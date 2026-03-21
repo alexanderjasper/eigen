@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// Project folds a slice of ChangeEvents into a SpecModule projection.
+// Project folds a slice of Changes into a SpecModule projection.
 // path is the slash-separated path relative to the specs root (e.g. "spec-cli/cmd-new").
-// Events are applied in ascending sequence order.
-func Project(path string, events []ChangeEvent) SpecModule {
-	sorted := make([]ChangeEvent, len(events))
-	copy(sorted, events)
+// Changes are applied in ascending sequence order.
+func Project(path string, changes []*Change) SpecModule {
+	sorted := make([]*Change, len(changes))
+	copy(sorted, changes)
 	sort.Slice(sorted, func(i, j int) bool {
 		return sorted[i].Sequence < sorted[j].Sequence
 	})
@@ -28,42 +28,42 @@ func Project(path string, events []ChangeEvent) SpecModule {
 	acMap := map[string]AcceptanceCriterion{}
 	acOrder := []string{}
 
-	for _, ev := range sorted {
-		c := ev.Changes
+	for _, ch := range sorted {
+		cs := ch.Changes
 
-		if c.Title != "" {
-			s.Title = c.Title
+		if cs.Title != "" {
+			s.Title = cs.Title
 		}
-		if c.Owner != "" {
-			s.Owner = c.Owner
+		if cs.Owner != "" {
+			s.Owner = cs.Owner
 		}
-		if c.Status != "" {
-			s.Status = c.Status
+		if cs.Status != "" {
+			s.Status = cs.Status
 		}
-		if c.Description != "" {
-			s.Description = c.Description
+		if cs.Description != "" {
+			s.Description = cs.Description
 		}
-		if c.Behavior != "" {
-			s.Behavior = c.Behavior
+		if cs.Behavior != "" {
+			s.Behavior = cs.Behavior
 		}
-		if c.Technology != nil {
-			for k, v := range c.Technology {
+		if cs.Technology != nil {
+			for k, v := range cs.Technology {
 				s.Technology[k] = v
 			}
 		}
-		if c.Dependencies != nil {
-			s.Dependencies = c.Dependencies
+		if cs.Dependencies != nil {
+			s.Dependencies = cs.Dependencies
 		}
 
-		for _, ac := range c.AcceptanceCriteria {
+		for _, ac := range cs.AcceptanceCriteria {
 			if _, exists := acMap[ac.ID]; !exists {
 				acOrder = append(acOrder, ac.ID)
 			}
 			acMap[ac.ID] = ac
 		}
 
-		s.LastEvent = ev.ID
-		s.EventsCount++
+		s.LastChange = ch.ID
+		s.ChangesCount++
 	}
 
 	// Build final AC list, excluding removed entries.

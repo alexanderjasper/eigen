@@ -22,9 +22,9 @@ func ModulePath(specsRoot, path string) string {
 	return filepath.Join(specsRoot, filepath.FromSlash(path))
 }
 
-// EventsPath returns the events/ directory for a module.
-func EventsPath(specsRoot, path string) string {
-	return filepath.Join(ModulePath(specsRoot, path), "events")
+// ChangesPath returns the changes/ directory for a module.
+func ChangesPath(specsRoot, path string) string {
+	return filepath.Join(ModulePath(specsRoot, path), "changes")
 }
 
 // SpecPath returns the spec.yaml path for a module.
@@ -32,35 +32,35 @@ func SpecPath(specsRoot, path string) string {
 	return filepath.Join(ModulePath(specsRoot, path), "spec.yaml")
 }
 
-// ReadEvents reads and parses all event YAML files from a module's events/ directory.
-func ReadEvents(specsRoot, path string) ([]spec.ChangeEvent, error) {
-	dir := EventsPath(specsRoot, path)
+// ReadChanges reads and parses all change YAML files from a module's changes/ directory.
+func ReadChanges(specsRoot, path string) ([]spec.Change, error) {
+	dir := ChangesPath(specsRoot, path)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("reading events dir %s: %w", dir, err)
+		return nil, fmt.Errorf("reading changes dir %s: %w", dir, err)
 	}
 
-	var events []spec.ChangeEvent
+	var changes []spec.Change
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".yaml") {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("reading event file %s: %w", e.Name(), err)
+			return nil, fmt.Errorf("reading change file %s: %w", e.Name(), err)
 		}
-		var ev spec.ChangeEvent
-		if err := yaml.Unmarshal(data, &ev); err != nil {
-			return nil, fmt.Errorf("parsing event file %s: %w", e.Name(), err)
+		var ch spec.Change
+		if err := yaml.Unmarshal(data, &ch); err != nil {
+			return nil, fmt.Errorf("parsing change file %s: %w", e.Name(), err)
 		}
-		events = append(events, ev)
+		changes = append(changes, ch)
 	}
 
-	sort.Slice(events, func(i, j int) bool {
-		return events[i].Sequence < events[j].Sequence
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].Sequence < changes[j].Sequence
 	})
 
-	return events, nil
+	return changes, nil
 }
 
 // WriteSpec marshals a SpecModule and writes it to spec.yaml.
@@ -75,30 +75,30 @@ func WriteSpec(specsRoot, path string, s spec.SpecModule) error {
 	return nil
 }
 
-// WriteEvent writes a ChangeEvent to the events/ directory with the given sequence number and slug.
-func WriteEvent(specsRoot, path string, ev spec.ChangeEvent, slug string) error {
-	dir := EventsPath(specsRoot, path)
-	filename := fmt.Sprintf("%03d_%s.yaml", ev.Sequence, slug)
-	data, err := yaml.Marshal(ev)
+// WriteChange writes a Change to the changes/ directory with the given sequence number and slug.
+func WriteChange(specsRoot, path string, ch spec.Change, slug string) error {
+	dir := ChangesPath(specsRoot, path)
+	filename := fmt.Sprintf("%03d_%s.yaml", ch.Sequence, slug)
+	data, err := yaml.Marshal(ch)
 	if err != nil {
-		return fmt.Errorf("marshaling event: %w", err)
+		return fmt.Errorf("marshaling change: %w", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, filename), data, 0644); err != nil {
-		return fmt.Errorf("writing event file: %w", err)
+		return fmt.Errorf("writing change file: %w", err)
 	}
 	return nil
 }
 
-// NextSequence returns the next sequence number for a module's events.
+// NextSequence returns the next sequence number for a module's changes.
 func NextSequence(specsRoot, path string) (int, error) {
-	events, err := ReadEvents(specsRoot, path)
-	if err != nil || len(events) == 0 {
+	changes, err := ReadChanges(specsRoot, path)
+	if err != nil || len(changes) == 0 {
 		return 1, nil
 	}
 	max := 0
-	for _, ev := range events {
-		if ev.Sequence > max {
-			max = ev.Sequence
+	for _, ch := range changes {
+		if ch.Sequence > max {
+			max = ch.Sequence
 		}
 	}
 	return max + 1, nil
@@ -118,7 +118,7 @@ func ReadSpec(specsRoot, path string) (spec.SpecModule, error) {
 }
 
 // WalkModules returns all ModuleRefs found under specsRoot at arbitrary depth.
-// A directory is a module if it contains an events/ subdirectory.
+// A directory is a module if it contains a changes/ subdirectory.
 // An optional prefix filters results to paths that start with the given prefix.
 func WalkModules(specsRoot, prefix string) ([]ModuleRef, error) {
 	var refs []ModuleRef
@@ -138,20 +138,20 @@ func walkDir(specsRoot, dir, prefix string, refs *[]ModuleRef) error {
 		return fmt.Errorf("reading directory %s: %w", dir, err)
 	}
 
-	hasEvents := false
+	hasChanges := false
 	var subdirs []os.DirEntry
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
-		if e.Name() == "events" {
-			hasEvents = true
+		if e.Name() == "changes" {
+			hasChanges = true
 		} else {
 			subdirs = append(subdirs, e)
 		}
 	}
 
-	if hasEvents {
+	if hasChanges {
 		rel, err := filepath.Rel(specsRoot, dir)
 		if err != nil {
 			return err

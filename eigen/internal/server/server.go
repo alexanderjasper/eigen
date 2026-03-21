@@ -20,8 +20,8 @@ func Start(specsRoot string, port int, open bool) error {
 	// JSON API
 	mux.HandleFunc("/api/modules", modulesHandler(specsRoot))
 	mux.HandleFunc("/api/modules/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/events") {
-			moduleEventsHandler(specsRoot)(w, r)
+		if strings.HasSuffix(r.URL.Path, "/changes") {
+			moduleChangesHandler(specsRoot)(w, r)
 		} else {
 			moduleDetailHandler(specsRoot)(w, r)
 		}
