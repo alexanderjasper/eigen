@@ -151,5 +151,5 @@ After compile-agent completes:
 ## Notes
 
 - **Spec is always updated first on rejection**: feedback becomes a new change file in `changes/` before re-running any phase. This ensures the spec stays authoritative — a fresh agent could re-plan or re-implement from spec.yaml alone.
-- **Legacy skills remain**: `/eigen-spec`, `/eigen-plan`, `/eigen-compile` are still available for manual use.
+- **Companion skills**: `/eigen-change-spec` and `/eigen-change-compile` are available for manual phase invocation.
 - **Plan mode UI is preserved**: eigen-change enters plan mode after plan-agent returns the draft, so plan mode UI is presented in the main conversation thread.

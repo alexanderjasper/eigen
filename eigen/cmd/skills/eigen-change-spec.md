@@ -1,12 +1,12 @@
 ---
-name: eigen-spec
-description: Spec a feature by authoring changes across one or more eigen modules
+name: eigen-change-spec
+description: Companion to eigen-change — invoke spec-agent directly to spec a feature
 ---
 
 Spec a change for the eigen project. This could be a small single-change tweak to one module, or a large feature spanning multiple new and existing modules. Scale your effort to the scope — don't over-engineer a one-line fix, but don't under-spec a major feature.
 
 ## Arguments
-`/eigen-spec [description]`
+`/eigen-change-spec [description]`
 
 If the description is missing or too vague to proceed, ask the user what they want to build and why.
 
