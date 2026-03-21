@@ -1,0 +1,17 @@
+id: chg-003
+sequence: 3
+timestamp: 2026-03-21T06:42:16Z
+author: alexander
+type: updated
+summary: Update AC-002 to reference changes/ directory
+reason: |
+  The directory was renamed from events/ to changes/ as part of the
+  terminology refactoring. The acceptance criterion still referenced
+  the old name.
+changes:
+  acceptance_criteria:
+    - id: AC-002
+      description: Fails with a clear error if the module does not exist
+      given: A path that has no changes/ directory
+      when: eigen spec project <path> is run
+      then: Exits non-zero and prints an error identifying the missing module
