@@ -5,12 +5,10 @@ owner: alexander
 title: spec-subagent — asks clarifying questions and produces eigen-spec format specs
 status: ""
 description: |-
-    A subagent invoked by the `change` skill during the spec phase. It receives a feature description
-    and optional hints, explores the codebase to understand context, asks clarifying questions
-    (following the eigen-spec skill's question patterns), and produces a complete spec in the
-    standard eigen-spec format: changes/ directory with change files and auto-generated spec.yaml.
-    The subagent has full codebase access (Glob, Grep, Read, etc.) and uses that to understand
-    existing patterns, affected areas, and dependencies.
+    Clarify that spec-subagent always generates the next sequential change file
+    (e.g., 002_feedback.yaml, 003_additional_clarification.yaml) when writing updates.
+    It runs `eigen spec project` to update spec.yaml after each change. The skill
+    commits each change separately with `spec(<module>): <summary>`.
 behavior: ""
 dependencies:
     - feature description (input)
@@ -23,4 +21,4 @@ technology:
     Output: changes/*.yaml files + spec.yaml (eigen-spec format)
     Tools: Glob, Grep, Read, Bash (for eigen spec project), Git
 last_change: ""
-changes_count: 1
+changes_count: 2

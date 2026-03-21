@@ -5,13 +5,9 @@ owner: alexander
 title: plan-subagent — designs implementation strategy based on approved spec
 status: ""
 description: |-
-    A subagent invoked by the `change` skill during the plan phase. It receives an approved spec
-    (spec.yaml and changes/), explores the codebase to understand existing patterns, conventions,
-    file structure, and implementation details. It produces a detailed step-by-step implementation plan
-    in markdown format that covers: (1) overview of the feature and affected areas, (2) step-by-step
-    plan with file locations and specific changes, (3) architectural decisions and trade-offs considered,
-    (4) testing strategy and acceptance criteria mapping. The plan is detailed enough for a compile-subagent
-    to implement exactly as specified.
+    Clarify that plan-subagent writes the plan.md file to .claude/plans/<branch>/plan.md
+    (or similar persistent location accessible to compile-subagent). The file is committed
+    with the plan(...) commit. Compile-subagent reads from this file path when invoked.
 behavior: ""
 dependencies:
     - approved spec (spec.yaml + changes/)
@@ -23,4 +19,4 @@ technology:
     Output: markdown file (e.g., plan.md in .claude/ or feature branch)
     Tools: Glob, Grep, Read, Bash, Git
 last_change: ""
-changes_count: 1
+changes_count: 2
