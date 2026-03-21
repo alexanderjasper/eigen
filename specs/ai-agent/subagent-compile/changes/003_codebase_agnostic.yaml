@@ -1,0 +1,19 @@
+summary: compile-agent must be codebase-agnostic — discover patterns and build commands at runtime
+reason: |-
+  The agent definitions are distributed to any project by eigen scaffold. Hardcoding
+  language-specific patterns (cobra, go build, specsRoot, storage package) makes the
+  compile-agent only usable in the eigen codebase. It should read the code to understand
+  conventions and discover build commands from the project configuration.
+type: updated
+changes:
+  description: |-
+    compile-agent must not assume any specific language, framework, build system,
+    or codebase structure. It discovers how to build the project (Makefile, package.json,
+    go.mod, etc.) and which patterns to follow by reading existing code. All implementation
+    guidance comes from the spec and plan files, not from baked-in codebase knowledge.
+  acceptanceCriteria:
+    - id: AC-008
+      description: |-
+        compile-agent does not reference any project-specific paths, frameworks, or tools
+        in its agent definition. Build commands and code patterns are discovered by reading
+        the target codebase at runtime.

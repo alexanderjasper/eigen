@@ -1,0 +1,19 @@
+summary: spec-agent must be codebase-agnostic — explore rather than assume project structure
+reason: |-
+  Agent definitions are distributed to any project by eigen scaffold. The spec-agent
+  should work in any codebase without assuming specific directories or conventions.
+  It uses eigen's CLI tooling (eigen spec new/change/project/validate) which is the
+  framework itself, not the target codebase — those references stay. But any references
+  to specific project file layouts must be removed.
+type: updated
+changes:
+  description: |-
+    spec-agent does not assume any specific codebase structure when exploring for context.
+    It uses Glob, Grep, and Read to discover relevant files. The eigen spec CLI commands
+    (eigen spec new, eigen spec change, eigen spec project, eigen spec validate) are
+    retained — these are the framework tooling, not the target codebase.
+  acceptanceCriteria:
+    - id: AC-008
+      description: |-
+        spec-agent does not reference any project-specific directories or file patterns
+        in its definition. Codebase exploration is open-ended using Glob/Grep/Read.

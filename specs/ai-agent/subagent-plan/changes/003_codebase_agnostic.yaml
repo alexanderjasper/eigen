@@ -1,0 +1,18 @@
+summary: plan-agent must be codebase-agnostic — discover structure rather than hardcode it
+reason: |-
+  The agent definitions are distributed by eigen scaffold to any project. Hardcoding
+  paths like eigen/cmd/ or patterns like cobra/specsRoot makes the agents only usable
+  in the eigen codebase itself. Agents should explore the codebase they're invoked in
+  and adapt to what they find.
+type: updated
+changes:
+  description: |-
+    plan-agent must not assume any specific codebase structure, framework, language,
+    or build system. It discovers the codebase by using Glob, Grep, and Read to find
+    relevant files and understand conventions. Build commands are discovered from the
+    project (Makefile, package.json, go.mod, etc.) rather than hardcoded.
+  acceptanceCriteria:
+    - id: AC-008
+      description: |-
+        plan-agent does not reference any project-specific paths, frameworks, or tools
+        in its agent definition. All codebase knowledge comes from exploration at runtime.
