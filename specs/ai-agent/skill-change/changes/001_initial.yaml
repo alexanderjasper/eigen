@@ -1,4 +1,4 @@
-summary: Unified `change` skill — orchestrates spec → plan → compile workflow
+summary: "Unified `change` skill — orchestrates spec → plan → compile workflow"
 reason: |-
   The current separate eigen-spec, eigen-plan, eigen-compile skills require multiple invocations and manual
   coordination. A unified `change` skill provides seamless orchestration, approval gates between phases,
@@ -8,7 +8,7 @@ changes:
   domain: ai-agent
   module: skill-change
   owner: alexander
-  title: Unified `change` skill — orchestrates spec → plan → compile workflow
+  title: "Unified `change` skill — orchestrates spec → plan → compile workflow"
   description: |-
     A single `change` skill that orchestrates feature development via three agent-driven phases:
     (1) spec-subagent asks clarifying questions and produces spec in eigen-spec format (changes/ + spec.yaml),
