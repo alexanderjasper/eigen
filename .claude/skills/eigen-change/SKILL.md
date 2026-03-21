@@ -51,15 +51,52 @@ Agent(
 After the agent completes:
 
 1. Tell the user: "Spec phase complete. Review with `git diff HEAD~1` or in your editor."
-2. Use AskUserQuestion to ask:
-   - Question: "Approve the spec?"
-   - Options: "Approve" (proceed to Phase 2), "Reject" (provide feedback to refine)
-   - If rejected, prompt for feedback text via a follow-up AskUserQuestion, then run **Spec Feedback Loop** below, then re-show approval.
-3. On approval, for each change file reported by spec-agent, run:
+2. Read each change file's raw YAML and POST the batch to the review API:
+   Build a JSON array of change entries (change_id, file_path, change_yaml) for all
+   change files reported by spec-agent.
+
    ```bash
-   eigen spec change-status <module-path> <filename> approved
+   SESSION_ID=$(curl -s -X POST http://localhost:7171/api/reviews \
+     -H 'Content-Type: application/json' \
+     -d '{"module_path":"<module-path>","changes":[...]}' \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['session_id'])" 2>/dev/null)
    ```
-   Then commit: `chore(<module>): approve spec changes`
+
+   If SESSION_ID is empty (server not running or curl failed): fall back to AskUserQuestion
+   with "Approve the spec?" / "Approve" / "Reject" as before.
+
+3. Tell the user: "Spec written. Open http://localhost:7171 to review and approve/reject in the browser."
+
+4. Poll every 3 seconds until submitted:
+   ```bash
+   while true; do
+     RESULT=$(curl -s http://localhost:7171/api/reviews/$SESSION_ID)
+     STATUS=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null)
+     [ "$STATUS" = "submitted" ] && break
+     sleep 3
+   done
+   ```
+
+5. Read decision:
+   ```bash
+   DECISION=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['decision'])")
+   ```
+   - "approved":
+       For each change file, run: `eigen spec change-status <module-path> <filename> approved`
+       Commit: `chore(<module>): approve spec changes`
+       Proceed to Phase 2.
+   - "rejected":
+       Extract change_comments from RESULT:
+       ```bash
+       FEEDBACK=$(echo "$RESULT" | python3 -c "
+       import sys,json
+       d=json.load(sys.stdin)
+       lines=[f'{k}: {v}' for k,v in d.get('change_comments',{}).items() if v]
+       print('\n'.join(lines) if lines else 'No specific comments provided.')
+       ")
+       ```
+       Run Spec Feedback Loop with FEEDBACK as the user feedback text.
+       Repeat from step 2.
 
 ### Spec Feedback Loop
 
