@@ -33,6 +33,10 @@ Use Glob, Grep, and Read to understand the areas the feature will touch. Discove
 
 Do not assume any specific framework, language, or file layout — discover it from the codebase.
 
+**Conventions to enforce in the plan:**
+- Spec module paths must be domain-based (e.g. `spec-cli/cmd-new`), never sequence numbers (AC-009).
+- Any agent invocations must reference named agent files via `subagent_type: <name>`, not inline prompts (AC-010).
+
 ### 3. Enter plan mode
 
 Use the EnterPlanMode tool to enter plan mode. Present a comprehensive implementation plan with:

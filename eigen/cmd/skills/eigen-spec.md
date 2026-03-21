@@ -43,3 +43,5 @@ If the description is missing or too vague to proceed, ask the user what they wa
 - New top-level domain? Create a parent module first, then sub-modules
 - Cross-module contracts (dependencies)? Update the `dependencies` field
 - One change = one logical modification; don't bundle unrelated changes into a single change
+- **Module naming**: module paths use domain-based identifiers (e.g. `ai-agent`, `spec-cli/cmd-scaffold`), never sequence numbers. Only `changes/` filenames are numbered.
+- **Named agents**: subagents must be defined as `.claude/agents/<name>.md` with a `name:` frontmatter field and invoked via `subagent_type: <name>`. Never use `subagent_type: general-purpose` with an inline prompt.
