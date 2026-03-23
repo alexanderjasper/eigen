@@ -24,10 +24,10 @@ In Eigen, **specifications are the source of truth**. Code is a compiled artifac
 
 The workflow is:
 
-1. A developer writes or modifies a specification.
+1. A developer describes the desired behavior; an AI spec agent authors the change.
 2. A human reviews and approves the specification change.
 3. An AI model compiles the specification into working software.
-4. Tests derived from the specification verify correctness.
+4. Acceptance criteria derived from the specification verify correctness.
 5. The software ships.
 
 Nowhere in this workflow does a human need to read implementation code. This is the north star. We are honest that we will not reach it on day one — but every decision we make should be in service of it.
@@ -87,13 +87,13 @@ We are deliberately cautious about how much formal structure to impose on accept
 
 When a specification changes, the following occurs:
 
-1. **Spec authoring**: A developer writes a change describing the new or modified behavior.
-2. **Spec review**: Another developer (or the same developer after reflection) reviews the change and the resulting projection. This is the primary human review step — reviewing intent, not implementation.
-3. **Compilation**: The AI model reads the full specification projection (and optionally the recent changes for context) and produces code changes.
-4. **Verification**: Generated tests derived from acceptance criteria run. Additional static analysis and security scanning run.
-5. **Commit**: Passing compilation produces a linked pair: a spec commit and a code commit.
+1. **Spec authoring**: A developer describes desired behavior; an AI spec agent authors the change file and reprojects the current spec state.
+2. **Spec review**: The developer reviews the change and the resulting projection in the browser UI. This is the primary human review step — reviewing intent, not implementation. Feedback triggers a new change file rather than editing in place.
+3. **Planning**: The AI model explores the codebase and produces an implementation plan mapped to the spec. The developer reviews and approves the plan before any code is written.
+4. **Compilation**: The AI model reads the full specification projection and implements it, verifying each acceptance criterion.
+5. **Commit**: Passing compilation produces a linked pair: a spec commit and a code commit. Change files are marked `compiled`.
 
-The AI model must be able to complete step 3 **without asking for clarification**. If it cannot, the specification is incomplete. Incompleteness is a specification defect, not an invitation for the AI to make assumptions about things that matter.
+The AI model must be able to complete step 4 **without asking for clarification**. If it cannot, the specification is incomplete. Incompleteness is a specification defect, not an invitation for the AI to make assumptions about things that matter.
 
 ---
 
@@ -112,10 +112,9 @@ Eigen is designed for teams of 10–50 engineers working on software that spans 
 
 Eigen is a framework in formation. There are open questions we are committed to answering through building, not through speculation:
 
-- **Specification format**: We do not yet have a definitive answer on whether specifications should be structured prose, a lightweight DSL, YAML/TOML with natural language fields, or something else. The constraint is that the format must be human-readable without tooling, and machine-parseable without ambiguity. We will find this through iteration.
-- **Acceptance criteria formalism**: How much structure is the right amount for expressing testable behavior without creating specification bloat? Unknown.
+- **Acceptance criteria formalism**: The current format (given/when/then per criterion) is working but the right level of structure for complex behavior is still being discovered through practice.
 - **Cross-cutting concern placement**: The right structure for concerns like authentication, observability, and error handling that touch every domain is not yet settled.
-- **Developer tooling**: Navigating a large specification tree, understanding cross-module dependencies, and inspecting specification history all require purpose-built tooling. We know what it needs to do; we have not yet built it.
+- **Developer tooling**: The spec navigator (`eigen serve`) covers browsing and change review. Deeper tooling — cross-module dependency graphs, specification history visualization, conflict detection — is not yet built.
 - **Existing codebase adoption**: Eigen's eventual goal includes the ability to reverse-compile an existing codebase into specifications — effectively translating legacy code into Eigen's source of truth. This is not a near-term objective, but it informs design decisions we make now.
 
 ---
@@ -152,7 +151,7 @@ go install .
 
 ### Set up a new project
 
-Run `eigen scaffold` in your project root to install the Claude skills and create the `specs/` directory:
+Run `eigen scaffold` in your project root to install the Claude skills, subagent definitions, and create the `specs/` directory:
 
 ```bash
 cd my-project
@@ -160,65 +159,79 @@ eigen scaffold
 ```
 
 This creates:
-- `.claude/skills/eigen-spec/SKILL.md`
-- `.claude/skills/eigen-plan/SKILL.md`
-- `.claude/skills/eigen-compile/SKILL.md`
+- `.claude/skills/eigen-change/SKILL.md`
+- `.claude/skills/eigen-change-spec/SKILL.md`
+- `.claude/skills/eigen-change-compile/SKILL.md`
+- `.claude/agents/spec-agent.md`
+- `.claude/agents/plan-agent.md`
+- `.claude/agents/compile-agent.md`
 - `specs/`
 
-> If your specs live somewhere other than a `specs/` directory above your CWD, set `EIGEN_SPECS=<path>` or pass `--specs <path>` to any command.
+Use `eigen scaffold --force` to overwrite existing skill and agent files.
+
+> If your specs live somewhere other than a `specs/` directory above your CWD, set `EIGEN_SPECS=<path>` or pass `--specs <path>` to any command. The CLI also walks up from the CWD automatically, so you can run commands from any subdirectory of your project.
 
 ---
 
 ## The Development Workflow
 
-Eigen development happens in three steps, each driven by a Claude Code skill.
+Eigen development is driven by Claude Code skills. The primary skill orchestrates the full workflow; companion skills let you invoke individual phases manually.
 
-### 1. Author a spec — `/eigen-spec`
-
-```
-/eigen-spec [description of what you want to build]
-```
-
-Claude will identify which spec modules are affected, create or update them by writing changes, project the current state, and validate. Each change records not just *what* changed but *why*.
-
-After this step you have a reviewed, validated spec. That is the human review checkpoint — you are approving intent, not implementation.
-
-### 2. Plan the implementation — `/eigen-plan`
+### Primary workflow — `/eigen-change`
 
 ```
-/eigen-plan <module-path>
+/eigen-change <description of what you want to build>
 ```
 
-Claude reads the spec and recent changes, explores the existing codebase, and produces a detailed implementation plan mapped to each acceptance criterion. No code is written yet.
+This skill runs the full spec → plan → compile pipeline through three phases:
 
-Use this step when the change is non-trivial and you want to align on approach before compilation begins.
+**Phase 1 — Spec**: A spec subagent writes change files for the relevant module, projects the current spec state, and validates. The spec is then submitted for review via the browser UI (see `eigen serve` below). You can approve or reject with per-change comments. On rejection, feedback is incorporated as a new change file and re-submitted.
 
-### 3. Compile the spec to code — `/eigen-compile`
+**Phase 2 — Plan**: A plan subagent reads the spec and explores the codebase, then returns a structured implementation plan. This is presented in plan mode for your review before any code is written.
 
+**Phase 3 — Compile**: A compile subagent implements exactly what the spec says — no more, no less. Each acceptance criterion is treated as a test case. If the spec is ambiguous, compilation stops and reports the gap rather than guessing. Implemented changes are marked `compiled` in their change files.
+
+### Companion skills
+
+`/eigen-change-spec <module-path>` — invoke only the spec phase manually.
+
+`/eigen-change-compile <module-path>` — invoke only the compile phase manually.
+
+### Spec review UI — `eigen serve`
+
+```bash
+eigen serve
 ```
-/eigen-compile <module-path>
-```
 
-Claude implements exactly what the spec says — no more, no less. Each acceptance criterion in the spec is treated as a test case. If the spec is ambiguous or incomplete, compilation stops and reports the gap rather than guessing.
+Starts a local web UI at `http://localhost:7171` for browsing specs and reviewing pending change submissions. The `/eigen-change` skill posts change batches to this server for approval — if the server is not running, it falls back to an in-conversation approval prompt.
+
+### Change lifecycle
+
+Each change file has a status that tracks its progress through the workflow:
+
+- `draft` — written but not yet approved
+- `approved` — approved in the review UI; ready for compilation
+- `compiled` — implemented and committed
 
 ---
 
 ## CLI Reference
 
 ```
-eigen spec list [prefix]          List all spec modules
-eigen spec new <path>             Create a new spec module
-eigen spec show <path>            Print the current spec projection
-eigen spec change <path>          Record a new change
-eigen spec project [path]         Reproject spec.yaml from changes
-eigen spec validate [path]        Validate completeness and dependencies
+eigen spec list [prefix]                        List all spec modules
+eigen spec new <path>                           Create a new spec module
+eigen spec show <path>                          Print the current spec projection
+eigen spec change <path> [--edit]               Record a new change (--edit opens $EDITOR)
+eigen spec project [path]                       Reproject spec.yaml from changes
+eigen spec validate [path]                      Validate completeness and dependencies
+eigen spec change-status <path> <file> <status> Set change status (draft|approved|compiled)
 
-eigen serve [--port 7171] [--open]   Browse specs in a web UI
-eigen scaffold [path]             Initialize a new project
+eigen serve [--port 7171] [--no-open]           Browse specs and review changes in a web UI
+eigen scaffold [path] [--force]                 Initialize a new project
 ```
 
 ---
 
 ## Status
 
-Early formation. The manifesto precedes the framework. Both will evolve.
+Early but functional. The CLI, spec format, AI workflow skills, and spec navigator UI are built and in use. The framework is being developed using itself. Open questions are being answered through practice.
