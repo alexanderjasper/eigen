@@ -274,19 +274,16 @@ html, body {
 /* ── Review panel ── */
 #review-panel {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  right: 0;
+  bottom: 0;
   z-index: 100;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border-left: 1px solid var(--border);
   padding: 28px 32px;
-  max-width: 720px;
-  width: 90vw;
-  max-height: 85vh;
+  width: min(720px, 55vw);
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,.5);
+  box-shadow: -8px 0 32px rgba(0,0,0,.4);
 }
 
 #review-panel h2 {

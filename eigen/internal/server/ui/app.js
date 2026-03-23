@@ -330,6 +330,12 @@ async function showReviewPanel(sessionId) {
       return;
     }
 
+    // Already rendering this session — don't rebuild (would reset scroll).
+    if (activeReviewSessionId === sessionId &&
+        document.getElementById('review-panel').style.display !== 'none') {
+      return;
+    }
+
     activeReviewSessionId = sessionId;
 
     const changesEl = document.getElementById('review-changes');
