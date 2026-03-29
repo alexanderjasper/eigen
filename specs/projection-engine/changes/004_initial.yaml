@@ -5,100 +5,100 @@ author: alexander
 type: updated
 summary: Add Go table-driven tests for projection and validation code paths
 reason: |
-    The projection engine and validation logic are the most critical code paths
-    in the project -- the "compiler" for specs -- and currently have zero test
-    coverage. This change adds comprehensive acceptance criteria for two new
-    test files that exercise all existing behavior.
+  The projection engine and validation logic are the most critical code paths
+  in the project -- the "compiler" for specs -- and currently have zero test
+  coverage. This change adds comprehensive acceptance criteria for two new
+  test files that exercise all existing behavior.
 status: compiled
 changes:
-    acceptance_criteria:
-        - id: AC-010
-          description: 'Projection: empty change list produces empty spec'
-          given: An empty slice of changes and a module path
-          when: Project() is called
-          then: Returns a SpecModule with only id, domain, module set from the path, empty dependencies slice, empty technology map, and zero-value metadata
-        - id: AC-011
-          description: 'Projection: single initial change sets all fields'
-          given: A single Change with all ChangeSet fields populated (title, owner, status, description, behavior, technology, dependencies, acceptance_criteria)
-          when: Project() is called
-          then: The returned SpecModule contains all field values from that change, LastChange equals the change ID, and ChangesCount is 1
-        - id: AC-012
-          description: 'Projection: last-write-wins for scalar fields'
-          given: Two changes that both set title, owner, status, description, and behavior to different values
-          when: Project() is called
-          then: The returned SpecModule has the values from the second change for all scalar fields
-        - id: AC-013
-          description: 'Projection: acceptance criteria merged by id with add and update'
-          given: Change 1 adds AC-A, Change 2 adds AC-B and updates AC-A with a new then field
-          when: Project() is called
-          then: The result contains both AC-A (with updated then) and AC-B, in insertion order
-        - id: AC-014
-          description: 'Projection: acceptance criteria with removed true are dropped'
-          given: Change 1 adds AC-A, Change 2 sets AC-A with removed true
-          when: Project() is called
-          then: AC-A does not appear in the AcceptanceCriteria slice
-        - id: AC-015
-          description: 'Projection: dependencies are replaced wholesale, not merged'
-          given: Change 1 sets dependencies to [A, B], Change 2 sets dependencies to [C]
-          when: Project() is called
-          then: The result has dependencies [C] only
-        - id: AC-016
-          description: 'Projection: technology keys are merged across changes'
-          given: Change 1 sets technology {lang go}, Change 2 sets technology {db postgres}
-          when: Project() is called
-          then: The result has technology {lang go, db postgres}
-        - id: AC-017
-          description: 'Projection: metadata reflects the final change'
-          given: Three changes with IDs chg-001, chg-002, chg-003
-          when: Project() is called
-          then: LastChange is chg-003 and ChangesCount is 3
-        - id: AC-018
-          description: 'Projection: sequence ordering is respected regardless of slice order'
-          given: Changes provided in slice order [seq 3, seq 1, seq 2]
-          when: Project() is called
-          then: The result matches what you would get from applying them in order [seq 1, seq 2, seq 3]
-        - id: AC-019
-          description: 'Validation: missing required fields produce errors'
-          given: A SpecModule with one or more of id, domain, module, owner, title, description, behavior empty
-          when: Validate() is called
-          then: A ValidationError is returned for each missing required field with the field name and a message indicating it is required
-        - id: AC-020
-          description: 'Validation: missing AC sub-fields produce errors'
-          given: A SpecModule with an acceptance criterion missing given, when, or then
-          when: Validate() is called
-          then: A ValidationError is returned for each missing AC sub-field, formatted as acceptance_criteria[ID].field
-        - id: AC-021
-          description: 'Validation: broken dependency path produces error'
-          given: A SpecModule with a dependency path that does not exist on disk
-          when: Validate() is called with the specs root directory
-          then: A ValidationError is returned naming the missing dependency
-        - id: AC-022
-          description: 'Validation: valid dependency path passes'
-          given: A SpecModule with a dependency path that exists on disk (created via os.MkdirTemp)
-          when: Validate() is called with the specs root directory
-          then: No ValidationError is returned for dependencies
-        - id: AC-023
-          description: 'ValidateChanges: no-op simple field is flagged'
-          given: A SpecModule with title set to X, and a ChangeSet also setting title to X
-          when: ValidateChanges() is called
-          then: Returns a ValidationError for the title field with a no-op message
-        - id: AC-024
-          description: 'ValidateChanges: AC with same id and identical content is flagged'
-          given: A SpecModule with AC-001 having specific description/given/when/then, and a ChangeSet with AC-001 having identical fields
-          when: ValidateChanges() is called
-          then: Returns a ValidationError for acceptance_criteria[AC-001] with a no-op message
-        - id: AC-025
-          description: 'LintChangeFile: unquoted colon in scalar value is caught'
-          given: 'A YAML byte slice containing a line like summary: foo: bar'
-          when: LintChangeFile() is called
-          then: Returns a LintError for that line mentioning bare colon
-        - id: AC-026
-          description: 'LintChangeFile: content inside block scalars is not linted'
-          given: A YAML byte slice where a block scalar (using pipe or greater-than) contains lines with colons
-          when: LintChangeFile() is called
-          then: No LintError is returned for lines inside the block scalar
-        - id: AC-027
-          description: Test files exist at the correct paths
-          given: The implementation is complete
-          when: The test files are checked
-          then: eigen/internal/spec/projection_test.go and eigen/internal/spec/validation_test.go exist, are in package spec, and all tests pass via go test
+  acceptance_criteria:
+    - id: AC-010
+      description: 'Projection: empty change list produces empty spec'
+      given: An empty slice of changes and a module path
+      when: Project() is called
+      then: Returns a SpecModule with only id, domain, module set from the path, empty dependencies slice, empty technology map, and zero-value metadata
+    - id: AC-011
+      description: 'Projection: single initial change sets all fields'
+      given: A single Change with all ChangeSet fields populated (title, owner, status, description, behavior, technology, dependencies, acceptance_criteria)
+      when: Project() is called
+      then: The returned SpecModule contains all field values from that change, LastChange equals the change ID, and ChangesCount is 1
+    - id: AC-012
+      description: 'Projection: last-write-wins for scalar fields'
+      given: Two changes that both set title, owner, status, description, and behavior to different values
+      when: Project() is called
+      then: The returned SpecModule has the values from the second change for all scalar fields
+    - id: AC-013
+      description: 'Projection: acceptance criteria merged by id with add and update'
+      given: Change 1 adds AC-A, Change 2 adds AC-B and updates AC-A with a new then field
+      when: Project() is called
+      then: The result contains both AC-A (with updated then) and AC-B, in insertion order
+    - id: AC-014
+      description: 'Projection: acceptance criteria with removed true are dropped'
+      given: Change 1 adds AC-A, Change 2 sets AC-A with removed true
+      when: Project() is called
+      then: AC-A does not appear in the AcceptanceCriteria slice
+    - id: AC-015
+      description: 'Projection: dependencies are replaced wholesale, not merged'
+      given: Change 1 sets dependencies to [A, B], Change 2 sets dependencies to [C]
+      when: Project() is called
+      then: The result has dependencies [C] only
+    - id: AC-016
+      description: 'Projection: technology keys are merged across changes'
+      given: Change 1 sets technology {lang go}, Change 2 sets technology {db postgres}
+      when: Project() is called
+      then: The result has technology {lang go, db postgres}
+    - id: AC-017
+      description: 'Projection: metadata reflects the final change'
+      given: Three changes with IDs chg-001, chg-002, chg-003
+      when: Project() is called
+      then: LastChange is chg-003 and ChangesCount is 3
+    - id: AC-018
+      description: 'Projection: sequence ordering is respected regardless of slice order'
+      given: Changes provided in slice order [seq 3, seq 1, seq 2]
+      when: Project() is called
+      then: The result matches what you would get from applying them in order [seq 1, seq 2, seq 3]
+    - id: AC-019
+      description: 'Validation: missing required fields produce errors'
+      given: A SpecModule with one or more of id, domain, module, owner, title, description, behavior empty
+      when: Validate() is called
+      then: A ValidationError is returned for each missing required field with the field name and a message indicating it is required
+    - id: AC-020
+      description: 'Validation: missing AC sub-fields produce errors'
+      given: A SpecModule with an acceptance criterion missing given, when, or then
+      when: Validate() is called
+      then: A ValidationError is returned for each missing AC sub-field, formatted as acceptance_criteria[ID].field
+    - id: AC-021
+      description: 'Validation: broken dependency path produces error'
+      given: A SpecModule with a dependency path that does not exist on disk
+      when: Validate() is called with the specs root directory
+      then: A ValidationError is returned naming the missing dependency
+    - id: AC-022
+      description: 'Validation: valid dependency path passes'
+      given: A SpecModule with a dependency path that exists on disk (created via os.MkdirTemp)
+      when: Validate() is called with the specs root directory
+      then: No ValidationError is returned for dependencies
+    - id: AC-023
+      description: 'ValidateChanges: no-op simple field is flagged'
+      given: A SpecModule with title set to X, and a ChangeSet also setting title to X
+      when: ValidateChanges() is called
+      then: Returns a ValidationError for the title field with a no-op message
+    - id: AC-024
+      description: 'ValidateChanges: AC with same id and identical content is flagged'
+      given: A SpecModule with AC-001 having specific description/given/when/then, and a ChangeSet with AC-001 having identical fields
+      when: ValidateChanges() is called
+      then: Returns a ValidationError for acceptance_criteria[AC-001] with a no-op message
+    - id: AC-025
+      description: 'LintChangeFile: unquoted colon in scalar value is caught'
+      given: 'A YAML byte slice containing a line like summary: foo: bar'
+      when: LintChangeFile() is called
+      then: Returns a LintError for that line mentioning bare colon
+    - id: AC-026
+      description: 'LintChangeFile: content inside block scalars is not linted'
+      given: A YAML byte slice where a block scalar (using pipe or greater-than) contains lines with colons
+      when: LintChangeFile() is called
+      then: No LintError is returned for lines inside the block scalar
+    - id: AC-027
+      description: Test files exist at the correct paths
+      given: The implementation is complete
+      when: The test files are checked
+      then: eigen/internal/spec/projection_test.go and eigen/internal/spec/validation_test.go exist, are in package spec, and all tests pass via go test

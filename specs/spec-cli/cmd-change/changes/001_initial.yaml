@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T21:00:00Z
+timestamp: "2026-03-20T21:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for eigen spec event
@@ -9,7 +9,7 @@ reason: |
   recording change events against an existing module.
 status: compiled
 changes:
-  title: "spec event"
+  title: spec event
   owner: eigen
   status: draft
   description: |

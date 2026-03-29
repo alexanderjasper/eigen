@@ -1,15 +1,13 @@
+type: created
 summary: plan-subagent — designs implementation strategy based on approved spec
 reason: |-
   Planning requires deep codebase exploration and architectural thinking. A plan-subagent automates this,
   reading the approved spec, exploring existing patterns and conventions in the codebase, and producing
   a detailed implementation plan with step-by-step instructions and architectural decisions.
-type: created
 status: compiled
 changes:
-  domain: ai-agent
-  module: subagent-plan
-  owner: alexander
   title: plan-subagent — designs implementation strategy based on approved spec
+  owner: alexander
   description: |-
     A subagent invoked by the `change` skill during the plan phase. It receives an approved spec
     (spec.yaml and changes/), explores the codebase to understand existing patterns, conventions,
@@ -18,34 +16,48 @@ changes:
     plan with file locations and specific changes, (3) architectural decisions and trade-offs considered,
     (4) testing strategy and acceptance criteria mapping. The plan is detailed enough for a compile-subagent
     to implement exactly as specified.
+  technology:
+    CommitPattern: 'plan(<module>): <summary>'
+    Input: spec.yaml path and changes/ directory
+    Output: markdown file (e.g., plan.md in .claude/ or feature branch)
+    Tools: Glob, Grep, Read, Bash, Git
+  dependencies:
+    - approved spec (spec.yaml + changes/)
+    - codebase access (Glob, Grep, Read, etc.)
+    - understanding of existing patterns and conventions in codebase
   acceptance_criteria:
     - id: AC-001
       description: |-
         plan-subagent reads approved spec.yaml and changes/, explores codebase to identify affected
         files, existing patterns, and implementation approach. Uses Glob, Grep, Read to understand
         current state.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-002
       description: |-
         Produces markdown implementation plan with sections: overview, step-by-step plan,
         architectural decisions, testing strategy. Plan is 50-200 lines, specific, and actionable.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-003
       description: |-
         Each step in the plan specifies: file path, what changes are needed, why (references spec),
         and any dependencies on other steps. Plan enables compile-subagent to implement without
         asking clarifying questions.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-004
       description: |-
         Plan includes a section mapping spec acceptance criteria to implementation steps,
         showing how each criterion will be tested/verified.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-005
-      description: |-
-        Makes atomic commit with plan file. Uses conventional commit format: `plan(<module>): <summary>`.
-  dependencies:
-    - approved spec (spec.yaml + changes/)
-    - codebase access (Glob, Grep, Read, etc.)
-    - understanding of existing patterns and conventions in codebase
-  technology:
-    Input: spec.yaml path and changes/ directory
-    Output: markdown file (e.g., plan.md in .claude/ or feature branch)
-    Tools: Glob, Grep, Read, Bash, Git
-    CommitPattern: "plan(<module>): <summary>"
+      description: 'Makes atomic commit with plan file. Uses conventional commit format: `plan(<module>): <summary>`.'
+      given: ""
+      when: ""
+      then: ""

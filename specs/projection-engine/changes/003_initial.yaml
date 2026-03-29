@@ -1,6 +1,6 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-21T06:32:25Z
+timestamp: "2026-03-21T06:32:25Z"
 author: alexander
 type: updated
 summary: Rename "event" terminology to "change" throughout

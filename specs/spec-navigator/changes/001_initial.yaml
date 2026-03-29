@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for the spec navigator
@@ -24,6 +24,9 @@ changes:
     a JSON API for modules and serves embedded static assets for the UI.
     The specs root is resolved using the same --specs / EIGEN_SPECS / default
     logic as all other commands.
+  dependencies:
+    - spec-navigator/api
+    - spec-navigator/ui
   acceptance_criteria:
     - id: AC-001
       description: serve starts on the configured port
@@ -50,6 +53,3 @@ changes:
       given: eigen serve --open=false is run
       when: the server starts
       then: no browser is opened
-  dependencies:
-    - spec-navigator/api
-    - spec-navigator/ui

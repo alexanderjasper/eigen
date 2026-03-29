@@ -1,6 +1,6 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-21T11:30:24Z
+timestamp: "2026-03-21T11:30:24Z"
 author: alexander
 type: updated
 summary: Remove eigen-plan; rename eigen-spec→eigen-change-spec and eigen-compile→eigen-change-compile

@@ -1,6 +1,6 @@
 id: chg-005
 sequence: 5
-timestamp: 2026-03-21T11:30:24Z
+timestamp: "2026-03-21T11:30:24Z"
 author: alexander
 type: updated
 summary: Remove eigen-plan reference; update legacy skill names to eigen-change-spec and eigen-change-compile
@@ -31,3 +31,6 @@ changes:
         creation/management. User only needs to invoke once with a description.
         Companion skills eigen-change-spec and eigen-change-compile are available for manual
         use; eigen-plan no longer exists.
+      given: ""
+      when: ""
+      then: ""
