@@ -65,19 +65,24 @@ After the agent completes:
    If SESSION_ID is empty (server not running or curl failed): fall back to AskUserQuestion
    with "Approve the spec?" / "Approve" / "Reject" as before.
 
-3. Tell the user: "Spec written. Open http://localhost:7171 to review and approve/reject in the browser."
+3. Tell the user: "Spec written. Open http://localhost:7171 to review and approve/reject in the browser. I'll proceed automatically when you submit."
 
-4. Poll every 3 seconds until submitted:
+   Start a background poll (run_in_background: true, timeout: 300000):
    ```bash
+   SESSION="<session-id>"
    while true; do
-     RESULT=$(curl -s http://localhost:7171/api/reviews/$SESSION_ID)
+     RESULT=$(curl -s "http://localhost:7171/api/reviews/$SESSION")
      STATUS=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null)
-     [ "$STATUS" = "submitted" ] && break
+     if [ "$STATUS" = "submitted" ]; then
+       echo "$RESULT"
+       exit 0
+     fi
      sleep 3
    done
    ```
+   Wait for the background task completion notification. The task output contains the full RESULT JSON.
 
-5. Read decision:
+5. Read decision from the background task output:
    ```bash
    DECISION=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['decision'])")
    ```
@@ -114,10 +119,16 @@ Agent(
     Module path: <module-path>
     User feedback: <feedback text>
 
-    Write a new change file (next sequence number) incorporating this feedback.
+    If the feedback indicates a fundamental rewrite (wrong framing, wrong direction, start over):
+    - Delete all change files in specs/<module-path>/changes/ that have status="" or status="draft"
+    - Write a fresh change file using the next available sequence number (may be 001 if the module
+      is new, or higher if compiled/approved changes already exist)
+    Otherwise:
+    - Write a new change file at the next sequence number on top of existing ones
+
     Run `eigen spec project <module-path>` and validate.
 
-    When done, report the change file written and what was updated.
+    When done, report whether this was a rewrite or incremental, the change file written, and what was updated.
 )
 ```
 
@@ -176,11 +187,13 @@ Agent(
 
     Read the spec and the PLAN_CONTENT above completely before writing any code. The plan text is provided inline — it is not a file.
     Implement following the plan step by step.
-    Build with `cd eigen && go build ./...`.
+    Build with `go build ./...` from the `eigen/` subdirectory of the repo root.
     Verify each acceptance criterion.
     Commit atomically: feat(<domain>): implement <title>.
 
     Only compile changes whose status is `approved`; skip draft and compiled changes.
+    The `eigen` CLI must be available in $PATH. If `eigen` is not found, stop and ask the user
+    to install it first (`go install` from the `eigen/` directory).
     After successful build and commit, run `eigen spec change-status <module-path> <filename> compiled`
     for each compiled change file, then commit: `chore(<module>): mark changes compiled`.
 

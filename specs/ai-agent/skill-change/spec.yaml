@@ -32,13 +32,13 @@ acceptance_criteria:
     - id: AC-002
       description: |-
         After spec-agent finishes writing change files and running `eigen spec project`,
-        outputs are written to specs/ (changes/ + spec.yaml) but NOT yet committed.
-        eigen-change posts the changes to the review API and waits for browser approval.
-        On approval: eigen-change commits the spec files with `spec(<module>): <summary>`,
-        then marks changes approved and commits `chore(<module>): approve spec changes`.
-        On rejection: eigen-change runs the Spec Feedback Loop; spec-agent writes the
-        feedback change file (no commit); eigen-change commits all pending spec files
-        after the next approval.
+        eigen-change posts the changes to the review API and starts a background poll
+        (run_in_background: true, timeout: 300000ms) that exits with the full JSON result
+        when the session status becomes "submitted". Claude is notified automatically when
+        the poll completes and proceeds without blocking the conversation thread.
+        On approval: eigen-change commits spec files, marks changes approved, proceeds to Phase 2.
+        On rejection: eigen-change extracts change_comments from the result JSON, runs the
+        Spec Feedback Loop, then re-posts to the review API for another round.
       given: ""
       when: ""
       then: ""
@@ -80,10 +80,14 @@ acceptance_criteria:
       then: ""
     - id: AC-006
       description: |-
-        On rejection at any phase: (1) collect user feedback via AskUserQuestion,
-        (2) launch spec-agent with feedback to write changes/*.yaml update (no commit),
-        (3) eigen-change commits all uncommitted spec files with spec(<module>): incorporate
-        feedback on <aspect>, (4) re-run the failed phase using updated spec.yaml.
+        On rejection at any phase: (1) extract feedback from review API result or AskUserQuestion,
+        (2) launch spec-agent in feedback mode.
+        If the feedback indicates a fundamental rewrite (wrong framing, wrong direction, start over):
+          spec-agent deletes all draft change files (status="" or status="draft") and writes a fresh
+          change file at the next available sequence number (001 if new module, higher if compiled
+          changes exist).
+        Otherwise: spec-agent writes a new change file at the next sequence number on top of existing ones.
+        After spec-agent returns, eigen-change commits all pending spec files, then re-runs the failed phase.
       given: ""
       when: ""
       then: ""
@@ -140,6 +144,15 @@ acceptance_criteria:
       given: ""
       when: ""
       then: ""
+    - id: AC-013
+      description: |-
+        The compile-agent prompt instructs the agent to build with `go build ./...` from the
+        `eigen/` subdirectory of the repo root. The `eigen` CLI is assumed to be installed in
+        $PATH. If `eigen` is not found when running `eigen spec change-status`, the agent stops
+        and asks the user to install it via `go install` from the `eigen/` directory.
+      given: ""
+      when: ""
+      then: ""
 dependencies:
     - Agent tool (with subagent_type parameter)
     - spec-subagent definition
@@ -153,5 +166,5 @@ technology:
         Specs: changes/*.yaml + spec.yaml (eigen-spec format)
         Plans: temporary plan mode UI only (no file written)
         Code: git commits
-last_change: chg-007
-changes_count: 7
+last_change: chg-008
+changes_count: 8
