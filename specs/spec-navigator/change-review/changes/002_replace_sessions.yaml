@@ -12,7 +12,7 @@ reason: |
   the session UUID generation, and the in-memory store, replacing them with two thin
   HTTP handlers that call the existing storage.SetChangeStatus and a new
   storage.SetChangeComment function.
-status: draft
+status: approved
 changes:
   description: |
     spec-navigator/change-review defines the HTTP API for approving or rejecting
@@ -78,50 +78,83 @@ changes:
     JSON object with an "error" key and an appropriate HTTP status code.
   technology:
     Endpoints: POST /api/modules/<path>/changes/<filename>/approve, POST /api/modules/<path>/changes/<filename>/reject
+    NewCLICommand: eigen spec change-comment <module-path> <filename> <comment>
+    NewField: 'spec.Change.ReviewComment (yaml: review_comment)'
+    NewStorageFunc: SetChangeComment
     RemovedEndpoints: POST /api/reviews, GET /api/reviews/pending, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit
     RemovedTypes: ReviewSession, ChangeEntry, reviewStore, generateSessionID
-    NewField: "spec.Change.ReviewComment (yaml: review_comment)"
-    NewStorageFunc: SetChangeComment
-    NewCLICommand: "eigen spec change-comment <module-path> <filename> <comment>"
   acceptance_criteria:
     - id: AC-001
       description: POST /api/reviews is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-002
       description: GET /api/reviews/pending is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-003
       description: GET /api/reviews/pending 204 behavior is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-004
       description: GET /api/reviews/<session-id> is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-005
       description: pending session state behavior is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-006
       description: session approval submission is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-007
       description: session rejection submission is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-008
       description: session 404 on GET is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-009
       description: session 404 on submit is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-010
       description: session-based approval polling is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-011
       description: session-based rejection polling is removed
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-012
       description: approve endpoint sets change file status to approved
       given: a module "test-mod" exists with a draft change file "002_feature.yaml"
       when: POST /api/modules/test-mod/changes/002_feature.yaml/approve is sent
-      then: "response status is 200; body contains status approved; the change file on disk has status approved"
+      then: response status is 200; body contains status approved; the change file on disk has status approved
     - id: AC-013
       description: approve endpoint returns 404 for non-existent change file
       given: no change file named "999_missing.yaml" exists for module "test-mod"
@@ -130,43 +163,43 @@ changes:
     - id: AC-014
       description: reject endpoint writes review_comment and keeps status as draft
       given: a module "test-mod" exists with a draft change file "002_feature.yaml"
-      when: "POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with body containing comment 'needs more detail on edge cases'"
-      then: "response status is 200; body contains status draft and review_comment with the given comment; the change file on disk has review_comment set and status remains draft"
+      when: POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with body containing comment 'needs more detail on edge cases'
+      then: response status is 200; body contains status draft and review_comment with the given comment; the change file on disk has review_comment set and status remains draft
     - id: AC-015
       description: reject endpoint returns 400 when comment is missing or empty
       given: a module "test-mod" exists with a draft change file "002_feature.yaml"
-      when: "POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with an empty or missing comment field"
+      when: POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with an empty or missing comment field
       then: response status is 400; body contains an "error" key
     - id: AC-016
       description: reject endpoint returns 404 for non-existent change file
       given: no change file named "999_missing.yaml" exists for module "test-mod"
-      when: "POST /api/modules/test-mod/changes/999_missing.yaml/reject is sent with body containing a comment"
+      when: POST /api/modules/test-mod/changes/999_missing.yaml/reject is sent with body containing a comment
       then: response status is 404; body contains an "error" key
     - id: AC-017
       description: review_comment field is present in Change struct and persisted to YAML
       given: a change file exists with no review_comment
       when: storage.SetChangeComment is called with a non-empty comment string
-      then: "the change file on disk contains a review_comment field with the given value; reading the file back via storage.ReadChanges returns the comment in the ReviewComment field"
+      then: the change file on disk contains a review_comment field with the given value; reading the file back via storage.ReadChanges returns the comment in the ReviewComment field
     - id: AC-018
       description: review_comment is returned by the changes API endpoint
       given: a change file has a review_comment set
-      when: "GET /api/modules/test-mod/changes is requested"
+      when: GET /api/modules/test-mod/changes is requested
       then: the response JSON array includes the change with its review_comment field populated
     - id: AC-019
       description: CLI change-comment command writes review_comment to a change file
-      given: "a module test-mod exists with a change file 002_feature.yaml"
-      when: "eigen spec change-comment test-mod 002_feature.yaml 'needs edge case handling' is run"
-      then: "the command exits 0; the change file on disk contains review_comment 'needs edge case handling'"
+      given: a module test-mod exists with a change file 002_feature.yaml
+      when: eigen spec change-comment test-mod 002_feature.yaml 'needs edge case handling' is run
+      then: the command exits 0; the change file on disk contains review_comment 'needs edge case handling'
     - id: AC-020
       description: UI filters draft changes for pending review display
-      given: "a module has changes with statuses draft, approved, and compiled"
+      given: a module has changes with statuses draft, approved, and compiled
       when: the UI pending-review panel loads
-      then: "only changes with status draft (or absent status) are shown in the review list"
+      then: only changes with status draft (or absent status) are shown in the review list
     - id: AC-021
       description: agent polls module changes endpoint for status transitions
       given: eigen-change has written draft change files for a module
-      when: "the agent polls GET /api/modules/test-mod/changes"
-      then: "the agent detects when all draft changes transition to approved and proceeds to compile; if any change has a review_comment, the agent uses it as feedback for the spec-agent"
+      when: the agent polls GET /api/modules/test-mod/changes
+      then: the agent detects when all draft changes transition to approved and proceeds to compile; if any change has a review_comment, the agent uses it as feedback for the spec-agent
     - id: AC-022
       description: reviews.go file is removed or gutted
       given: the session-based review code exists in eigen/internal/server/reviews.go
