@@ -9,7 +9,7 @@ reason: |
     Speccing the API contract ensures the frontend and backend are built to the same
     interface. This is a rewrite of the original spec to frame acceptance criteria as
     behavioral requirements rather than test descriptions.
-status: approved
+status: compiled
 changes:
     title: Spec Navigator API
     owner: eigen

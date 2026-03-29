@@ -10,7 +10,7 @@ reason: |
     their decision. This is a rewrite of the original spec to frame acceptance
     criteria as behavioral requirements rather than test descriptions, and to use
     the batch-session model from the start.
-status: approved
+status: compiled
 changes:
     title: Change Review
     owner: eigen
