@@ -1,0 +1,137 @@
+id: chg-002
+sequence: 2
+timestamp: "2026-03-29T08:56:26Z"
+author: alexander
+type: updated
+summary: Rewrite spec to describe storage layer behavior and contracts, not test functions
+reason: |
+    The original spec listed test functions to create rather than describing the
+    storage layer's actual functionality. A spec should describe what the storage
+    layer does — its API surface, behavioral contracts, and invariants. Acceptance
+    criteria should be behavioral assertions about the storage layer itself, from
+    which tests naturally follow as a verification mechanism.
+changes:
+    title: Storage Layer Behavior
+    description: |
+        The storage layer (eigen/internal/storage) provides filesystem-backed
+        persistence for spec modules and their change histories. It exposes a
+        public API for reading, writing, discovering, and managing spec modules
+        and change files stored as YAML on disk.
+
+        The layer operates on a specs root directory. Within it, each module is a
+        directory identified by a slash-delimited path (e.g. "spec-cli" or
+        "spec-cli/cmd-new"). A module directory contains a spec.yaml file (the
+        projected current state) and a changes/ subdirectory holding numbered
+        change files (e.g. 001_initial.yaml, 002_feedback.yaml).
+
+        Public API surface:
+        - ReadSpec: load a module's spec.yaml into a SpecModule struct
+        - WriteSpec: persist a SpecModule struct as spec.yaml
+        - ReadChanges: load all change files from a module's changes/ directory
+        - WriteChange: persist a Change struct as a numbered YAML file
+        - NextSequence: determine the next available sequence number for a module
+        - WalkModules: discover all modules under the specs root
+        - SetChangeStatus: update the status field of a change file in-place
+        - FilterChangesByStatus: filter a set of changes by their effective status
+    behavior: |
+        All persistence uses YAML serialization via the yaml.v3 library. Files are
+        read and written atomically using os.ReadFile/os.WriteFile. The layer has
+        no caching; every call reads directly from the filesystem.
+
+        Change files are identified by .yaml extension within a module's changes/
+        directory. Non-YAML files and subdirectories are ignored. Changes are always
+        returned sorted ascending by sequence number.
+
+        Module discovery (WalkModules) identifies a directory as a module if and
+        only if it contains a "changes/" subdirectory. Discovery walks the full
+        directory tree at arbitrary depth and returns results sorted alphabetically.
+
+        Status defaults: a change with an empty/absent status field is treated as
+        having the effective status "draft" when filtering by status.
+
+        Path handling: module paths use forward-slash notation regardless of OS.
+        Internal path construction converts to OS-native separators.
+    acceptance_criteria:
+        - id: AC-001
+          description: Reading an existing spec returns its deserialized contents
+          given: A specs root containing a module directory with a valid spec.yaml
+          when: ReadSpec is called with the specs root and module path
+          then: It returns a SpecModule whose fields match the YAML content on disk, and no error
+
+        - id: AC-002
+          description: Reading a spec that does not exist returns an error
+          given: A specs root where no spec.yaml exists at the given module path
+          when: ReadSpec is called
+          then: It returns an error wrapping the underlying filesystem error
+
+        - id: AC-003
+          description: Writing a spec persists it to disk in YAML format
+          given: A SpecModule struct with known field values and an existing module directory
+          when: WriteSpec is called, then the resulting spec.yaml is read back
+          then: The file on disk contains valid YAML that deserializes to the original SpecModule values
+
+        - id: AC-004
+          description: Reading changes returns all change files sorted by sequence number
+          given: A module's changes/ directory containing multiple .yaml files with non-sequential sequence numbers (e.g. 3, 1, 2)
+          when: ReadChanges is called
+          then: It returns a slice of Change structs sorted ascending by Sequence, and no error
+
+        - id: AC-005
+          description: Reading changes from an empty directory returns an empty result
+          given: A module's changes/ directory that exists but contains no .yaml files
+          when: ReadChanges is called
+          then: It returns an empty (nil or zero-length) slice and no error
+
+        - id: AC-006
+          description: Reading changes from a non-existent directory returns an error
+          given: A module path whose changes/ directory does not exist on disk
+          when: ReadChanges is called
+          then: It returns an error wrapping the underlying filesystem error
+
+        - id: AC-007
+          description: Writing a change persists it as a numbered YAML file
+          given: A Change struct with sequence 3 and a slug "feedback"
+          when: WriteChange is called
+          then: A file named 003_feedback.yaml appears in the module's changes/ directory containing the serialized Change
+
+        - id: AC-008
+          description: Next sequence is 1 when no changes exist
+          given: A module whose changes/ directory is empty or whose ReadChanges returns an error
+          when: NextSequence is called
+          then: It returns 1 (the starting sequence number)
+
+        - id: AC-009
+          description: Next sequence is one greater than the highest existing sequence
+          given: A module's changes/ directory containing change files with sequence numbers 1, 3, and 2
+          when: NextSequence is called
+          then: It returns 4 (max sequence 3, plus 1)
+
+        - id: AC-010
+          description: Module discovery identifies directories that contain a changes/ subdirectory
+          given: A specs root with multiple nested directories, some containing a changes/ subdirectory and some not
+          when: WalkModules is called with an empty prefix
+          then: It returns ModuleRefs for exactly the directories that contain a changes/ subdirectory, sorted alphabetically by path
+
+        - id: AC-011
+          description: Module discovery filters by path prefix
+          given: A specs root with modules at paths "alpha", "beta", and "alpha/child"
+          when: WalkModules is called with prefix "alpha"
+          then: It returns only ModuleRefs whose paths equal "alpha" or start with "alpha/"
+
+        - id: AC-012
+          description: Setting change status updates the status field and preserves all other content
+          given: A change file on disk with known summary, reason, sequence, and an initial status (or no status)
+          when: SetChangeStatus is called with status "approved"
+          then: Re-reading the file shows status is "approved" and all other fields are preserved unchanged
+
+        - id: AC-013
+          description: Filtering changes by status uses effective status, defaulting empty to "draft"
+          given: A slice of Change structs where some have explicit statuses and some have empty status
+          when: FilterChangesByStatus is called with status "draft"
+          then: It returns changes whose Status field is "draft" as well as changes whose Status field is empty
+
+        - id: AC-014
+          description: Non-YAML files in changes/ directory are ignored
+          given: A module's changes/ directory containing both .yaml files and non-YAML files (e.g. .txt, .bak)
+          when: ReadChanges is called
+          then: Only the .yaml files are parsed and returned; non-YAML files are silently skipped
