@@ -9,6 +9,7 @@ reason: |
   identical to the current spec state. The projection engine already
   owns the projection logic and types, making it the right home for
   ValidateChanges.
+status: compiled
 changes:
   behavior: |
     Events are applied in ascending sequence order. Simple fields (title, owner,

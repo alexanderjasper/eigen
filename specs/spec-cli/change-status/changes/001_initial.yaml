@@ -11,6 +11,7 @@ reason: |
     status field to each change file enables the compile phase to select only
     approved-but-not-yet-compiled changes, and gives tooling and the web UI a
     stable signal for displaying per-change state.
+status: compiled
 changes:
     title: Change Status
     owner: eigen

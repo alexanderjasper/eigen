@@ -15,6 +15,7 @@ reason: |
      discoverable. An explicit `eigen spec project-all` subcommand and
      `eigen spec project --all` flag make the intent unambiguous and improve
      shell-script composability.
+status: compiled
 changes:
   description: |
     The spec project command recomputes and overwrites spec.yaml for a module

@@ -1,6 +1,7 @@
 summary: AI agent framework for Claude Code — orchestration model and core concepts
 reason: Introduce AI agents as a first-class concept in Claude Code, providing a structured framework for multi-phase workflows. This enables consolidating separate skills (eigen-spec, eigen-plan, eigen-compile) into unified agent-orchestrated experiences.
 type: created
+status: compiled
 changes:
   domain: ai-agent
   module: ai-agent

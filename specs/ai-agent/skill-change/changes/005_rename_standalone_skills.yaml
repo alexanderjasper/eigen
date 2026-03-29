@@ -11,6 +11,7 @@ reason: |
   the old names and eigen-plan, which would mislead users or agents reading the skill file.
   Updating the description ensures the spec stays authoritative and accurately reflects
   the current set of available companion skills.
+status: compiled
 changes:
   description: |-
     Refine the feedback loop: when user rejects output at any phase and provides feedback,

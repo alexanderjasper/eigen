@@ -5,6 +5,7 @@ reason: |-
   compile-agent only usable in the eigen codebase. It should read the code to understand
   conventions and discover build commands from the project configuration.
 type: updated
+status: compiled
 changes:
   description: |-
     compile-agent must not assume any specific language, framework, build system,

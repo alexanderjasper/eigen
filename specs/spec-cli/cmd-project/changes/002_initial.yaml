@@ -7,6 +7,7 @@ summary: Update terminology from "event" to "change"
 reason: |
   Update the spec project command's documentation to use "change" instead of
   "event" terminology, aligning with the broader refactoring.
+status: compiled
 changes:
   description: |
     The spec project command recomputes and overwrites spec.yaml for a module

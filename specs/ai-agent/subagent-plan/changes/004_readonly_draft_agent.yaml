@@ -6,6 +6,7 @@ reason: |-
   plan-agent must only read the spec, explore the codebase, and return a structured draft plan
   as text output to the caller.
 type: updated
+status: compiled
 changes:
   description: |-
     plan-agent is a read-only research and drafting agent. It receives a spec module path,

@@ -8,6 +8,7 @@ reason: |
   With spec event defaulting to non-interactive, the AI edits the event file
   directly after creation. A separate project command is needed to recompute
   spec.yaml from the edited events without creating a new event.
+status: compiled
 changes:
   title: "spec project"
   owner: eigen

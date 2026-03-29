@@ -8,6 +8,7 @@ reason: |-
   a contributor or AI agent could produce the wrong structure, breaking the pattern
   that the rest of the toolchain depends on.
 type: updated
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-009

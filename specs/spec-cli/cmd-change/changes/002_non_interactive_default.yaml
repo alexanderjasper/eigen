@@ -8,6 +8,7 @@ reason: |
   The primary user of eigen is an AI coding agent (Claude Code) that edits
   files directly. Opening $EDITOR unconditionally blocks automated workflows.
   Non-interactive should be the default; humans who want an editor can opt in.
+status: compiled
 changes:
   description: |
     The spec event command records a new change event against an existing

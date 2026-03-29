@@ -7,6 +7,7 @@ summary: Initial spec for eigen spec event
 reason: |
   Extracted from the monolithic spec-cli spec. spec event is responsible for
   recording change events against an existing module.
+status: compiled
 changes:
   title: "spec event"
   owner: eigen

@@ -10,6 +10,7 @@ reason: |
   eigen-change-spec and eigen-change-compile to make their relationship to eigen-change explicit and
   to clarify they invoke the corresponding subagents rather than containing the workflow inline.
   scaffold.go must drop the eigen-plan embed and rename the two skill distribution entries to match.
+status: compiled
 changes:
   description: |
     The scaffold command initializes a project directory with the eigen Claude

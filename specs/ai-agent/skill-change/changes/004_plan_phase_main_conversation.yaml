@@ -7,6 +7,7 @@ reason: |-
   splits Phase 2: plan-agent is a read-only research subagent that returns a draft plan as
   text, and eigen-change (main conversation) owns the plan mode lifecycle.
 type: updated
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-003

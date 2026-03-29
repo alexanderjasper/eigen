@@ -9,6 +9,7 @@ reason: |
   The projection engine applies changes (not events) to compute the projection.
   This refactoring updates all terminology: directories, IDs, metadata fields,
   and documentation.
+status: compiled
 changes:
   description: |
     The projection engine folds an ordered sequence of changes into a
