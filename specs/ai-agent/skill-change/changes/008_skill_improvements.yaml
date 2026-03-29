@@ -13,7 +13,7 @@ reason: |
        in the module.
     3. The compile-agent prompt used `cd eigen && go build ./...` which assumed a relative
        working directory and `eigen` not in PATH, requiring workarounds like `go run .`.
-status: approved
+status: compiled
 changes:
     acceptance_criteria:
         - id: AC-002

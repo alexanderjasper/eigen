@@ -7,6 +7,7 @@ summary: Update to display change timeline and terminology
 reason: |
   Update the spec navigator UI to use "change" terminology and fetch the
   renamed /changes API endpoint to populate the history section properly.
+status: compiled
 changes:
   behavior: |
     On load the UI fetches /api/modules and builds a tree from the flat

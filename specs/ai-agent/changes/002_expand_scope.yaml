@@ -4,6 +4,7 @@ reason: |-
   into a single `change` skill. This demonstrates the framework's value, eliminates separate skill invocations,
   and improves UX. This is the first implementation built on top of the framework.
 type: updated
+status: compiled
 changes:
   description: |-
     Using the ai-agent framework, implement a unified `change` skill that orchestrates feature development

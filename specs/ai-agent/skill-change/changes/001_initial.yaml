@@ -4,6 +4,7 @@ reason: |-
   coordination. A unified `change` skill provides seamless orchestration, approval gates between phases,
   and feedback-driven iteration, eliminating context switching and improving UX.
 type: created
+status: compiled
 changes:
   domain: ai-agent
   module: skill-change

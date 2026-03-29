@@ -4,6 +4,7 @@ reason: |-
   careful atomic commits. A compile-subagent automates this, following the plan step-by-step,
   making changes, testing, and committing incrementally.
 type: created
+status: compiled
 changes:
   domain: ai-agent
   module: subagent-compile

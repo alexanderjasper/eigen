@@ -8,6 +8,7 @@ reason: |
   An event that repeats existing values provides no information and
   pollutes the event log. Catching this at write time gives immediate
   feedback rather than requiring a post-hoc audit.
+status: compiled
 changes:
   behavior: |
     Accepts a single slash-delimited path argument identifying the target

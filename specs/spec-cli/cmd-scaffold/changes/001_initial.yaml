@@ -9,6 +9,7 @@ reason: |
     Claude skill files. They must manually copy skill files from the eigen repo or
     know the expected directory structure. A scaffold command eliminates this
     friction by producing a ready-to-use project layout in one step.
+status: compiled
 changes:
     title: scaffold
     owner: eigen

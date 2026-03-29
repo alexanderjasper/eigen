@@ -4,6 +4,7 @@ reason: |-
   relying on conversation context. This decouples planning from implementation and enables
   compile-subagent to run independently if needed.
 type: updated
+status: compiled
 changes:
   description: |-
     Clarify that compile-subagent receives path to plan.md file (e.g., .claude/plans/<branch>/plan.md)

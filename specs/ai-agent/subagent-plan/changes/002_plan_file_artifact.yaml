@@ -5,6 +5,7 @@ reason: |-
   This enables compile-subagent to work from stable, documented requirements without
   re-planning or relying on conversation history.
 type: updated
+status: compiled
 changes:
   description: |-
     Clarify that plan-subagent writes the plan.md file to .claude/plans/<branch>/plan.md

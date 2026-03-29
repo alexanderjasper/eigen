@@ -11,6 +11,7 @@ reason: |
     The spec also lacked the eigen-change skill and the three agent definition files
     (.claude/agents/) that were added to the implementation after the initial spec
     was written; this change brings them in sync.
+status: compiled
 changes:
     description: |
         The scaffold command initializes a project directory with the eigen Claude

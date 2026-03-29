@@ -6,6 +6,7 @@ reason: |-
   framework itself, not the target codebase — those references stay. But any references
   to specific project file layouts must be removed.
 type: updated
+status: compiled
 changes:
   description: |-
     spec-agent does not assume any specific codebase structure when exploring for context.

@@ -6,6 +6,7 @@ type: created
 summary: Initial spec for eigen spec list
 reason: |
   Extracted from the monolithic spec-cli spec.
+status: compiled
 changes:
   title: "spec list"
   owner: eigen

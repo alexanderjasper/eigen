@@ -7,6 +7,7 @@ summary: Initial spec for eigen spec new
 reason: |
   Extracted from the monolithic spec-cli spec. spec new is responsible for
   scaffolding new module directories and first events.
+status: compiled
 changes:
   title: "spec new"
   owner: eigen

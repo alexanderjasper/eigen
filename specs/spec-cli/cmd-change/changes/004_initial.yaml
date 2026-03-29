@@ -8,6 +8,7 @@ reason: |
   As part of the "event" → "change" terminology refactoring, this command
   is renamed from "spec event" to "spec change" to align with updated
   projection engine terminology and make the user-facing API consistent.
+status: compiled
 changes:
   title: spec change
   description: |

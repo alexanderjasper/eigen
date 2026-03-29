@@ -8,6 +8,7 @@ reason: |
   Phase 2 of Eigen adds a browser-based spec navigator. The serve command
   provides a self-contained local HTTP server so users can browse specs
   visually without any external tooling.
+status: compiled
 changes:
   title: Spec Navigator
   owner: eigen

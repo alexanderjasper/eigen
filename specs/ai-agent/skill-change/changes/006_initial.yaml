@@ -9,6 +9,7 @@ reason: |
   built-in plan mode already provides a temporary plan that the user reviews and
   approves in the UI. After approval, eigen-change passes that plan text directly
   to compile-agent as inline content — no file write, no git commit for the plan.
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-003

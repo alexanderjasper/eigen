@@ -8,6 +8,7 @@ reason: |
   Eigen applies its own methodology from day one. The projection engine is the
   core artifact that makes specs real: it folds change events into a readable,
   diffable spec.yaml projection.
+status: compiled
 changes:
   title: Projection Engine
   owner: eigen

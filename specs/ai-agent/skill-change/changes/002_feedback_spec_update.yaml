@@ -4,6 +4,7 @@ reason: |-
   before re-running failed phases. This keeps the spec as source of truth, enables fresh agents
   to plan/implement without conversation history, and ensures feedback is recorded permanently.
 type: updated
+status: compiled
 changes:
   description: |-
     Refine the feedback loop: when user rejects output at any phase and provides feedback,

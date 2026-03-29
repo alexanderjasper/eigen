@@ -9,6 +9,7 @@ reason: |
     --specs every time is friction. Walking up from the current working directory
     to find a specs/ folder is the natural convention (same pattern as git, go,
     and other project-aware tools).
+status: compiled
 changes:
     behavior: |
         The specs root is resolved in order: --specs flag, EIGEN_SPECS environment

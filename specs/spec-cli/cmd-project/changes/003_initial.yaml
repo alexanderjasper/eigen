@@ -8,6 +8,7 @@ reason: |
   The directory was renamed from events/ to changes/ as part of the
   terminology refactoring. The acceptance criterion still referenced
   the old name.
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-002

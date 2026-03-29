@@ -4,6 +4,7 @@ reason: |-
   it should write this as a new change file rather than overwriting the initial spec. This keeps
   the spec's change history intact and shows how requirements evolved through feedback.
 type: updated
+status: compiled
 changes:
   description: |-
     Clarify that spec-subagent always generates the next sequential change file

@@ -5,6 +5,7 @@ reason: |-
   in the eigen codebase itself. Agents should explore the codebase they're invoked in
   and adapt to what they find.
 type: updated
+status: compiled
 changes:
   description: |-
     plan-agent must not assume any specific codebase structure, framework, language,

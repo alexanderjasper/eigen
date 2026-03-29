@@ -6,6 +6,7 @@ type: created
 summary: Initial spec for eigen spec show
 reason: |
   Extracted from the monolithic spec-cli spec.
+status: compiled
 changes:
   title: "spec show"
   owner: eigen

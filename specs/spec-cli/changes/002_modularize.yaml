@@ -9,6 +9,7 @@ reason: |
   is a distinct enough concern to have its own spec. spec-cli now describes
   only the binary itself: how the specs root is resolved and the command
   structure. Individual commands are specified under spec-cli/cmd-*.
+status: compiled
 changes:
   description: |
     The spec CLI is a single static Go binary providing the eigen spec

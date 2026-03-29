@@ -4,6 +4,7 @@ reason: |-
   A spec-subagent automates this, asking clarifying questions based on the feature description,
   exploring the codebase for context, and producing spec files in the standard eigen-spec format.
 type: created
+status: compiled
 changes:
   domain: ai-agent
   module: subagent-spec
