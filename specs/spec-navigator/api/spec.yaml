@@ -7,7 +7,8 @@ status: draft
 description: |
     The spec navigator API is a set of JSON endpoints served by eigen serve.
     It exposes module listings and per-module detail (projection + changes)
-    so the frontend can render the spec tree and detail pane.
+    so the frontend can render the spec tree and detail pane. It also serves
+    the review session endpoints used by the change-review flow.
 behavior: |
     GET /api/modules returns a flat list of ModuleSummary objects for all
     modules under the specs root. Each summary includes path, title, owner,
@@ -39,56 +40,36 @@ behavior: |
     return a JSON object with an "error" key and an appropriate HTTP status.
 acceptance_criteria:
     - id: AC-001
-      description: GET /api/modules returns all modules as flat list
-      given: specs root contains modules at spec-cli and spec-cli/cmd-new
+      description: GET /api/modules returns a JSON array of all discovered modules
+      given: the specs root contains modules at paths "spec-cli" and "spec-cli/cmd-new"
       when: GET /api/modules is requested
-      then: response contains ModuleSummary for both paths with correct fields
+      then: response status is 200 with Content-Type application/json; body is a JSON array containing a ModuleSummary for each module with path, title, owner, status, and children fields
     - id: AC-002
-      description: children flag is true when sub-modules exist
-      given: spec-cli has sub-module spec-cli/cmd-new
+      description: children flag reflects whether sub-modules exist
+      given: module "spec-cli" has sub-module "spec-cli/cmd-new", and "spec-cli/cmd-new" has no sub-modules
       when: GET /api/modules is requested
-      then: the ModuleSummary for spec-cli has children true
+      then: the ModuleSummary for "spec-cli" has children true; the ModuleSummary for "spec-cli/cmd-new" has children false
     - id: AC-003
-      description: children flag is false for leaf modules
-      given: spec-cli/cmd-new has no sub-modules
-      when: GET /api/modules is requested
-      then: the ModuleSummary for spec-cli/cmd-new has children false
-    - id: AC-004
-      description: GET /api/modules/*path returns full projection
-      given: module spec-cli/cmd-new exists with a valid spec.yaml
+      description: GET /api/modules/*path returns the full module projection
+      given: module "spec-cli/cmd-new" exists with a valid spec.yaml
       when: GET /api/modules/spec-cli/cmd-new is requested
-      then: response contains the full SpecModule JSON including acceptance_criteria
-    - id: AC-005
-      description: GET /api/modules/*path/changes returns ordered changes
-      given: module spec-cli has two changes with sequences 1 and 2
+      then: response status is 200; body is the full SpecModule JSON including all projected fields such as title, description, behavior, and acceptance_criteria
+    - id: AC-004
+      description: GET /api/modules/*path/changes returns change files in sequence order
+      given: module "spec-cli" has two change files with sequences 1 and 2
       when: GET /api/modules/spec-cli/changes is requested
-      then: response contains both changes in ascending sequence order
-    - id: AC-006
-      description: unknown module returns 404
-      given: no module exists at path nonexistent
+      then: response status is 200; body is a JSON array of both changes ordered by ascending sequence number
+    - id: AC-005
+      description: requesting a non-existent module returns 404
+      given: no module exists at path "nonexistent"
       when: GET /api/modules/nonexistent is requested
-      then: response status is 404 with a JSON error body
-    - id: AC-007
-      description: POST /api/reviews creates a pending review session
-      given: eigen-change POSTs change_id "chg-003" with valid module_path and change_yaml
-      when: POST /api/reviews is received
-      then: server responds 201 with {"review_id":"chg-003"} and stores the session with status "pending"
-    - id: AC-008
-      description: GET /api/reviews/<change-id> returns current session state
-      given: a review session for "chg-003" exists with status "pending"
-      when: GET /api/reviews/chg-003 is requested
-      then: response is 200 with status "pending", decision "", comments ""
-    - id: AC-009
-      description: POST /api/reviews/<change-id>/submit transitions session to submitted
-      given: a pending session for "chg-003" exists
-      when: POST /api/reviews/chg-003/submit is sent with {"decision":"approved","comments":""}
-      then: response is 200; subsequent GET returns status "submitted", decision "approved"
-    - id: AC-010
-      description: GET /api/reviews for unknown change-id returns 404
-      given: no session exists for "chg-999"
-      when: GET /api/reviews/chg-999 is requested
-      then: response is 404 with JSON error body
+      then: response status is 404; body is a JSON object with an "error" key
+    - id: AC-006
+      description: requesting changes for a non-existent module returns 404
+      given: no module exists at path "nonexistent"
+      when: GET /api/modules/nonexistent/changes is requested
+      then: response status is 404; body is a JSON object with an "error" key
 dependencies: []
 technology: {}
-last_change: chg-003
-changes_count: 3
+last_change: chg-001
+changes_count: 1
