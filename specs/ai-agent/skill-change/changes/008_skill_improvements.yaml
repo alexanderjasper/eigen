@@ -1,0 +1,53 @@
+id: chg-008
+sequence: 8
+timestamp: "2026-03-29T00:00:00Z"
+author: alexander
+type: updated
+summary: Background polling, fresh-spec on rewrite, eigen in PATH
+reason: |
+    Three issues discovered during real usage of the skill:
+    1. The blocking poll loop (while true; sleep 3) froze the conversation thread — the user
+       could not interact with Claude while waiting for a review decision.
+    2. The Spec Feedback Loop always wrote a new incremental change file, even when the user
+       wanted to scrap the entire spec direction and start over. This left stale draft changes
+       in the module.
+    3. The compile-agent prompt used `cd eigen && go build ./...` which assumed a relative
+       working directory and `eigen` not in PATH, requiring workarounds like `go run .`.
+status: approved
+changes:
+    acceptance_criteria:
+        - id: AC-002
+          description: |-
+            After spec-agent finishes writing change files and running `eigen spec project`,
+            eigen-change posts the changes to the review API and starts a background poll
+            (run_in_background: true, timeout: 300000ms) that exits with the full JSON result
+            when the session status becomes "submitted". Claude is notified automatically when
+            the poll completes and proceeds without blocking the conversation thread.
+            On approval: eigen-change commits spec files, marks changes approved, proceeds to Phase 2.
+            On rejection: eigen-change extracts change_comments from the result JSON, runs the
+            Spec Feedback Loop, then re-posts to the review API for another round.
+          given: ""
+          when: ""
+          then: ""
+        - id: AC-006
+          description: |-
+            On rejection at any phase: (1) extract feedback from review API result or AskUserQuestion,
+            (2) launch spec-agent in feedback mode.
+            If the feedback indicates a fundamental rewrite (wrong framing, wrong direction, start over):
+              spec-agent deletes all draft change files (status="" or status="draft") and writes a fresh
+              change file at the next available sequence number (001 if new module, higher if compiled
+              changes exist).
+            Otherwise: spec-agent writes a new change file at the next sequence number on top of existing ones.
+            After spec-agent returns, eigen-change commits all pending spec files, then re-runs the failed phase.
+          given: ""
+          when: ""
+          then: ""
+        - id: AC-013
+          description: |-
+            The compile-agent prompt instructs the agent to build with `go build ./...` from the
+            `eigen/` subdirectory of the repo root. The `eigen` CLI is assumed to be installed in
+            $PATH. If `eigen` is not found when running `eigen spec change-status`, the agent stops
+            and asks the user to install it via `go install` from the `eigen/` directory.
+          given: ""
+          when: ""
+          then: ""

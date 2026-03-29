@@ -12,7 +12,7 @@ Compile a spec into code for the eigen project. Specs are the source of truth â€
 
 1. **Read the spec**: `specs/<module-path>/spec.yaml`. This defines correctness.
 
-2. **Read recent changes**: `specs/<module-path>/changes/` for context on the change. Only process changes with status `approved`; skip changes with status `draft`, `compiled`, or absent status (absent = draft).
+2. **Read recent changes**: `specs/<module-path>/changes/` for context on the change.
 
 3. **Explore the codebase**: understand existing patterns in `eigen/cmd/` and `eigen/internal/` before writing anything.
 
@@ -23,12 +23,6 @@ Compile a spec into code for the eigen project. Specs are the source of truth â€
 6. **Verify manually**: exercise each acceptance criterion from the spec against the built binary.
 
 7. **Commit**: `feat(<domain>): implement <spec title>` â€” small atomic commits as you go.
-
-8. **Mark compiled**: after successful build and commit, for each approved change file that was compiled run:
-   ```bash
-   eigen spec change-status <module-path> <filename> compiled
-   ```
-   Then commit: `chore(<module>): mark changes compiled`
 
 ## Constraints
 - Implement exactly what the spec says â€” no extra features, no gold-plating
