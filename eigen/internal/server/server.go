@@ -20,20 +20,14 @@ func Start(specsRoot string, port int, open bool) error {
 	// JSON API
 	mux.HandleFunc("/api/modules", modulesHandler(specsRoot))
 	mux.HandleFunc("/api/modules/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/changes") {
+		if strings.HasSuffix(r.URL.Path, "/approve") {
+			changeApproveHandler(specsRoot)(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/reject") {
+			changeRejectHandler(specsRoot)(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/changes") {
 			moduleChangesHandler(specsRoot)(w, r)
 		} else {
 			moduleDetailHandler(specsRoot)(w, r)
-		}
-	})
-
-	mux.HandleFunc("/api/reviews/pending", pendingReviewHandler())
-	mux.HandleFunc("/api/reviews", createReviewHandler())
-	mux.HandleFunc("/api/reviews/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/submit") {
-			submitReviewHandler()(w, r)
-		} else {
-			getReviewHandler()(w, r)
 		}
 	})
 

@@ -37,8 +37,10 @@ type Change struct {
 	Type      string    `yaml:"type"      json:"type"` // created | updated | deprecated
 	Summary   string    `yaml:"summary"   json:"summary"`
 	Reason    string    `yaml:"reason"    json:"reason"`
-	Status    string    `yaml:"status,omitempty" json:"status,omitempty"`
-	Changes   ChangeSet `yaml:"changes"   json:"changes"`
+	Status        string    `yaml:"status,omitempty" json:"status,omitempty"`
+	ReviewComment string    `yaml:"review_comment,omitempty" json:"review_comment,omitempty"`
+	Filename      string    `yaml:"-" json:"filename,omitempty"`
+	Changes       ChangeSet `yaml:"changes"   json:"changes"`
 }
 
 // ChangeSet holds the fields that may change in a single change.

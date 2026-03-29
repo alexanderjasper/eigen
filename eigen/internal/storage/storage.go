@@ -54,6 +54,7 @@ func ReadChanges(specsRoot, path string) ([]spec.Change, error) {
 		if err := yaml.Unmarshal(data, &ch); err != nil {
 			return nil, fmt.Errorf("parsing change file %s: %w", e.Name(), err)
 		}
+		ch.Filename = e.Name()
 		changes = append(changes, ch)
 	}
 
@@ -131,6 +132,29 @@ func SetChangeStatus(specsRoot, modulePath, filename, status string) error {
 		return fmt.Errorf("parsing change file %s: %w", filename, err)
 	}
 	ch.Status = status
+	out, err := marshalCanonical(ch)
+	if err != nil {
+		return fmt.Errorf("marshaling change file %s: %w", filename, err)
+	}
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		return fmt.Errorf("writing change file %s: %w", filename, err)
+	}
+	return nil
+}
+
+// SetChangeComment reads a change file by filename, sets its ReviewComment field, and writes it back.
+func SetChangeComment(specsRoot, modulePath, filename, comment string) error {
+	dir := ChangesPath(specsRoot, modulePath)
+	path := filepath.Join(dir, filename)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("reading change file %s: %w", filename, err)
+	}
+	var ch spec.Change
+	if err := yaml.Unmarshal(data, &ch); err != nil {
+		return fmt.Errorf("parsing change file %s: %w", filename, err)
+	}
+	ch.ReviewComment = comment
 	out, err := marshalCanonical(ch)
 	if err != nil {
 		return fmt.Errorf("marshaling change file %s: %w", filename, err)

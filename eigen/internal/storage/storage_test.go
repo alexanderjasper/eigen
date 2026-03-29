@@ -417,6 +417,85 @@ func TestSetChangeStatus(t *testing.T) {
 	})
 }
 
+func TestSetChangeComment(t *testing.T) {
+	t.Run("sets_comment_preserves_fields", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{
+			ID:       "chg-001",
+			Sequence: 1,
+			Author:   "alice",
+			Summary:  "initial",
+			Status:   "draft",
+		}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeComment(root, "mymod", "001_initial.yaml", "needs more detail"); err != nil {
+			t.Fatalf("SetChangeComment error: %v", err)
+		}
+
+		// Read back
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].ReviewComment != "needs more detail" {
+			t.Errorf("ReviewComment = %q, want 'needs more detail'", changes[0].ReviewComment)
+		}
+		if changes[0].Author != "alice" {
+			t.Errorf("Author = %q, want alice", changes[0].Author)
+		}
+		if changes[0].Status != "draft" {
+			t.Errorf("Status = %q, want draft", changes[0].Status)
+		}
+	})
+
+	t.Run("error_nonexistent", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "mymod")
+
+		err := SetChangeComment(root, "mymod", "999_nope.yaml", "comment")
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("roundtrip_via_ReadChanges", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{
+			ID:       "chg-001",
+			Sequence: 1,
+			Summary:  "feature",
+			Status:   "draft",
+		}
+		writeChangeFile(t, changesDir, ch, "feature")
+
+		if err := SetChangeComment(root, "mymod", "001_feature.yaml", "edge case handling"); err != nil {
+			t.Fatalf("SetChangeComment error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].ReviewComment != "edge case handling" {
+			t.Errorf("ReviewComment = %q, want 'edge case handling'", changes[0].ReviewComment)
+		}
+		if changes[0].Filename != "001_feature.yaml" {
+			t.Errorf("Filename = %q, want '001_feature.yaml'", changes[0].Filename)
+		}
+	})
+}
+
 func TestFilterChangesByStatus(t *testing.T) {
 	t.Run("filters_matching", func(t *testing.T) {
 		changes := []spec.Change{

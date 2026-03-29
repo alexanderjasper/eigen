@@ -277,129 +277,99 @@ function esc(str) {
 // ── Review Panel ──────────────────────────────────────────────────────────────
 
 let reviewPollerTimer = null;
-let activeReviewSessionId = null;
 
 function injectReviewPanel() {
   const panel = document.createElement('div');
   panel.id = 'review-panel';
   panel.style.display = 'none';
   panel.innerHTML =
-    '<h2>Spec Review</h2>' +
-    '<div id="review-changes"></div>' +
-    '<div class="review-actions">' +
-      '<button class="btn-approve">Approve</button>' +
-      '<button class="btn-reject">Reject</button>' +
-    '</div>';
-
-  panel.querySelector('.btn-approve').addEventListener('click', () => {
-    submitReview('approved');
-  });
-  panel.querySelector('.btn-reject').addEventListener('click', () => {
-    submitReview('rejected');
-  });
+    '<h2>Pending Review</h2>' +
+    '<div id="review-changes"></div>';
 
   document.body.appendChild(panel);
 }
 
 function startReviewPoller() {
   reviewPollerTimer = setInterval(async () => {
+    if (!activePath) return;
     try {
-      const res = await fetch('/api/reviews/pending');
-      if (res.status === 204 || !res.ok) {
+      const res = await fetch('/api/modules/' + activePath + '/changes');
+      if (!res.ok) {
         hideReviewPanel();
         return;
       }
-      const data = await res.json();
-      showReviewPanel(data.session_id);
+      const changes = await res.json();
+      const draft = changes.filter(c => !c.status || c.status === 'draft');
+      if (draft.length === 0) {
+        hideReviewPanel();
+        return;
+      }
+      showReviewPanel(draft);
     } catch (_) {
       hideReviewPanel();
     }
   }, 3000);
 }
 
-async function showReviewPanel(sessionId) {
-  try {
-    const res = await fetch('/api/reviews/' + sessionId);
-    if (!res.ok) {
-      hideReviewPanel();
-      return;
-    }
-    const session = await res.json();
-    if (session.status === 'submitted') {
-      hideReviewPanel();
-      return;
-    }
+function showReviewPanel(draftChanges) {
+  const changesEl = document.getElementById('review-changes');
+  changesEl.innerHTML = '';
 
-    // Already rendering this session — don't rebuild (would reset scroll).
-    if (activeReviewSessionId === sessionId &&
-        document.getElementById('review-panel').style.display !== 'none') {
-      return;
-    }
+  for (const change of draftChanges) {
+    const card = document.createElement('div');
+    card.className = 'review-change-card';
 
-    activeReviewSessionId = sessionId;
+    const heading = document.createElement('div');
+    heading.className = 'review-change-heading';
+    heading.textContent = (change.id || '') + ' — ' + (change.filename || '') + ' — ' + (change.summary || '');
 
-    const changesEl = document.getElementById('review-changes');
-    changesEl.innerHTML = '';
-
-    for (const change of (session.changes || [])) {
-      const card = document.createElement('div');
-      card.className = 'review-change-card';
-
-      const heading = document.createElement('div');
-      heading.className = 'review-change-heading';
-      heading.textContent = change.change_id + ' — ' + change.file_path;
-
-      const yamlPre = document.createElement('pre');
-      yamlPre.className = 'review-yaml';
-      yamlPre.textContent = change.change_yaml || '';
-
-      const commentLabel = document.createElement('label');
-      commentLabel.textContent = 'Comment (optional)';
-
-      const textarea = document.createElement('textarea');
-      textarea.className = 'review-comments';
-      textarea.dataset.changeId = change.change_id;
-      textarea.rows = 3;
-
-      card.append(heading, yamlPre, commentLabel, textarea);
-      changesEl.appendChild(card);
+    if (change.review_comment) {
+      const commentNote = document.createElement('div');
+      commentNote.className = 'review-comment-note';
+      commentNote.textContent = 'Previous feedback: ' + change.review_comment;
+      card.appendChild(commentNote);
     }
 
-    document.getElementById('review-panel').style.display = 'block';
-  } catch (_) {
-    hideReviewPanel();
+    const actions = document.createElement('div');
+    actions.className = 'review-actions';
+
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'btn-approve';
+    approveBtn.textContent = 'Approve';
+    approveBtn.addEventListener('click', async () => {
+      try {
+        await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve', {
+          method: 'POST',
+        });
+      } catch (_) { /* poller will refresh */ }
+    });
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'btn-reject';
+    rejectBtn.textContent = 'Reject';
+    rejectBtn.addEventListener('click', async () => {
+      const comment = prompt('Rejection comment:');
+      if (!comment) return;
+      try {
+        await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment }),
+        });
+      } catch (_) { /* poller will refresh */ }
+    });
+
+    actions.append(approveBtn, rejectBtn);
+    card.append(heading, actions);
+    changesEl.appendChild(card);
   }
+
+  document.getElementById('review-panel').style.display = 'block';
 }
 
 function hideReviewPanel() {
   const panel = document.getElementById('review-panel');
   if (panel) panel.style.display = 'none';
-  activeReviewSessionId = null;
-}
-
-async function submitReview(decision) {
-  if (!activeReviewSessionId) return;
-
-  const changeComments = {};
-  const textareas = document.querySelectorAll('.review-comments');
-  for (const ta of textareas) {
-    if (ta.value.trim()) {
-      changeComments[ta.dataset.changeId] = ta.value.trim();
-    }
-  }
-
-  try {
-    const res = await fetch('/api/reviews/' + activeReviewSessionId + '/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decision, change_comments: changeComments }),
-    });
-    if (res.ok) {
-      hideReviewPanel();
-    }
-  } catch (_) {
-    // ignore, poller will retry
-  }
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
