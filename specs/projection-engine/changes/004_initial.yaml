@@ -9,7 +9,7 @@ reason: |
     in the project -- the "compiler" for specs -- and currently have zero test
     coverage. This change adds comprehensive acceptance criteria for two new
     test files that exercise all existing behavior.
-status: approved
+status: compiled
 changes:
     acceptance_criteria:
         - id: AC-010
