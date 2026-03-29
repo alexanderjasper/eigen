@@ -1,6 +1,6 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-21T06:42:16Z
+timestamp: "2026-03-21T06:42:16Z"
 author: alexander
 type: updated
 summary: Update AC-002 to reference changes/ directory

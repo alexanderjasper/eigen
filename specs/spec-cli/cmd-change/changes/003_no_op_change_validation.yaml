@@ -1,6 +1,6 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: updated
 summary: Reject event fields that are identical to current spec state

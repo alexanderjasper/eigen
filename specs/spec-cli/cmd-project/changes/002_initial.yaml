@@ -1,6 +1,6 @@
 id: chg-002
 sequence: 2
-timestamp: 2026-03-21T06:33:41Z
+timestamp: "2026-03-21T06:33:41Z"
 author: alexander
 type: updated
 summary: Update terminology from "event" to "change"

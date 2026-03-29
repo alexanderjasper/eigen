@@ -5,76 +5,76 @@ author: eigen
 type: updated
 summary: Fix YAML serialization to produce canonical 2-space-indented output with no zero-value fields
 reason: |
-    `SetChangeStatus` (and other write functions) round-trip change files through
-    `yaml.Marshal`, which produces two correctness problems: (1) `gopkg.in/yaml.v3`
-    defaults to 4-space indentation, drifting from the 2-space convention used by
-    all hand-authored change files; (2) the `Change` struct fields `id`, `sequence`,
-    `timestamp`, and `author` lack `omitempty` tags, so zero-value strings and ints
-    are written to disk even when they were absent in the original file. Together
-    these cause spurious diffs and corrupt the canonical format every time a file
-    is re-serialized.
+  `SetChangeStatus` (and other write functions) round-trip change files through
+  `yaml.Marshal`, which produces two correctness problems: (1) `gopkg.in/yaml.v3`
+  defaults to 4-space indentation, drifting from the 2-space convention used by
+  all hand-authored change files; (2) the `Change` struct fields `id`, `sequence`,
+  `timestamp`, and `author` lack `omitempty` tags, so zero-value strings and ints
+  are written to disk even when they were absent in the original file. Together
+  these cause spurious diffs and corrupt the canonical format every time a file
+  is re-serialized.
 status: compiled
 changes:
-    behavior: |
-        All functions accept a specsRoot path and a module path (slash-delimited,
-        e.g. "spec-cli/cmd-new"). The storage layer derives filesystem paths
-        deterministically: the module directory is specsRoot/<module-path>, the
-        changes directory is specsRoot/<module-path>/changes/, and the projected
-        spec is specsRoot/<module-path>/spec.yaml.
+  behavior: |
+    All functions accept a specsRoot path and a module path (slash-delimited,
+    e.g. "spec-cli/cmd-new"). The storage layer derives filesystem paths
+    deterministically: the module directory is specsRoot/<module-path>, the
+    changes directory is specsRoot/<module-path>/changes/, and the projected
+    spec is specsRoot/<module-path>/spec.yaml.
 
-        ReadChanges reads all .yaml files from the changes/ directory, skipping
-        subdirectories and non-YAML files, and returns them sorted by ascending
-        sequence number.
+    ReadChanges reads all .yaml files from the changes/ directory, skipping
+    subdirectories and non-YAML files, and returns them sorted by ascending
+    sequence number.
 
-        WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
-        mode 0644. WriteChange marshals a Change to YAML and writes it to the
-        changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
-        3 digits) and mode 0644.
+    WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
+    mode 0644. WriteChange marshals a Change to YAML and writes it to the
+    changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
+    3 digits) and mode 0644.
 
-        NextSequence returns 1 when no changes exist or the changes directory
-        is unreadable; otherwise it returns max(sequence) + 1 across all existing
-        changes.
+    NextSequence returns 1 when no changes exist or the changes directory
+    is unreadable; otherwise it returns max(sequence) + 1 across all existing
+    changes.
 
-        WalkModules recursively discovers modules under specsRoot. A directory
-        qualifies as a module if it contains a "changes/" subdirectory. Results
-        are sorted lexicographically by slash path and can be filtered by an
-        optional prefix. The "changes" directory itself is never recursed into
-        as a module subtree.
+    WalkModules recursively discovers modules under specsRoot. A directory
+    qualifies as a module if it contains a "changes/" subdirectory. Results
+    are sorted lexicographically by slash path and can be filtered by an
+    optional prefix. The "changes" directory itself is never recursed into
+    as a module subtree.
 
-        SetChangeStatus reads a change file by filename, updates its Status field,
-        and writes it back. FilterChangesByStatus returns only changes whose
-        effective status matches a given status string; absent (empty) status is
-        treated as "draft".
+    SetChangeStatus reads a change file by filename, updates its Status field,
+    and writes it back. FilterChangesByStatus returns only changes whose
+    effective status matches a given status string; absent (empty) status is
+    treated as "draft".
 
-        All YAML write operations (WriteChange, WriteSpec, SetChangeStatus) use a
-        canonical serializer: 2-space indentation and no zero-value fields emitted
-        for string or int fields that were absent (empty) in the original. A
-        marshalCanonical helper encodes using yaml.v3 with Indent set to 2 and
-        encodes the value into a yaml.Node first so that omitempty-equivalent
-        behaviour can be enforced at the encoder level.
-    acceptance_criteria:
-        - id: AC-025
-          description: WriteChange uses 2-space indentation
-          given: A Change struct with all fields populated
-          when: WriteChange is called and the resulting file bytes are inspected
-          then: Every indented line in the output file is indented by a multiple of 2 spaces, not 4
-        - id: AC-026
-          description: WriteChange omits zero-value header fields
-          given: A Change with ID, Sequence, Timestamp, and Author all set to zero values (empty string / 0)
-          when: WriteChange is called and the resulting file bytes are inspected
-          then: The output file does not contain the keys "id:", "sequence:", "timestamp:", or "author:"
-        - id: AC-027
-          description: SetChangeStatus does not alter indentation when rewriting a file
-          given: A change file on disk authored with 2-space indentation and a non-empty ID, Author, and Timestamp
-          when: SetChangeStatus is called to change the status
-          then: The rewritten file still uses 2-space indentation and still contains the original id, author, and timestamp values
-        - id: AC-028
-          description: SetChangeStatus does not introduce zero-value keys absent from the original file
-          given: A change file on disk that does not contain an "author:" key
-          when: SetChangeStatus is called to change the status
-          then: The rewritten file still does not contain an "author:" key
-        - id: AC-029
-          description: WriteSpec uses 2-space indentation
-          given: A SpecModule struct with populated fields
-          when: WriteSpec is called and the resulting file bytes are inspected
-          then: Every indented line in the output file is indented by a multiple of 2 spaces, not 4
+    All YAML write operations (WriteChange, WriteSpec, SetChangeStatus) use a
+    canonical serializer: 2-space indentation and no zero-value fields emitted
+    for string or int fields that were absent (empty) in the original. A
+    marshalCanonical helper encodes using yaml.v3 with Indent set to 2 and
+    encodes the value into a yaml.Node first so that omitempty-equivalent
+    behaviour can be enforced at the encoder level.
+  acceptance_criteria:
+    - id: AC-025
+      description: WriteChange uses 2-space indentation
+      given: A Change struct with all fields populated
+      when: WriteChange is called and the resulting file bytes are inspected
+      then: Every indented line in the output file is indented by a multiple of 2 spaces, not 4
+    - id: AC-026
+      description: WriteChange omits zero-value header fields
+      given: A Change with ID, Sequence, Timestamp, and Author all set to zero values (empty string / 0)
+      when: WriteChange is called and the resulting file bytes are inspected
+      then: The output file does not contain the keys "id:", "sequence:", "timestamp:", or "author:"
+    - id: AC-027
+      description: SetChangeStatus does not alter indentation when rewriting a file
+      given: A change file on disk authored with 2-space indentation and a non-empty ID, Author, and Timestamp
+      when: SetChangeStatus is called to change the status
+      then: The rewritten file still uses 2-space indentation and still contains the original id, author, and timestamp values
+    - id: AC-028
+      description: SetChangeStatus does not introduce zero-value keys absent from the original file
+      given: A change file on disk that does not contain an "author:" key
+      when: SetChangeStatus is called to change the status
+      then: The rewritten file still does not contain an "author:" key
+    - id: AC-029
+      description: WriteSpec uses 2-space indentation
+      given: A SpecModule struct with populated fields
+      when: WriteSpec is called and the resulting file bytes are inspected
+      then: Every indented line in the output file is indented by a multiple of 2 spaces, not 4

@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T21:00:00Z
+timestamp: "2026-03-20T21:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for eigen spec list
@@ -8,7 +8,7 @@ reason: |
   Extracted from the monolithic spec-cli spec.
 status: compiled
 changes:
-  title: "spec list"
+  title: spec list
   owner: eigen
   status: draft
   description: |

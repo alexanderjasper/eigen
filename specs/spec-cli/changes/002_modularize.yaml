@@ -1,6 +1,6 @@
 id: chg-002
 sequence: 2
-timestamp: 2026-03-20T21:00:00Z
+timestamp: "2026-03-20T21:00:00Z"
 author: alexander
 type: updated
 summary: Narrow spec-cli to root concerns, move commands to sub-specs
@@ -37,16 +37,44 @@ changes:
       when: Any eigen spec command is run
       then: ../specs relative to the binary path is used as the specs root
     - id: AC-004
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-005
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-006
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-007
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-008
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-009
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-010
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true

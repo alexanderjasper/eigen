@@ -1,9 +1,9 @@
+type: updated
 summary: Feedback-driven spec updates — spec remains authoritative across rejection loops
 reason: |-
   When user provides feedback on rejected output, the spec should be updated (via spec-agent)
   before re-running failed phases. This keeps the spec as source of truth, enables fresh agents
   to plan/implement without conversation history, and ensures feedback is recorded permanently.
-type: updated
 status: compiled
 changes:
   description: |-
@@ -19,11 +19,20 @@ changes:
         On rejection at any phase: (1) collect user feedback via AskUserQuestion,
         (2) launch spec-agent with feedback to write changes/*.yaml update,
         (3) commit spec(...) change, (4) re-run the failed phase using updated spec.yaml
+      given: ""
+      when: ""
+      then: ""
     - id: AC-007
       description: |-
         Plan-subagent writes plan.md as a persistent file artifact to .claude/plans/<branch>/plan.md
         (not just conversation output). Compile-subagent reads from this file.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-008
       description: |-
         Agents are defined as `.claude/agents/<name>.md` files with frontmatter name: field
         matching subagent_type invocations (spec-agent, plan-agent, compile-agent).
+      given: ""
+      when: ""
+      then: ""
