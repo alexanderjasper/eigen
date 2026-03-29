@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/alexanderjasper/eigen/internal/spec"
+	"github.com/alexanderjasper/eigen/internal/storage"
 )
 
 // setupModule creates the module directory and its changes/ subdirectory.
@@ -58,19 +60,14 @@ func newTestMux(specsRoot string) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/modules", modulesHandler(specsRoot))
 	mux.HandleFunc("/api/modules/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/changes") {
+		if strings.HasSuffix(r.URL.Path, "/approve") {
+			changeApproveHandler(specsRoot)(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/reject") {
+			changeRejectHandler(specsRoot)(w, r)
+		} else if strings.HasSuffix(r.URL.Path, "/changes") {
 			moduleChangesHandler(specsRoot)(w, r)
 		} else {
 			moduleDetailHandler(specsRoot)(w, r)
-		}
-	})
-	mux.HandleFunc("/api/reviews/pending", pendingReviewHandler())
-	mux.HandleFunc("/api/reviews", createReviewHandler())
-	mux.HandleFunc("/api/reviews/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, "/submit") {
-			submitReviewHandler()(w, r)
-		} else {
-			getReviewHandler()(w, r)
 		}
 	})
 	return mux
@@ -332,4 +329,239 @@ func TestModuleChangesHandler(t *testing.T) {
 			t.Error("response missing 'error' key")
 		}
 	})
+}
+
+func TestChangeApprove(t *testing.T) {
+	t.Run("approves_change_file", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "test-mod")
+		writeSpecFile(t, root, "test-mod", spec.SpecModule{
+			ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+		})
+		writeChangeFile(t, changesDir, spec.Change{
+			ID: "chg-002", Sequence: 2, Summary: "feature", Status: "draft",
+		}, "feature")
+
+		ts := httptest.NewServer(newTestMux(root))
+		defer ts.Close()
+
+		resp, err := http.Post(ts.URL+"/api/modules/test-mod/changes/002_feature.yaml/approve", "application/json", nil)
+		if err != nil {
+			t.Fatalf("request error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+
+		var respBody map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if respBody["status"] != "approved" {
+			t.Errorf("status = %q, want approved", respBody["status"])
+		}
+
+		// Verify on disk
+		changes, err := storage.ReadChanges(root, "test-mod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].Status != "approved" {
+			t.Errorf("disk status = %q, want approved", changes[0].Status)
+		}
+	})
+
+	t.Run("404_missing_file", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "test-mod")
+		writeSpecFile(t, root, "test-mod", spec.SpecModule{
+			ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+		})
+
+		ts := httptest.NewServer(newTestMux(root))
+		defer ts.Close()
+
+		resp, err := http.Post(ts.URL+"/api/modules/test-mod/changes/999_missing.yaml/approve", "application/json", nil)
+		if err != nil {
+			t.Fatalf("request error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 404 {
+			t.Fatalf("status = %d, want 404", resp.StatusCode)
+		}
+
+		var respBody map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := respBody["error"]; !ok {
+			t.Error("response missing 'error' key")
+		}
+	})
+}
+
+func TestChangeReject(t *testing.T) {
+	t.Run("rejects_with_comment", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "test-mod")
+		writeSpecFile(t, root, "test-mod", spec.SpecModule{
+			ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+		})
+		writeChangeFile(t, changesDir, spec.Change{
+			ID: "chg-002", Sequence: 2, Summary: "feature", Status: "draft",
+		}, "feature")
+
+		ts := httptest.NewServer(newTestMux(root))
+		defer ts.Close()
+
+		reqBody, _ := json.Marshal(map[string]string{"comment": "needs more detail on edge cases"})
+		resp, err := http.Post(ts.URL+"/api/modules/test-mod/changes/002_feature.yaml/reject", "application/json", bytes.NewReader(reqBody))
+		if err != nil {
+			t.Fatalf("request error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			t.Fatalf("status = %d, want 200", resp.StatusCode)
+		}
+
+		var respBody map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if respBody["status"] != "draft" {
+			t.Errorf("status = %q, want draft", respBody["status"])
+		}
+		if respBody["review_comment"] != "needs more detail on edge cases" {
+			t.Errorf("review_comment = %q, want 'needs more detail on edge cases'", respBody["review_comment"])
+		}
+
+		// Verify on disk
+		changes, err := storage.ReadChanges(root, "test-mod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].ReviewComment != "needs more detail on edge cases" {
+			t.Errorf("disk ReviewComment = %q", changes[0].ReviewComment)
+		}
+		if changes[0].Status != "draft" {
+			t.Errorf("disk Status = %q, want draft", changes[0].Status)
+		}
+	})
+
+	t.Run("400_empty_comment", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "test-mod")
+		writeSpecFile(t, root, "test-mod", spec.SpecModule{
+			ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+		})
+		writeChangeFile(t, changesDir, spec.Change{
+			ID: "chg-002", Sequence: 2, Summary: "feature", Status: "draft",
+		}, "feature")
+
+		ts := httptest.NewServer(newTestMux(root))
+		defer ts.Close()
+
+		reqBody, _ := json.Marshal(map[string]string{"comment": ""})
+		resp, err := http.Post(ts.URL+"/api/modules/test-mod/changes/002_feature.yaml/reject", "application/json", bytes.NewReader(reqBody))
+		if err != nil {
+			t.Fatalf("request error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 400 {
+			t.Fatalf("status = %d, want 400", resp.StatusCode)
+		}
+
+		var respBody map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := respBody["error"]; !ok {
+			t.Error("response missing 'error' key")
+		}
+	})
+
+	t.Run("404_missing_file", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "test-mod")
+		writeSpecFile(t, root, "test-mod", spec.SpecModule{
+			ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+		})
+
+		ts := httptest.NewServer(newTestMux(root))
+		defer ts.Close()
+
+		reqBody, _ := json.Marshal(map[string]string{"comment": "some feedback"})
+		resp, err := http.Post(ts.URL+"/api/modules/test-mod/changes/999_missing.yaml/reject", "application/json", bytes.NewReader(reqBody))
+		if err != nil {
+			t.Fatalf("request error: %v", err)
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != 404 {
+			t.Fatalf("status = %d, want 404", resp.StatusCode)
+		}
+
+		var respBody map[string]string
+		if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if _, ok := respBody["error"]; !ok {
+			t.Error("response missing 'error' key")
+		}
+	})
+}
+
+func TestChangesEndpointIncludesReviewComment(t *testing.T) {
+	root := t.TempDir()
+	changesDir := setupModule(t, root, "test-mod")
+	writeSpecFile(t, root, "test-mod", spec.SpecModule{
+		ID: "test-mod", Title: "Test", Owner: "o", Status: "draft",
+	})
+	writeChangeFile(t, changesDir, spec.Change{
+		ID: "chg-002", Sequence: 2, Summary: "feature", Status: "draft",
+	}, "feature")
+
+	// Set a review comment via storage
+	if err := storage.SetChangeComment(root, "test-mod", "002_feature.yaml", "needs edge cases"); err != nil {
+		t.Fatalf("SetChangeComment error: %v", err)
+	}
+
+	ts := httptest.NewServer(newTestMux(root))
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/modules/test-mod/changes")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var changes []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&changes); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(changes) != 1 {
+		t.Fatalf("len = %d, want 1", len(changes))
+	}
+	rc, ok := changes[0]["review_comment"]
+	if !ok {
+		t.Fatal("response missing review_comment field")
+	}
+	if rc != "needs edge cases" {
+		t.Errorf("review_comment = %q, want 'needs edge cases'", rc)
+	}
 }
