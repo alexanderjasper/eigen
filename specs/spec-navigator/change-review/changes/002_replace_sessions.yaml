@@ -12,7 +12,7 @@ reason: |
   the session UUID generation, and the in-memory store, replacing them with two thin
   HTTP handlers that call the existing storage.SetChangeStatus and a new
   storage.SetChangeComment function.
-status: approved
+status: compiled
 changes:
   description: |
     spec-navigator/change-review defines the HTTP API for approving or rejecting
