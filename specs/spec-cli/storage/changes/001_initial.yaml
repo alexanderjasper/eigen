@@ -1,0 +1,175 @@
+id: chg-001
+sequence: 1
+timestamp: "2026-03-29T09:01:35Z"
+author: eigen
+type: created
+summary: Initial spec for the storage layer
+reason: |
+    The storage layer is the only component that touches the filesystem for
+    spec persistence. Speccing its contracts ensures that all callers (CLI
+    commands, projection engine, navigator) share a single source of truth
+    for how modules, changes, and specs are read and written.
+changes:
+    title: Storage
+    owner: eigen
+    status: draft
+    description: |
+        The storage layer (eigen/internal/storage) provides filesystem-backed
+        persistence for spec modules and their change histories. It exposes
+        functions for reading and writing spec.yaml files, reading and writing
+        change YAML files, discovering modules by walking the specs directory
+        tree, computing the next change sequence number, updating change status
+        fields, and filtering changes by status.
+    behavior: |
+        All functions accept a specsRoot path and a module path (slash-delimited,
+        e.g. "spec-cli/cmd-new"). The storage layer derives filesystem paths
+        deterministically: the module directory is specsRoot/<module-path>, the
+        changes directory is specsRoot/<module-path>/changes/, and the projected
+        spec is specsRoot/<module-path>/spec.yaml.
+
+        ReadChanges reads all .yaml files from the changes/ directory, skipping
+        subdirectories and non-YAML files, and returns them sorted by ascending
+        sequence number.
+
+        WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
+        mode 0644. WriteChange marshals a Change to YAML and writes it to the
+        changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
+        3 digits) and mode 0644.
+
+        NextSequence returns 1 when no changes exist or the changes directory
+        is unreadable; otherwise it returns max(sequence) + 1 across all existing
+        changes.
+
+        WalkModules recursively discovers modules under specsRoot. A directory
+        qualifies as a module if it contains a "changes/" subdirectory. Results
+        are sorted lexicographically by slash path and can be filtered by an
+        optional prefix. The "changes" directory itself is never recursed into
+        as a module subtree.
+
+        SetChangeStatus reads a change file by filename, updates its Status field,
+        and writes it back. FilterChangesByStatus returns only changes whose
+        effective status matches a given status string; absent (empty) status is
+        treated as "draft".
+    dependencies:
+        - spec-cli
+    acceptance_criteria:
+        - id: AC-001
+          description: ModulePath returns the correct absolute directory for a module
+          given: A specsRoot "/tmp/specs" and module path "spec-cli/cmd-new"
+          when: ModulePath is called
+          then: It returns "/tmp/specs/spec-cli/cmd-new"
+        - id: AC-002
+          description: ChangesPath returns the changes/ subdirectory of the module
+          given: A specsRoot and module path
+          when: ChangesPath is called
+          then: It returns ModulePath + "/changes"
+        - id: AC-003
+          description: SpecPath returns the spec.yaml path within the module directory
+          given: A specsRoot and module path
+          when: SpecPath is called
+          then: It returns ModulePath + "/spec.yaml"
+        - id: AC-004
+          description: ReadChanges parses all YAML files in the changes directory
+          given: A changes/ directory containing two valid YAML change files
+          when: ReadChanges is called
+          then: It returns two parsed Change structs with no error
+        - id: AC-005
+          description: ReadChanges skips non-YAML files and subdirectories
+          given: A changes/ directory containing a .yaml file, a .txt file, and a subdirectory
+          when: ReadChanges is called
+          then: Only the .yaml file is parsed and returned
+        - id: AC-006
+          description: ReadChanges returns changes sorted by ascending sequence number
+          given: A changes/ directory with files having sequences 3, 1, 2
+          when: ReadChanges is called
+          then: The returned slice is ordered [1, 2, 3]
+        - id: AC-007
+          description: ReadChanges returns an error when the changes directory does not exist
+          given: A module path whose changes/ directory does not exist on disk
+          when: ReadChanges is called
+          then: It returns a non-nil error wrapping the underlying filesystem error
+        - id: AC-008
+          description: ReadChanges returns an error when a YAML file is malformed
+          given: A changes/ directory containing a file with invalid YAML content
+          when: ReadChanges is called
+          then: It returns a non-nil error identifying the malformed file
+        - id: AC-009
+          description: WriteSpec writes a valid YAML file at spec.yaml
+          given: A SpecModule struct with populated fields
+          when: WriteSpec is called
+          then: A file at specsRoot/<path>/spec.yaml is created with mode 0644 containing valid YAML that round-trips back to the original struct
+        - id: AC-010
+          description: WriteChange writes the change file with the correct filename format
+          given: A Change with sequence 7 and slug "add-feature"
+          when: WriteChange is called
+          then: A file named "007_add-feature.yaml" is created in the changes/ directory with mode 0644
+        - id: AC-011
+          description: WriteChange produces valid YAML that round-trips
+          given: A Change struct with all fields populated
+          when: WriteChange is called and the resulting file is read back
+          then: The parsed Change matches the original struct
+        - id: AC-012
+          description: NextSequence returns 1 when no changes exist
+          given: A module with an empty changes/ directory
+          when: NextSequence is called
+          then: It returns 1 with no error
+        - id: AC-013
+          description: NextSequence returns 1 when the changes directory is unreadable
+          given: A module path whose changes/ directory does not exist
+          when: NextSequence is called
+          then: It returns 1 with no error (swallows the read error)
+        - id: AC-014
+          description: NextSequence returns max sequence plus one
+          given: A module with changes at sequences 1, 2, and 5
+          when: NextSequence is called
+          then: It returns 6
+        - id: AC-015
+          description: ReadSpec parses spec.yaml into a SpecModule
+          given: A valid spec.yaml file exists for the module
+          when: ReadSpec is called
+          then: It returns a SpecModule with fields matching the YAML content
+        - id: AC-016
+          description: ReadSpec returns an error when spec.yaml does not exist
+          given: A module path with no spec.yaml on disk
+          when: ReadSpec is called
+          then: It returns a non-nil error
+        - id: AC-017
+          description: SetChangeStatus updates the status field in a change file
+          given: A change file with status "draft"
+          when: SetChangeStatus is called with status "approved"
+          then: The file on disk now contains status "approved" and all other fields are preserved
+        - id: AC-018
+          description: SetChangeStatus returns an error for a nonexistent file
+          given: A filename that does not exist in the changes/ directory
+          when: SetChangeStatus is called
+          then: It returns a non-nil error
+        - id: AC-019
+          description: FilterChangesByStatus returns only changes matching the given status
+          given: A slice of changes with statuses "draft", "approved", and "compiled"
+          when: FilterChangesByStatus is called with status "approved"
+          then: Only the change with status "approved" is returned
+        - id: AC-020
+          description: FilterChangesByStatus treats empty status as "draft"
+          given: A slice containing a change with an empty Status field
+          when: FilterChangesByStatus is called with status "draft"
+          then: That change is included in the result
+        - id: AC-021
+          description: WalkModules discovers all modules with a changes/ subdirectory
+          given: A specsRoot with directories A/changes/, A/B/changes/, and C/ (no changes/)
+          when: WalkModules is called with empty prefix
+          then: It returns ModuleRefs for "A" and "A/B" but not "C"
+        - id: AC-022
+          description: WalkModules returns results sorted lexicographically
+          given: A specsRoot with modules "z-mod", "a-mod", and "m-mod"
+          when: WalkModules is called
+          then: The returned slice is ordered ["a-mod", "m-mod", "z-mod"]
+        - id: AC-023
+          description: WalkModules filters by prefix
+          given: A specsRoot with modules "spec-cli", "spec-cli/cmd-new", and "ai-agent"
+          when: WalkModules is called with prefix "spec-cli"
+          then: Only "spec-cli" and "spec-cli/cmd-new" are returned
+        - id: AC-024
+          description: WalkModules returns an error when specsRoot does not exist
+          given: A specsRoot path that does not exist on disk
+          when: WalkModules is called
+          then: It returns a non-nil error
