@@ -13,7 +13,7 @@ reason: |
     are written to disk even when they were absent in the original file. Together
     these cause spurious diffs and corrupt the canonical format every time a file
     is re-serialized.
-status: approved
+status: compiled
 changes:
     behavior: |
         All functions accept a specsRoot path and a module path (slash-delimited,
