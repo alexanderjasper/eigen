@@ -1,80 +1,81 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-29T12:00:00Z
+timestamp: "2026-03-29T12:00:00Z"
 author: alexander
 type: created
 summary: Spec Navigator API — module listing, detail, changes, and review endpoints
 reason: |
-  The browser UI needs a JSON API to fetch module data and manage review sessions.
-  Speccing the API contract ensures the frontend and backend are built to the same
-  interface. This is a rewrite of the original spec to frame acceptance criteria as
-  behavioral requirements rather than test descriptions.
+    The browser UI needs a JSON API to fetch module data and manage review sessions.
+    Speccing the API contract ensures the frontend and backend are built to the same
+    interface. This is a rewrite of the original spec to frame acceptance criteria as
+    behavioral requirements rather than test descriptions.
+status: approved
 changes:
-  title: Spec Navigator API
-  owner: eigen
-  status: draft
-  description: |
-    The spec navigator API is a set of JSON endpoints served by eigen serve.
-    It exposes module listings and per-module detail (projection + changes)
-    so the frontend can render the spec tree and detail pane. It also serves
-    the review session endpoints used by the change-review flow.
-  behavior: |
-    GET /api/modules returns a flat list of ModuleSummary objects for all
-    modules under the specs root. Each summary includes path, title, owner,
-    status, and a children flag indicating whether any other module path
-    starts with this path followed by a slash.
+    title: Spec Navigator API
+    owner: eigen
+    status: draft
+    description: |
+        The spec navigator API is a set of JSON endpoints served by eigen serve.
+        It exposes module listings and per-module detail (projection + changes)
+        so the frontend can render the spec tree and detail pane. It also serves
+        the review session endpoints used by the change-review flow.
+    behavior: |
+        GET /api/modules returns a flat list of ModuleSummary objects for all
+        modules under the specs root. Each summary includes path, title, owner,
+        status, and a children flag indicating whether any other module path
+        starts with this path followed by a slash.
 
-    GET /api/modules/*path returns the full SpecModule projection for the
-    module at the given path.
+        GET /api/modules/*path returns the full SpecModule projection for the
+        module at the given path.
 
-    GET /api/modules/*path/changes returns the ordered slice of Changes
-    for the module at the given path.
+        GET /api/modules/*path/changes returns the ordered slice of Changes
+        for the module at the given path.
 
-    POST /api/reviews creates a new in-memory review session.
-    Request body: { "change_id": string, "module_path": string, "change_yaml": string }.
-    Response: 201 { "review_id": "<change_id>" }. Returns 409 if a session for
-    that change_id already exists.
+        POST /api/reviews creates a new in-memory review session.
+        Request body: { "change_id": string, "module_path": string, "change_yaml": string }.
+        Response: 201 { "review_id": "<change_id>" }. Returns 409 if a session for
+        that change_id already exists.
 
-    GET /api/reviews/<change-id> returns the current review session state.
-    Response: { "review_id": string, "status": "pending"|"submitted",
-    "decision": ""|"approved"|"rejected", "comments": string }.
-    Returns 404 if no session exists.
+        GET /api/reviews/<change-id> returns the current review session state.
+        Response: { "review_id": string, "status": "pending"|"submitted",
+        "decision": ""|"approved"|"rejected", "comments": string }.
+        Returns 404 if no session exists.
 
-    POST /api/reviews/<change-id>/submit records the reviewer's decision.
-    Request body: { "decision": "approved"|"rejected", "comments": string }.
-    Transitions session status to "submitted". Returns 200 on success,
-    404 if no session exists.
+        POST /api/reviews/<change-id>/submit records the reviewer's decision.
+        Request body: { "decision": "approved"|"rejected", "comments": string }.
+        Transitions session status to "submitted". Returns 200 on success,
+        404 if no session exists.
 
-    All endpoints return JSON with Content-Type application/json. Errors
-    return a JSON object with an "error" key and an appropriate HTTP status.
-  acceptance_criteria:
-    - id: AC-001
-      description: GET /api/modules returns a JSON array of all discovered modules
-      given: the specs root contains modules at paths "spec-cli" and "spec-cli/cmd-new"
-      when: GET /api/modules is requested
-      then: response status is 200 with Content-Type application/json; body is a JSON array containing a ModuleSummary for each module with path, title, owner, status, and children fields
-    - id: AC-002
-      description: children flag reflects whether sub-modules exist
-      given: module "spec-cli" has sub-module "spec-cli/cmd-new", and "spec-cli/cmd-new" has no sub-modules
-      when: GET /api/modules is requested
-      then: the ModuleSummary for "spec-cli" has children true; the ModuleSummary for "spec-cli/cmd-new" has children false
-    - id: AC-003
-      description: GET /api/modules/*path returns the full module projection
-      given: module "spec-cli/cmd-new" exists with a valid spec.yaml
-      when: GET /api/modules/spec-cli/cmd-new is requested
-      then: response status is 200; body is the full SpecModule JSON including all projected fields such as title, description, behavior, and acceptance_criteria
-    - id: AC-004
-      description: GET /api/modules/*path/changes returns change files in sequence order
-      given: module "spec-cli" has two change files with sequences 1 and 2
-      when: GET /api/modules/spec-cli/changes is requested
-      then: response status is 200; body is a JSON array of both changes ordered by ascending sequence number
-    - id: AC-005
-      description: requesting a non-existent module returns 404
-      given: no module exists at path "nonexistent"
-      when: GET /api/modules/nonexistent is requested
-      then: response status is 404; body is a JSON object with an "error" key
-    - id: AC-006
-      description: requesting changes for a non-existent module returns 404
-      given: no module exists at path "nonexistent"
-      when: GET /api/modules/nonexistent/changes is requested
-      then: response status is 404; body is a JSON object with an "error" key
+        All endpoints return JSON with Content-Type application/json. Errors
+        return a JSON object with an "error" key and an appropriate HTTP status.
+    acceptance_criteria:
+        - id: AC-001
+          description: GET /api/modules returns a JSON array of all discovered modules
+          given: the specs root contains modules at paths "spec-cli" and "spec-cli/cmd-new"
+          when: GET /api/modules is requested
+          then: response status is 200 with Content-Type application/json; body is a JSON array containing a ModuleSummary for each module with path, title, owner, status, and children fields
+        - id: AC-002
+          description: children flag reflects whether sub-modules exist
+          given: module "spec-cli" has sub-module "spec-cli/cmd-new", and "spec-cli/cmd-new" has no sub-modules
+          when: GET /api/modules is requested
+          then: the ModuleSummary for "spec-cli" has children true; the ModuleSummary for "spec-cli/cmd-new" has children false
+        - id: AC-003
+          description: GET /api/modules/*path returns the full module projection
+          given: module "spec-cli/cmd-new" exists with a valid spec.yaml
+          when: GET /api/modules/spec-cli/cmd-new is requested
+          then: response status is 200; body is the full SpecModule JSON including all projected fields such as title, description, behavior, and acceptance_criteria
+        - id: AC-004
+          description: GET /api/modules/*path/changes returns change files in sequence order
+          given: module "spec-cli" has two change files with sequences 1 and 2
+          when: GET /api/modules/spec-cli/changes is requested
+          then: response status is 200; body is a JSON array of both changes ordered by ascending sequence number
+        - id: AC-005
+          description: requesting a non-existent module returns 404
+          given: no module exists at path "nonexistent"
+          when: GET /api/modules/nonexistent is requested
+          then: response status is 404; body is a JSON object with an "error" key
+        - id: AC-006
+          description: requesting changes for a non-existent module returns 404
+          given: no module exists at path "nonexistent"
+          when: GET /api/modules/nonexistent/changes is requested
+          then: response status is 404; body is a JSON object with an "error" key
