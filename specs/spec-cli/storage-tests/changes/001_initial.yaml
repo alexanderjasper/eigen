@@ -1,0 +1,91 @@
+id: chg-001
+sequence: 1
+timestamp: "2026-03-29T08:35:54Z"
+author: alexander
+type: created
+summary: Add unit tests for the storage layer
+reason: |
+    The storage package (internal/storage/storage.go) handles all filesystem I/O
+    for specs and changes -- reading, writing, walking, and status updates -- but
+    has zero test coverage. These tests exercise every public function using
+    t.TempDir() for isolated fixtures.
+changes:
+    title: Storage Tests
+    owner: alexander
+    status: draft
+    description: |
+        Unit tests for the storage layer in eigen/internal/storage/storage.go.
+        Tests use t.TempDir() for isolated filesystem fixtures and cover all
+        public functions: ReadSpec, ReadChanges, WriteSpec, NextSequence,
+        WalkModules, and SetChangeStatus.
+    behavior: |
+        All tests live in eigen/internal/storage/storage_test.go in package
+        storage. Each test creates its own temporary directory tree via
+        t.TempDir(), writes fixture YAML files as needed, then calls the
+        function under test and asserts the result. No shared mutable state
+        exists between tests.
+    technology:
+        language: go
+        test_framework: testing
+    dependencies:
+        - spec-cli
+    acceptance_criteria:
+        - id: AC-001
+          description: "ReadSpec reads and unmarshals a valid spec.yaml"
+          given: A temp directory containing a valid spec.yaml with known field values
+          when: ReadSpec() is called with the temp specs root and module path
+          then: Returns a SpecModule whose fields match the written YAML content and no error
+
+        - id: AC-002
+          description: "ReadChanges reads all .yaml files from changes/ dir, returns sorted by sequence"
+          given: A temp changes/ directory containing multiple .yaml files with different sequence numbers (e.g. 3, 1, 2)
+          when: ReadChanges() is called
+          then: Returns a slice of Changes sorted ascending by Sequence field, and no error
+
+        - id: AC-003
+          description: "ReadChanges on empty changes/ dir returns empty slice"
+          given: A temp changes/ directory that exists but contains no .yaml files
+          when: ReadChanges() is called
+          then: Returns an empty (nil or zero-length) slice and no error
+
+        - id: AC-004
+          description: "WriteSpec marshals and writes spec.yaml, readable back via ReadSpec"
+          given: A SpecModule struct with known field values and an empty temp directory for the module
+          when: WriteSpec() is called, then ReadSpec() is called on the same path
+          then: The SpecModule returned by ReadSpec matches the original struct's field values
+
+        - id: AC-005
+          description: "NextSequence returns 1 for empty changes dir"
+          given: A temp changes/ directory that exists but contains no .yaml files
+          when: NextSequence() is called
+          then: Returns 1 and no error
+
+        - id: AC-006
+          description: "NextSequence returns max+1 for populated changes dir"
+          given: A temp changes/ directory containing change files with sequence numbers (e.g. 1, 3, 2)
+          when: NextSequence() is called
+          then: Returns 4 (max sequence 3 plus 1) and no error
+
+        - id: AC-007
+          description: "WalkModules finds all modules containing a changes/ subdirectory"
+          given: A temp specs root with multiple nested directories, some containing changes/ subdirs and some not
+          when: WalkModules() is called with an empty prefix
+          then: Returns ModuleRefs for exactly the directories that contain changes/ subdirs, sorted alphabetically by path
+
+        - id: AC-008
+          description: "WalkModules respects prefix filter"
+          given: A temp specs root with modules at paths like alpha, beta, alpha/child
+          when: WalkModules() is called with prefix "alpha"
+          then: Returns only ModuleRefs whose paths are "alpha" or start with "alpha/"
+
+        - id: AC-009
+          description: "SetChangeStatus updates status field in-place, preserves other content"
+          given: A temp changes/ directory containing a change file with a known summary, reason, and no status (or a different status)
+          when: SetChangeStatus() is called with status "approved"
+          then: Re-reading the file shows status is "approved" and all other fields (summary, reason, sequence, etc.) are preserved
+
+        - id: AC-010
+          description: "Test file exists at the correct path"
+          given: The implementation is complete
+          when: The test file is checked
+          then: eigen/internal/storage/storage_test.go exists, is in package storage, and all tests pass via go test ./eigen/internal/storage/...
