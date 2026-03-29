@@ -9,6 +9,7 @@ reason: |
     spec persistence. Speccing its contracts ensures that all callers (CLI
     commands, projection engine, navigator) share a single source of truth
     for how modules, changes, and specs are read and written.
+status: approved
 changes:
     title: Storage
     owner: eigen
