@@ -81,6 +81,7 @@ func Start(gitRoot, specsRoot string, port int, open bool) error {
 
 	// JSON API
 	mux.HandleFunc("/api/worktrees", worktreesHandler(state))
+	mux.HandleFunc("/api/changes", globalChangesHandler(state))
 	mux.HandleFunc("/api/modules", modulesHandler(state))
 	mux.HandleFunc("/api/modules/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/approve") {

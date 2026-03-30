@@ -36,6 +36,7 @@ html, body {
   display: flex;
   flex-direction: column;
   background: var(--surface);
+  position: relative;
 }
 
 #left-header {
@@ -339,7 +340,7 @@ html, body {
   background: var(--surface);
   border-left: 1px solid var(--border);
   padding: 28px 32px;
-  width: min(720px, 55vw);
+  width: var(--review-width, min(720px, 55vw));
   overflow-y: auto;
   box-shadow: -8px 0 32px rgba(0,0,0,.4);
 }
@@ -471,3 +472,191 @@ html, body {
 .btn-approve:disabled, .btn-reject:disabled {
   opacity: 0.4; cursor: not-allowed; pointer-events: none;
 }
+
+/* ── Resize handles ── */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s;
+}
+.resize-handle:hover, .resize-handle.dragging {
+  background: rgba(99, 102, 241, 0.25);
+}
+/* Left sidebar handle sits on its right edge */
+#left > .resize-handle {
+  right: -3px;
+}
+/* Review panel handle sits on its left edge */
+#review-panel > .resize-handle {
+  left: -3px;
+}
+.resize-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  cursor: col-resize;
+  background: transparent;
+}
+
+/* ── Review list view ── */
+.review-list-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: 16px;
+}
+.review-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  background: var(--bg);
+  transition: border-color 0.15s, background 0.15s;
+}
+.review-list-row:hover {
+  border-color: var(--accent);
+  background: rgba(99, 102, 241, 0.07);
+}
+.review-list-module {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.review-list-summary {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Review detail navigation ── */
+.review-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.review-back-link {
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.review-back-link:hover { color: var(--accent-hover); }
+.review-nav-spacer { flex: 1; }
+.review-nav-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text);
+  cursor: pointer;
+}
+.review-nav-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.review-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Rich change field rendering ── */
+.review-fields {
+  margin-bottom: 14px;
+}
+.review-field {
+  margin-bottom: 14px;
+}
+.review-field-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.review-field-text {
+  font-size: 13px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.review-field-value {
+  font-size: 13px;
+  color: var(--text);
+}
+.review-ac-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.review-ac-item {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.review-ac-id {
+  font-weight: 600;
+  color: var(--accent);
+  margin-right: 6px;
+}
+.review-ac-desc {
+  color: var(--text);
+}
+.review-tech-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.review-tech-table td {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.review-tech-table td:first-child {
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bg);
+  width: 35%;
+}
+.review-tech-table td:last-child {
+  background: var(--bg);
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* ── Validation message ── */
+.review-validation {
+  font-size: 12px;
+  color: var(--status-deprecated);
+  margin-top: 4px;
+  display: none;
+}
+.review-validation.visible { display: block; }
