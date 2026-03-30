@@ -12,7 +12,9 @@ reason: |
   covering: list view as overview with next/prev stepping, always-visible
   comment textarea, and drag-to-resize handles on both the left sidebar
   and the review panel.
-status: approved
+status: compiled
+compiled_commits:
+  - 37aa49bc8afbe9ffdb8ad4aa1529753b34b77967
 changes:
   title: Review UX
   owner: alexander
