@@ -14,7 +14,7 @@ reason: |
   without re-marshaling, so the format line is naturally preserved from the
   template string. The AC must document both approaches so an implementer
   uses the correct strategy for each command.
-status: approved
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-010

@@ -11,7 +11,7 @@ reason: |
   also carry format: eigen/v1 as the first field. Without this, change files
   written after the initial scaffold lack the version marker, defeating the
   purpose of having it at all.
-status: approved
+status: compiled
 changes:
   description: |
     Adds a format field (e.g. format: eigen/v1) to SpecModule and to every
