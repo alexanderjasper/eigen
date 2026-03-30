@@ -18,7 +18,9 @@ reason: |
   (ordered list of ops). Replace and delete operations that fail to match are
   hard errors, not silent no-ops, so change authors get immediate feedback
   when text has drifted.
-status: approved
+status: compiled
+compiled_commits:
+  - 628b687
 changes:
   behavior: |
     Changes are applied in ascending sequence order. Simple fields (title, owner,
