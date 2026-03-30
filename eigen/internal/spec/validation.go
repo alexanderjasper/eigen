@@ -114,10 +114,29 @@ func (e ValidationError) Error() string {
 	return e.Message
 }
 
+// ValidationWarning describes a non-fatal issue found during validation.
+type ValidationWarning struct {
+	Field   string
+	Message string
+}
+
+func (w ValidationWarning) String() string {
+	if w.Field != "" {
+		return fmt.Sprintf("%s: %s", w.Field, w.Message)
+	}
+	return w.Message
+}
+
 // Validate checks a SpecModule for required fields, AC completeness, and dependency existence.
 // specsRoot is the root specs/ directory used to resolve dependency module ids.
-func Validate(s SpecModule, specsRoot string) []ValidationError {
+// It returns validation errors (blocking) and warnings (non-blocking).
+func Validate(s SpecModule, specsRoot string) ([]ValidationError, []ValidationWarning) {
 	var errs []ValidationError
+	var warnings []ValidationWarning
+
+	if s.Format == "" {
+		warnings = append(warnings, ValidationWarning{Field: "format", Message: `format field is absent; expected "eigen/v1"`})
+	}
 
 	required := []struct{ field, value string }{
 		{"id", s.ID},
@@ -163,7 +182,7 @@ func Validate(s SpecModule, specsRoot string) []ValidationError {
 		}
 	}
 
-	return errs
+	return errs, warnings
 }
 
 // ValidateChangeLog replays changes in order and returns a ValidationError for each
