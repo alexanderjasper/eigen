@@ -63,12 +63,14 @@ acceptance_criteria:
     when: eigen spec validate <path> is run
     then: No warning or error is emitted for the format field
   - id: AC-006
-    description: SpecModule struct exposes Format field
+    description: SpecModule and Change structs both expose a Format field
     given: The implementation is complete
     when: eigen/internal/spec/types.go is inspected
     then: |
       SpecModule has a Format string field tagged yaml:"format,omitempty"
-      appearing before the id field in struct definition order
+      appearing before the id field in struct definition order.
+      Change also has a Format string field tagged yaml:"format,omitempty"
+      appearing as the first field in the Change struct definition.
   - id: AC-007
     description: Tests cover format field behavior
     given: The implementation is complete
@@ -91,7 +93,18 @@ acceptance_criteria:
     then: |
       Every change file written by the CLI has format: eigen/v1 as the
       first field, regardless of which command produced it
+  - id: AC-010
+    description: spec_new.go and spec_change.go set Change.Format before marshaling
+    given: The implementation is complete
+    when: eigen/internal/spec/spec_new.go and eigen/internal/spec/spec_change.go are inspected
+    then: |
+      In spec_new.go, the Change value constructed before yaml.Marshal is
+      called has its Format field set to "eigen/v1".
+      In spec_change.go, the Change value constructed before yaml.Marshal is
+      called has its Format field set to "eigen/v1".
+      Without this explicit assignment, yaml.Marshal will not write the
+      format key to the generated change file even if the struct carries the field.
 dependencies: []
 technology: {}
-last_change: chg-002
-changes_count: 2
+last_change: chg-003
+changes_count: 3
