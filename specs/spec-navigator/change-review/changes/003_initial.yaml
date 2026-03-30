@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-003
 sequence: 3
-timestamp: 2026-03-30T07:51:58Z
+timestamp: "2026-03-30T07:51:58Z"
 author: alexander
 type: updated
 summary: Replace hardcoded setInterval review poller with adaptive setTimeout chain with backoff
@@ -13,6 +13,7 @@ reason: |
   should back off to reduce noise, reset quickly when work appears, and stop entirely
   while the user is actively reviewing (panel open) so there are no concurrent
   mutations while the user is deciding.
+status: approved
 changes:
   behavior: |
     The session-based review API is removed entirely (unchanged from chg-002).
@@ -54,9 +55,9 @@ changes:
 
     All other UI behaviour is unchanged from chg-002.
   technology:
+    BackoffThreshold: 5 consecutive polls with no draft changes
     PollingInterval: 5 seconds (default), 15 seconds (backoff after 5 consecutive no-draft polls)
     PollingMechanism: setTimeout chain (not setInterval)
-    BackoffThreshold: 5 consecutive polls with no draft changes
   acceptance_criteria:
     - id: AC-023
       description: poller uses setTimeout chain not setInterval
