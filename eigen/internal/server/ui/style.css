@@ -134,6 +134,30 @@ html, body {
 
 .tree-children.hidden { display: none; }
 
+/* ── Grouped tree (multi-worktree) ── */
+.tree-group-section {
+  margin-bottom: 4px;
+}
+
+.tree-group-header {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  background: rgba(99, 102, 241, 0.06);
+  border-top: 1px solid var(--border);
+  padding: 6px 12px;
+}
+
+.tree-group-header:hover {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.tree-group-children {
+  padding-left: 0;
+}
+
 /* ── Right pane ── */
 #right {
   flex: 1;
@@ -155,7 +179,14 @@ html, body {
 .detail-title {
   font-size: 22px;
   font-weight: 700;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
+}
+
+.detail-worktree-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+  margin-bottom: 10px;
 }
 
 .meta-row {
