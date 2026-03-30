@@ -9,49 +9,57 @@ description: |-
   It uses Glob, Grep, and Read to discover relevant files. The eigen spec CLI commands
   (eigen spec new, eigen spec change, eigen spec project, eigen spec validate) are
   retained — these are the framework tooling, not the target codebase.
+behavior: |
+  spec-agent receives a feature description and optional module path. It explores the
+  codebase with Glob, Grep, and Read to understand scope, then asks up to 5 clarifying
+  questions using AskUserQuestion. After clarifications, it writes change files under
+  specs/<module-path>/changes/ and runs eigen spec project to generate spec.yaml. It
+  does not commit; the orchestrating skill (eigen-change) commits after user approval via
+  the review UI. When invoked in feedback mode, spec-agent incorporates the feedback into
+  a new change file, reprojects, and validates.
 acceptance_criteria:
   - id: AC-001
-    description: |-
+    description: |
       spec-subagent reads feature description and optional short-name, explores codebase
       to understand scope, and identifies clarifying questions based on inconsistencies,
       scope boundaries, and edge cases.
-    given: ""
-    when: ""
-    then: ""
+    given: spec-agent is invoked with a feature description and module path
+    when: The agent begins
+    then: It explores the codebase with Glob, Grep, and Read to understand scope, then identifies clarifying questions
   - id: AC-002
-    description: |-
+    description: |
       Asks up to 5 clarifying questions (one at a time) using AskUserQuestion. Questions focus on
       scope, rules, affected areas, and edge cases. Stops early if spec is already clear.
-    given: ""
-    when: ""
-    then: ""
+    given: The agent has identified clarifying questions
+    when: It interacts with the user
+    then: It asks up to 5 questions one at a time using AskUserQuestion; it stops early if the spec is already clear
   - id: AC-003
-    description: |-
+    description: |
       After clarifications, produces complete spec in eigen-spec format: creates changes/
       directory with change file(s), calls `eigen spec project` to generate spec.yaml.
       Spec file contains all fields: domain, module, owner, title, description, acceptanceCriteria,
       dependencies, technology, affected areas.
-    given: ""
-    when: ""
-    then: ""
+    given: Clarifications are complete
+    when: spec-agent writes the spec
+    then: It creates a changes/ directory with a change file and calls eigen spec project to generate spec.yaml with all required fields populated
   - id: AC-004
-    description: |-
+    description: |
       Spec file includes explicit acceptance criteria (given/when/then) that can be tested
       during compilation. Criteria describe observable behavior and success conditions.
-    given: ""
-    when: ""
-    then: ""
+    given: The spec has been written
+    when: Acceptance criteria are reviewed
+    then: Each AC has a non-empty given, when, and then describing observable behavior and success conditions
   - id: AC-005
-    description: |-
+    description: |
       spec-agent writes change files and runs `eigen spec project` + `eigen spec validate`,
       but does NOT make any git commit. After the agent returns, the orchestrator
       (eigen-change) is responsible for committing the spec files once the user approves
       them via the review UI.
-    given: ""
-    when: ""
-    then: ""
+    given: spec-agent has written and validated the spec
+    when: It returns to the caller
+    then: No git commit has been made; all spec files remain uncommitted for the orchestrator to commit after review
   - id: AC-006
-    description: |-
+    description: |
       When invoked to incorporate feedback, spec-agent:
       (1) reads current spec.yaml and changes/ to find the next sequence number,
       (2) writes changes/NNN_feedback.yaml with the feedback incorporated,
@@ -59,32 +67,28 @@ acceptance_criteria:
       (4) runs `eigen spec validate` to confirm no errors,
       (5) reports the change file written and what was updated — does NOT commit.
       The orchestrator commits the feedback change file after this agent returns.
-    given: ""
-    when: ""
-    then: ""
+    given: spec-agent is invoked in feedback mode with feedback text
+    when: It processes the feedback
+    then: It writes a new change file at the next sequence number, reprojects spec.yaml, validates, and reports what was changed — without committing
   - id: AC-007
-    description: |-
+    description: |
       The change file captures the feedback reason and which spec fields were modified.
       This creates an audit trail of how the spec evolved through feedback loops.
-    given: ""
-    when: ""
-    then: ""
+    given: A feedback change file has been written
+    when: The change file is reviewed
+    then: It contains the feedback reason and identifies which spec fields were modified, creating an audit trail
   - id: AC-008
-    description: |-
+    description: |
       spec-agent does not reference any project-specific directories or file patterns
       in its definition. Codebase exploration is open-ended using Glob/Grep/Read.
-    given: ""
-    when: ""
-    then: ""
-dependencies:
-  - feature description (input)
-  - eigen-spec format and conventions
-  - eigen spec project command capability
-  - Codebase access (Glob, Grep, Read, etc.)
+    given: The spec-agent definition file is read
+    when: A reviewer checks it for project-specific references
+    then: No project-specific directories or file patterns appear in the definition; codebase exploration is open-ended via Glob/Grep/Read
+dependencies: []
 technology:
   CommitPattern: N/A — spec-agent does not commit; orchestrator commits after approval
   Input: feature description string
   Output: changes/*.yaml files + spec.yaml (eigen-spec format); no git commits
   Tools: Glob, Grep, Read, Bash (for eigen spec project/validate)
-last_change: chg-004
-changes_count: 4
+last_change: chg-005
+changes_count: 5
