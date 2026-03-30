@@ -426,29 +426,39 @@ function injectReviewPanel() {
   document.body.appendChild(panel);
 }
 
+function stopReviewPoller() {
+  if (reviewPollerTimer !== null) {
+    clearTimeout(reviewPollerTimer);
+    reviewPollerTimer = null;
+  }
+}
+
+async function pollOnce() {
+  if (!activePath) { schedulePoll(); return; }
+  try {
+    const res = await fetch('/api/modules/' + activePath + '/changes');
+    if (!res.ok) { hideReviewPanel(); schedulePoll(); return; }
+    const changes = await res.json();
+    const draft = changes.filter(c => !c.status || c.status === 'draft');
+    if (draft.length === 0) { hideReviewPanel(); schedulePoll(); return; }
+    showReviewPanel(draft);
+  } catch (_) {
+    hideReviewPanel();
+    schedulePoll();
+  }
+}
+
+function schedulePoll() {
+  reviewPollerTimer = setTimeout(pollOnce, 3000);
+}
+
 function startReviewPoller() {
-  reviewPollerTimer = setInterval(async () => {
-    if (!activePath) return;
-    try {
-      const res = await fetch('/api/modules/' + activePath + '/changes');
-      if (!res.ok) {
-        hideReviewPanel();
-        return;
-      }
-      const changes = await res.json();
-      const draft = changes.filter(c => !c.status || c.status === 'draft');
-      if (draft.length === 0) {
-        hideReviewPanel();
-        return;
-      }
-      showReviewPanel(draft);
-    } catch (_) {
-      hideReviewPanel();
-    }
-  }, 3000);
+  stopReviewPoller();
+  schedulePoll();
 }
 
 function showReviewPanel(draftChanges) {
+  stopReviewPoller();
   const changesEl = document.getElementById('review-changes');
   changesEl.innerHTML = '';
 
@@ -510,6 +520,8 @@ function showReviewPanel(draftChanges) {
 function hideReviewPanel() {
   const panel = document.getElementById('review-panel');
   if (panel) panel.style.display = 'none';
+  stopReviewPoller();
+  schedulePoll();
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
