@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-005
 sequence: 5
-timestamp: 2026-03-30T18:19:58Z
+timestamp: "2026-03-30T18:19:58Z"
 author: alexander
 type: updated
 summary: Auto-promote approved metadata-only changes to compiled status
@@ -11,6 +11,7 @@ reason: |
   currently skips them because there is nothing to implement, leaving them stuck in
   approved status forever. This blocks the projection engine from promoting the module
   to compiled (which requires ALL changes to be compiled). Fixes GitHub issue #13.
+status: approved
 changes:
   behavior: |
     compile-agent receives a spec path and an approved plan as inline content. It reads both
@@ -35,7 +36,7 @@ changes:
         behavior text, given/when/then on existing ACs, and dependency lists.
       given: A module has an approved change that only modifies spec metadata fields (e.g. backfilling given/when/then, updating description text, clearing dependencies)
       when: compile-agent processes the module's approved changes
-      then: "The agent marks the change as compiled via eigen spec change-status with a commit noting no code changes required, and does not attempt to generate code for it"
+      then: The agent marks the change as compiled via eigen spec change-status with a commit noting no code changes required, and does not attempt to generate code for it
     - id: AC-010
       description: |
         compile-agent correctly distinguishes metadata-only changes from changes that
@@ -51,4 +52,4 @@ changes:
         that no code changes were needed.
       given: compile-agent auto-promotes a metadata-only change
       when: It creates the commit
-      then: "The commit message follows the pattern chore(<module>): mark <filename> compiled -- no code changes required"
+      then: 'The commit message follows the pattern chore(<module>): mark <filename> compiled -- no code changes required'

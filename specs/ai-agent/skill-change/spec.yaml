@@ -21,13 +21,17 @@ description: |-
   rejection, eigen-change commits the feedback change file after the next spec-agent run
   completes.
 behavior: |
-  The /change skill orchestrates spec → plan → compile. It launches spec-agent to produce
-  change files, posts them to the review API, and polls for user approval. On approval it
-  commits and marks changes approved, then launches plan-agent (read-only) to return a draft
-  plan as text. The user reviews the plan in plan mode UI; on approval the approved plan text
-  is passed inline to compile-agent which implements code with atomic commits. Rejections at
-  any phase trigger the Spec Feedback Loop: spec-agent writes a new change file incorporating
-  the feedback, eigen-change commits it, then the failed phase re-runs.
+  The /change skill orchestrates spec -> plan -> compile. At setup it captures both
+  BRANCH (from git branch --show-current) and WORKTREE (the worktree name, derived
+  from the basename of `git rev-parse --show-toplevel`). WORKTREE is threaded into all
+  HTTP API calls to the eigen serve API as a ?worktree= query parameter so modules are
+  correctly disambiguated when the same module path exists in multiple worktrees.
+
+  The approval polling loop checks the HTTP status code of each curl response before
+  attempting JSON parsing. If the response is not HTTP 200, the loop logs a diagnostic
+  message with the status code and response body. After a configurable number of
+  consecutive failures (default 5), the loop exits with an error message instead of
+  spinning forever. Python3 stderr is no longer suppressed (2>/dev/null is removed).
 acceptance_criteria:
   - id: AC-001
     description: |
@@ -155,6 +159,49 @@ acceptance_criteria:
     given: compile-agent is ready to mark changes compiled
     when: It runs eigen spec change-status
     then: It first verifies the eigen binary is in PATH; if not found it stops and asks the user to install it
+  - id: AC-014
+    description: |
+      The Setup section captures WORKTREE by running
+      `basename "$(git rev-parse --show-toplevel)"` and storing the result.
+      WORKTREE is available to all subsequent phases alongside BRANCH.
+    given: The /change skill starts execution
+    when: The Setup section runs
+    then: WORKTREE is captured from the basename of the git worktree root and stored for use in all phases
+  - id: AC-015
+    description: |
+      All HTTP API calls to the eigen serve API (e.g. polling
+      /api/modules/$MODULE/changes) include ?worktree=$WORKTREE as a query
+      parameter. This prevents 409 Conflict responses when the module exists
+      in both the main worktree and a feature worktree.
+    given: The skill makes any curl request to the eigen serve API
+    when: The URL is constructed
+    then: The URL includes ?worktree=$WORKTREE as a query parameter
+  - id: AC-016
+    description: |
+      The polling loop checks the HTTP status code returned by curl (using
+      curl -s -w "%{http_code}" -o <tmpfile>) before attempting to parse the
+      response body as JSON. If the status code is not 200, the body is not
+      passed to python3 for parsing.
+    given: The polling loop makes a curl request
+    when: The HTTP response is received
+    then: The status code is checked; non-200 responses are not parsed as JSON
+  - id: AC-017
+    description: |
+      The python3 invocations in the polling loop do not suppress stderr
+      (2>/dev/null is removed). Parse errors and exceptions are visible in
+      the polling output.
+    given: The polling loop runs python3 to parse JSON
+    when: python3 encounters an error (malformed JSON, missing keys, etc.)
+    then: The error message is visible in the polling output, not suppressed
+  - id: AC-018
+    description: |
+      If the polling loop encounters 5 consecutive non-200 HTTP responses
+      (or curl failures), it exits with a non-zero status and prints a
+      diagnostic message including the last HTTP status code and response body.
+      The loop does not spin forever on persistent errors.
+    given: The eigen serve API is returning errors (409, 5xx, or unreachable)
+    when: 5 consecutive polling attempts fail
+    then: The loop exits with a diagnostic error message instead of spinning indefinitely
 dependencies: []
 technology:
   AgentTypes: spec-subagent, plan-subagent, compile-subagent
@@ -163,5 +210,5 @@ technology:
     Specs: changes/*.yaml + spec.yaml (eigen-spec format)
     Plans: temporary plan mode UI only (no file written)
     Code: git commits
-last_change: chg-009
-changes_count: 9
+last_change: chg-010
+changes_count: 10
