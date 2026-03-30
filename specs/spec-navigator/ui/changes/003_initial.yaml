@@ -11,7 +11,7 @@ reason: |
   loading or while approve/reject submissions are in flight. This change adds
   dismissible error toasts, spinner indicators in both panes, and in-flight
   button disabling to make the UI resilient and transparent.
-status: approved
+status: compiled
 changes:
   behavior: |
     On load the UI fetches /api/modules and builds a tree from the flat
