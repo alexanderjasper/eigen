@@ -9,6 +9,7 @@ reason: |
   Infrastructure concerns (CI, deployment, tooling) are distinct from product
   modules. A parent domain groups them so spec list remains navigable and
   cross-cutting infra changes can be tracked in one place.
+status: approved
 changes:
   title: Infrastructure
   owner: alexander
