@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-006
 sequence: 6
-timestamp: 2026-03-30T10:47:19Z
+timestamp: "2026-03-30T10:47:19Z"
 author: alexander
 type: updated
 summary: Auto-promote module status to compiled when all changes are compiled
@@ -13,6 +13,9 @@ reason: |
   The fix: after folding all changes, if every change's top-level Status is
   "compiled", promote the resulting module status to "compiled" — unless the
   module has been explicitly deprecated or removed, which takes precedence.
+status: compiled
+compiled_commits:
+  - 9a0c8656d746ae0dfaa85f34c00d18eb9d59bbbb
 changes:
   behavior: |
     Changes are applied in ascending sequence order. Simple fields (title, owner,

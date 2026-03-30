@@ -10,7 +10,9 @@ reason: |
   These fields were left empty when the module was initially compiled. The free-text
   dependency paths also block validation. This change backfills all missing required fields
   so the module passes eigen spec validate.
-status: approved
+status: compiled
+compiled_commits:
+  - 315e5cefb3382163a11f78e81c44e8010acd3c96
 changes:
   behavior: |
     The /change skill orchestrates spec → plan → compile. It launches spec-agent to produce
@@ -20,7 +22,6 @@ changes:
     is passed inline to compile-agent which implements code with atomic commits. Rejections at
     any phase trigger the Spec Feedback Loop: spec-agent writes a new change file incorporating
     the feedback, eigen-change commits it, then the failed phase re-runs.
-  dependencies: []
   acceptance_criteria:
     - id: AC-001
       description: |
@@ -92,6 +93,10 @@ changes:
       when: The rejection is processed
       then: spec-agent runs in feedback mode, writes a new change file, eigen-change commits it, then the failed phase re-runs
     - id: AC-007
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-008
       description: |
@@ -99,7 +104,7 @@ changes:
         matching subagent_type invocations (spec-agent, plan-agent, compile-agent).
       given: A subagent is needed for a phase of the workflow
       when: The agent is defined and deployed
-      then: "It exists as .claude/agents/<name>.md with a name: frontmatter field matching the subagent_type used to invoke it"
+      then: 'It exists as .claude/agents/<name>.md with a name: frontmatter field matching the subagent_type used to invoke it'
     - id: AC-009
       description: |
         Spec module naming convention: module paths use domain-based identifiers

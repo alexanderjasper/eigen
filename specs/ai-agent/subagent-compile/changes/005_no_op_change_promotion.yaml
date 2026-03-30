@@ -1,0 +1,57 @@
+format: eigen/v1
+id: chg-005
+sequence: 5
+timestamp: "2026-03-30T18:19:58Z"
+author: alexander
+type: updated
+summary: Auto-promote approved metadata-only changes to compiled status
+reason: |
+  Approved changes that only modify spec metadata (descriptions, behavior text,
+  given/when/then fields, dependency lists) require zero code changes. The compile-agent
+  currently skips them because there is nothing to implement, leaving them stuck in
+  approved status forever. This blocks the projection engine from promoting the module
+  to compiled (which requires ALL changes to be compiled). Fixes GitHub issue #13.
+status: compiled
+compiled_commits:
+  - acc247b
+changes:
+  behavior: |
+    compile-agent receives a spec path and an approved plan as inline content. It reads both
+    completely before writing any code. It discovers the build system and code patterns by
+    reading the target codebase at runtime — no project-specific knowledge is baked into the
+    agent definition. For each plan step it makes the specified changes, verifies the result
+    (running tests if applicable), and commits atomically. After completing all steps it
+    verifies spec acceptance criteria are satisfied and reports any that cannot be tested yet.
+    It marks each compiled change via eigen spec change-status once the build passes.
+
+    Before implementing code changes, the agent scans all approved change files for the module.
+    If a change only modifies spec metadata fields (description, behavior, given/when/then text
+    on existing ACs, dependency lists) without adding new acceptance criteria or altering
+    observable behavior, the agent marks it compiled immediately via eigen spec change-status
+    with a commit message noting no code changes were required. This prevents metadata-only
+    changes from blocking module status promotion.
+  acceptance_criteria:
+    - id: AC-009
+      description: |
+        compile-agent detects approved changes that only modify spec metadata and marks
+        them compiled without generating code. Metadata-only fields include: description,
+        behavior text, given/when/then on existing ACs, and dependency lists.
+      given: A module has an approved change that only modifies spec metadata fields (e.g. backfilling given/when/then, updating description text, clearing dependencies)
+      when: compile-agent processes the module's approved changes
+      then: The agent marks the change as compiled via eigen spec change-status with a commit noting no code changes required, and does not attempt to generate code for it
+    - id: AC-010
+      description: |
+        compile-agent correctly distinguishes metadata-only changes from changes that
+        require code implementation. Changes that add new ACs, modify AC descriptions
+        to specify new observable behavior, or add new fields beyond metadata are not
+        auto-promoted.
+      given: A module has approved changes where some are metadata-only and others require code
+      when: compile-agent processes the approved changes
+      then: Only metadata-only changes are auto-promoted to compiled; changes requiring code implementation proceed through the normal compile workflow
+    - id: AC-011
+      description: |
+        The commit created when auto-promoting a metadata-only change clearly indicates
+        that no code changes were needed.
+      given: compile-agent auto-promotes a metadata-only change
+      when: It creates the commit
+      then: 'The commit message follows the pattern chore(<module>): mark <filename> compiled -- no code changes required'
