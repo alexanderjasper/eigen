@@ -55,6 +55,7 @@ async function init() {
     filterTree(e.target.value.trim().toLowerCase());
   });
   injectReviewPanel();
+  initResizeHandles();
   startReviewPoller();
   startWorktreePoller();
 }
@@ -554,6 +555,8 @@ function esc(str) {
 // ── Review Panel ──────────────────────────────────────────────────────────────
 
 let reviewPollerTimer = null;
+let reviewDraftChanges = [];
+let reviewDetailIndex = null;
 
 function injectReviewPanel() {
   const panel = document.createElement('div');
@@ -562,7 +565,6 @@ function injectReviewPanel() {
   panel.innerHTML =
     '<h2>Pending Review</h2>' +
     '<div id="review-changes"></div>';
-
   document.body.appendChild(panel);
 }
 
@@ -574,15 +576,15 @@ function stopReviewPoller() {
 }
 
 async function pollOnce() {
-  if (!activePath) { schedulePoll(); return; }
-  const wtParam = activeWorktreeName ? '?worktree=' + encodeURIComponent(activeWorktreeName) : '';
   try {
-    const res = await fetch('/api/modules/' + activePath + '/changes' + wtParam);
+    const res = await fetch('/api/changes?status=draft');
     if (!res.ok) { hideReviewPanel(); schedulePoll(); return; }
-    const changes = await res.json();
-    const draft = changes.filter(c => !c.status || c.status === 'draft');
-    if (draft.length === 0) { hideReviewPanel(); schedulePoll(); return; }
-    showReviewPanel(draft);
+    const drafts = await res.json();
+    if (drafts.length === 0) { hideReviewPanel(); schedulePoll(); return; }
+    // Don't interrupt if the panel is already open.
+    const panel = document.getElementById('review-panel');
+    if (panel && panel.style.display !== 'none') { schedulePoll(); return; }
+    showReviewPanel(drafts);
   } catch (_) {
     hideReviewPanel();
     schedulePoll();
@@ -600,71 +602,361 @@ function startReviewPoller() {
 
 function showReviewPanel(draftChanges) {
   stopReviewPoller();
+  reviewDraftChanges = draftChanges;
+  reviewDetailIndex = null;
+
+  const panel = document.getElementById('review-panel');
+  const savedWidth = localStorage.getItem('eigen-review-width');
+  if (savedWidth) panel.style.width = savedWidth + 'px';
+  panel.style.display = 'block';
+  renderReviewList();
+}
+
+function renderReviewList() {
+  reviewDetailIndex = null;
   const changesEl = document.getElementById('review-changes');
   changesEl.innerHTML = '';
 
-  for (const change of draftChanges) {
-    const card = document.createElement('div');
-    card.className = 'review-change-card';
+  const count = document.createElement('div');
+  count.className = 'review-list-count';
+  const n = reviewDraftChanges.length;
+  count.textContent = n + ' change' + (n !== 1 ? 's' : '') + ' pending';
+  changesEl.appendChild(count);
 
-    const heading = document.createElement('div');
-    heading.className = 'review-change-heading';
-    heading.textContent = (change.id || '') + ' — ' + (change.filename || '') + ' — ' + (change.summary || '');
+  reviewDraftChanges.forEach((change, idx) => {
+    const row = document.createElement('div');
+    row.className = 'review-list-row';
+    row.setAttribute('role', 'button');
+    row.setAttribute('tabindex', '0');
 
-    if (change.review_comment) {
-      const commentNote = document.createElement('div');
-      commentNote.className = 'review-comment-note';
-      commentNote.textContent = 'Previous feedback: ' + change.review_comment;
-      card.appendChild(commentNote);
-    }
+    const modEl = document.createElement('span');
+    modEl.className = 'review-list-module';
+    modEl.textContent = change.module_path || '';
 
-    const actions = document.createElement('div');
-    actions.className = 'review-actions';
+    const summaryEl = document.createElement('span');
+    summaryEl.className = 'review-list-summary';
+    summaryEl.textContent = change.summary || change.filename || '';
 
-    const wtParam = activeWorktreeName ? '?worktree=' + encodeURIComponent(activeWorktreeName) : '';
-
-    const approveBtn = document.createElement('button');
-    approveBtn.className = 'btn-approve';
-    approveBtn.textContent = 'Approve';
-    approveBtn.addEventListener('click', async () => {
-      approveBtn.disabled = true; rejectBtn.disabled = true;
-      try {
-        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve' + wtParam, { method: 'POST' });
-        if (!res.ok) throw new Error('Approve failed: ' + res.status);
-      } catch (err) { showToast(err.message); }
-      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
+    row.append(modEl, summaryEl, statusBadge(change.status || 'draft'));
+    row.addEventListener('click', () => renderReviewDetail(idx));
+    row.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); renderReviewDetail(idx); }
     });
+    changesEl.appendChild(row);
+  });
+}
 
-    const rejectBtn = document.createElement('button');
-    rejectBtn.className = 'btn-reject';
-    rejectBtn.textContent = 'Reject';
-    rejectBtn.addEventListener('click', async () => {
-      const comment = prompt('Rejection comment:');
-      if (!comment) return;
-      approveBtn.disabled = true; rejectBtn.disabled = true;
-      try {
-        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject' + wtParam, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ comment }),
-        });
-        if (!res.ok) throw new Error('Reject failed: ' + res.status);
-      } catch (err) { showToast(err.message); }
-      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
-    });
+function renderReviewDetail(index) {
+  reviewDetailIndex = index;
+  const change = reviewDraftChanges[index];
+  const changesEl = document.getElementById('review-changes');
+  changesEl.innerHTML = '';
 
-    actions.append(approveBtn, rejectBtn);
-    card.append(heading, actions);
-    changesEl.appendChild(card);
+  // Navigation bar
+  const nav = document.createElement('div');
+  nav.className = 'review-nav';
+
+  const backBtn = document.createElement('button');
+  backBtn.className = 'review-back-link';
+  backBtn.textContent = '← Back to list';
+  backBtn.addEventListener('click', renderReviewList);
+
+  const spacer = document.createElement('span');
+  spacer.className = 'review-nav-spacer';
+
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'review-nav-btn';
+  prevBtn.textContent = '← Prev';
+  prevBtn.disabled = index === 0;
+  prevBtn.addEventListener('click', () => renderReviewDetail(index - 1));
+
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'review-nav-btn';
+  nextBtn.textContent = 'Next →';
+  nextBtn.disabled = index === reviewDraftChanges.length - 1;
+  nextBtn.addEventListener('click', () => renderReviewDetail(index + 1));
+
+  nav.append(backBtn, spacer, prevBtn, nextBtn);
+  changesEl.appendChild(nav);
+
+  // Card
+  const card = document.createElement('div');
+  card.className = 'review-change-card';
+
+  const heading = document.createElement('div');
+  heading.className = 'review-change-heading';
+  heading.textContent = (change.module_path || '') + ' / ' + (change.filename || '') + ' — ' + (change.summary || '');
+  card.appendChild(heading);
+
+  // Rich change fields (no raw YAML)
+  if (change.changes && typeof change.changes === 'object') {
+    const fieldsEl = document.createElement('div');
+    fieldsEl.className = 'review-fields';
+    renderChangeFields(fieldsEl, change.changes);
+    card.appendChild(fieldsEl);
   }
 
-  document.getElementById('review-panel').style.display = 'block';
+  // Comment label
+  const commentLabelEl = document.createElement('div');
+  commentLabelEl.style.cssText = 'font-size:12px;color:var(--text-muted);margin-top:14px;margin-bottom:4px;';
+  commentLabelEl.textContent = 'Comment';
+  card.appendChild(commentLabelEl);
+
+  // Always-visible comment textarea
+  const textarea = document.createElement('textarea');
+  textarea.className = 'review-comments';
+  textarea.rows = 3;
+  textarea.placeholder = 'Add a comment (optional for approve, required for reject)...';
+  if (change.review_comment) textarea.value = change.review_comment;
+  card.appendChild(textarea);
+
+  const validation = document.createElement('div');
+  validation.className = 'review-validation';
+  validation.textContent = 'A comment is required to reject.';
+  card.appendChild(validation);
+
+  // Actions
+  const wtParam = change.worktree && change.worktree !== 'main'
+    ? '?worktree=' + encodeURIComponent(change.worktree)
+    : '';
+  const modPath = change.module_path || '';
+  const filename = change.filename || '';
+
+  const actions = document.createElement('div');
+  actions.className = 'review-actions';
+
+  const approveBtn = document.createElement('button');
+  approveBtn.className = 'btn-approve';
+  approveBtn.textContent = 'Approve';
+  approveBtn.addEventListener('click', async () => {
+    approveBtn.disabled = true; rejectBtn.disabled = true;
+    const comment = textarea.value.trim();
+    const body = comment ? JSON.stringify({ comment }) : undefined;
+    try {
+      const res = await fetch('/api/modules/' + modPath + '/changes/' + filename + '/approve' + wtParam, {
+        method: 'POST',
+        headers: body ? { 'Content-Type': 'application/json' } : {},
+        body,
+      });
+      if (!res.ok) throw new Error('Approve failed: ' + res.status);
+      reviewDraftChanges.splice(index, 1);
+      if (reviewDraftChanges.length === 0) { hideReviewPanel(); return; }
+      renderReviewList();
+    } catch (err) {
+      showToast(err.message);
+      approveBtn.disabled = false; rejectBtn.disabled = false;
+    }
+  });
+
+  const rejectBtn = document.createElement('button');
+  rejectBtn.className = 'btn-reject';
+  rejectBtn.textContent = 'Reject';
+  rejectBtn.addEventListener('click', async () => {
+    const comment = textarea.value.trim();
+    if (!comment) {
+      validation.classList.add('visible');
+      textarea.focus();
+      return;
+    }
+    validation.classList.remove('visible');
+    approveBtn.disabled = true; rejectBtn.disabled = true;
+    try {
+      const res = await fetch('/api/modules/' + modPath + '/changes/' + filename + '/reject' + wtParam, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment }),
+      });
+      if (!res.ok) throw new Error('Reject failed: ' + res.status);
+      reviewDraftChanges[index] = Object.assign({}, change, { review_comment: comment });
+      renderReviewList();
+    } catch (err) {
+      showToast(err.message);
+      approveBtn.disabled = false; rejectBtn.disabled = false;
+    }
+  });
+
+  actions.append(approveBtn, rejectBtn);
+  card.appendChild(actions);
+  changesEl.appendChild(card);
+}
+
+function renderChangeFields(container, changes) {
+  const fieldOrder = ['title', 'owner', 'status', 'deprecation_reason', 'description', 'behavior', 'technology', 'dependencies', 'acceptance_criteria'];
+  const seen = new Set();
+
+  for (const key of [...fieldOrder, ...Object.keys(changes)]) {
+    if (seen.has(key) || !(key in changes)) continue;
+    seen.add(key);
+    const val = changes[key];
+    if (val === null || val === undefined || val === '') continue;
+
+    const field = document.createElement('div');
+    field.className = 'review-field';
+
+    const label = document.createElement('div');
+    label.className = 'review-field-label';
+    label.textContent = key.replace(/_/g, ' ');
+    field.appendChild(label);
+
+    if (key === 'acceptance_criteria' && Array.isArray(val)) {
+      const list = document.createElement('ul');
+      list.className = 'review-ac-list';
+      for (const ac of val) {
+        const item = document.createElement('li');
+        item.className = 'review-ac-item';
+        const idEl = document.createElement('span');
+        idEl.className = 'review-ac-id';
+        idEl.textContent = ac.id || '';
+        const desc = document.createElement('span');
+        desc.className = 'review-ac-desc';
+        desc.textContent = ac.description || '';
+        item.append(idEl, desc);
+        list.appendChild(item);
+      }
+      field.appendChild(list);
+    } else if (key === 'technology' && typeof val === 'object' && !Array.isArray(val)) {
+      const table = document.createElement('table');
+      table.className = 'review-tech-table';
+      for (const [k, v] of Object.entries(val)) {
+        const row = document.createElement('tr');
+        const kCell = document.createElement('td'); kCell.textContent = k;
+        const vCell = document.createElement('td'); vCell.textContent = String(v);
+        row.append(kCell, vCell);
+        table.appendChild(row);
+      }
+      field.appendChild(table);
+    } else if (key === 'dependencies' && Array.isArray(val)) {
+      const list = document.createElement('ul');
+      list.style.paddingLeft = '18px';
+      list.style.fontSize = '13px';
+      for (const dep of val) {
+        const li = document.createElement('li'); li.textContent = dep;
+        list.appendChild(li);
+      }
+      field.appendChild(list);
+    } else if (typeof val === 'string' && (key === 'description' || key === 'behavior' || val.includes('\n'))) {
+      const pre = document.createElement('pre');
+      pre.className = 'review-field-text';
+      pre.textContent = val;
+      field.appendChild(pre);
+    } else {
+      const valueEl = document.createElement('div');
+      valueEl.className = 'review-field-value';
+      valueEl.textContent = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      field.appendChild(valueEl);
+    }
+
+    container.appendChild(field);
+  }
 }
 
 function hideReviewPanel() {
   const panel = document.getElementById('review-panel');
   if (panel) panel.style.display = 'none';
+  reviewDetailIndex = null;
   stopReviewPoller();
   schedulePoll();
+}
+
+// ── Keyboard shortcuts for review navigation ──────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (reviewDetailIndex === null) return;
+  const active = document.activeElement;
+  if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT')) return;
+  if (e.key === 'j' || e.key === 'n') {
+    if (reviewDetailIndex < reviewDraftChanges.length - 1) {
+      e.preventDefault();
+      renderReviewDetail(reviewDetailIndex + 1);
+    }
+  } else if (e.key === 'k' || e.key === 'p') {
+    if (reviewDetailIndex > 0) {
+      e.preventDefault();
+      renderReviewDetail(reviewDetailIndex - 1);
+    }
+  }
+});
+
+// ── Resize handles ────────────────────────────────────────────────────────────
+
+function initResizeHandles() {
+  // Restore saved sidebar width.
+  const savedLeftWidth = localStorage.getItem('eigen-left-width');
+  if (savedLeftWidth) {
+    document.documentElement.style.setProperty('--left-width', savedLeftWidth + 'px');
+  }
+
+  // Left sidebar handle (appended to #left, positioned on right edge via CSS).
+  const leftEl = document.getElementById('left');
+  if (leftEl) {
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    leftEl.appendChild(handle);
+
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      handle.classList.add('dragging');
+      const startX = e.clientX;
+      const startWidth = leftEl.getBoundingClientRect().width;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'resize-overlay';
+      document.body.appendChild(overlay);
+
+      const clamp = x => Math.min(Math.max(x, 180), window.innerWidth * 0.5);
+
+      const onMove = ev => {
+        document.documentElement.style.setProperty('--left-width', clamp(startWidth + ev.clientX - startX) + 'px');
+      };
+      const onUp = ev => {
+        const w = clamp(startWidth + ev.clientX - startX);
+        document.documentElement.style.setProperty('--left-width', w + 'px');
+        localStorage.setItem('eigen-left-width', Math.round(w));
+        handle.classList.remove('dragging');
+        overlay.remove();
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  }
+
+  // Review panel handle (prepended to #review-panel, positioned on left edge via CSS).
+  const panelEl = document.getElementById('review-panel');
+  if (panelEl) {
+    const handle = document.createElement('div');
+    handle.className = 'resize-handle';
+    panelEl.prepend(handle);
+
+    handle.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      handle.classList.add('dragging');
+      const startX = e.clientX;
+      const startWidth = panelEl.getBoundingClientRect().width;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'resize-overlay';
+      document.body.appendChild(overlay);
+
+      const clamp = x => Math.min(Math.max(x, 320), window.innerWidth * 0.8);
+
+      const onMove = ev => {
+        panelEl.style.width = clamp(startWidth - (ev.clientX - startX)) + 'px';
+      };
+      const onUp = ev => {
+        const w = clamp(startWidth - (ev.clientX - startX));
+        panelEl.style.width = w + 'px';
+        localStorage.setItem('eigen-review-width', Math.round(w));
+        handle.classList.remove('dragging');
+        overlay.remove();
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+    });
+  }
 }
 
 // ── Worktree Poller ───────────────────────────────────────────────────────────
