@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-cli/cmd-scaffold
 domain: spec-cli
 module: cmd-scaffold
@@ -33,6 +34,14 @@ behavior: |
   files to canonical form, then runs `eigen spec validate`; if either command fails it
   prints a clear error message and exits non-zero, rejecting the commit. With --no-hooks,
   the hook installation step is skipped entirely; existing hook files are left unchanged.
+
+  Change files written or updated by the CLI (via eigen spec change, eigen spec new,
+  change-status, or change-comment) are always stored in canonical YAML form through
+  the shared storage layer. There is no separate normalization step for change files
+  in the hook today. A future `eigen spec format` command may add explicit
+  re-canonicalization of change files (e.g. to normalize hand-edits); when that
+  command exists, the hook block can be extended to run it as an additional step
+  before project-all without changing the overall hook structure.
 acceptance_criteria:
   - id: AC-001
     description: Creates all three skill files and three agent files in the target directory
@@ -89,7 +98,8 @@ acceptance_criteria:
       (1) uses `git diff --cached --name-only` to list staged files,
       (2) exits 0 immediately if no file path starts with specs/,
       (3) runs `eigen spec project-all` to normalize all spec.yaml files to canonical
-          form,
+          form (change files written by the CLI are already canonical and do not
+          need a separate normalization step),
       (4) runs `eigen spec validate` after project-all succeeds,
       (5) on non-zero exit from either command, prints an error message to stderr and
           exits non-zero so the commit is rejected
@@ -125,7 +135,17 @@ acceptance_criteria:
     given: Hook installation succeeds (--no-hooks not passed)
     when: eigen scaffold completes successfully
     then: The path .git/hooks/pre-commit is included in the list of created/modified files printed to stdout
+  - id: AC-014
+    description: Hook script structure does not preclude future addition of eigen spec format
+    given: The pre-commit hook installed by eigen scaffold
+    when: A future `eigen spec format` command becomes available
+    then: |
+      The hook block is structured so that "eigen spec format" (change file
+      re-canonicalization) can be added as a step before "eigen spec project-all"
+      without requiring changes to how the hook block is identified or appended;
+      specifically the hook block is delimited by recognizable begin/end markers
+      so it can be replaced atomically on re-scaffold
 dependencies: []
 technology: {}
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6
