@@ -4,7 +4,7 @@ domain: spec-navigator
 module: api
 owner: eigen
 title: Spec Navigator API
-status: draft
+status: compiled
 description: |
   The spec navigator API is a set of JSON endpoints served by eigen serve.
   It exposes module listings and per-module detail (projection + changes)
