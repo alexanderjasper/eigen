@@ -4,7 +4,7 @@ domain: spec-navigator
 module: change-review
 owner: eigen
 title: Change Review
-status: draft
+status: compiled
 description: |
   spec-navigator/change-review defines the HTTP API for approving or rejecting
   individual change files via the spec-navigator. There are no review sessions —
