@@ -133,3 +133,51 @@ func CurrentBranch(dir string) (string, error) {
 	}
 	return strings.TrimSpace(string(out)), nil
 }
+
+// WorktreesDir returns the canonical path where eigen/Claude worktrees are created.
+func WorktreesDir(gitRoot string) string {
+	return filepath.Join(gitRoot, ".claude", "worktrees")
+}
+
+// ScanWorktreesDir scans .claude/worktrees/ and returns an Entry for each
+// subdirectory that looks like a valid worktree (has a specs/ dir or is a git
+// worktree). Entries already present in the registry (by name) are skipped so
+// the registry takes precedence for metadata.
+func ScanWorktreesDir(gitRoot string, reg Registry) ([]Entry, error) {
+	dir := WorktreesDir(gitRoot)
+	infos, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("scanning worktrees dir: %w", err)
+	}
+
+	registered := make(map[string]bool, len(reg.Entries))
+	for _, e := range reg.Entries {
+		registered[e.Name] = true
+	}
+
+	var discovered []Entry
+	for _, info := range infos {
+		if !info.IsDir() {
+			continue
+		}
+		name := info.Name()
+		if registered[name] {
+			continue // registry entry takes precedence
+		}
+		wtPath := filepath.Join(dir, name)
+		branch, err := CurrentBranch(wtPath)
+		if err != nil {
+			continue // not a git repo / not accessible — skip
+		}
+		discovered = append(discovered, Entry{
+			Name:      name,
+			Branch:    branch,
+			Path:      wtPath,
+			CreatedAt: time.Time{}, // unknown for auto-discovered worktrees
+		})
+	}
+	return discovered, nil
+}
