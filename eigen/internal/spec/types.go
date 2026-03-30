@@ -8,7 +8,8 @@ type SpecModule struct {
 	Module      string            `yaml:"module"       json:"module"`
 	Owner       string            `yaml:"owner"        json:"owner"`
 	Title       string            `yaml:"title"        json:"title"`
-	Status      string            `yaml:"status"       json:"status"`
+	Status            string `yaml:"status"       json:"status"`
+	DeprecationReason string `yaml:"deprecation_reason,omitempty" json:"deprecation_reason,omitempty"`
 	Description string            `yaml:"description"  json:"description"`
 	Behavior    string            `yaml:"behavior"     json:"behavior"`
 	AcceptanceCriteria []AcceptanceCriterion `yaml:"acceptance_criteria,omitempty" json:"acceptance_criteria,omitempty"`
@@ -51,7 +52,8 @@ type Change struct {
 type ChangeSet struct {
 	Title       string            `yaml:"title,omitempty"       json:"title,omitempty"`
 	Owner       string            `yaml:"owner,omitempty"       json:"owner,omitempty"`
-	Status      string            `yaml:"status,omitempty"      json:"status,omitempty"`
+	Status            string `yaml:"status,omitempty"            json:"status,omitempty"`
+	DeprecationReason string `yaml:"deprecation_reason,omitempty" json:"deprecation_reason,omitempty"`
 	Description string            `yaml:"description,omitempty" json:"description,omitempty"`
 	Behavior    string            `yaml:"behavior,omitempty"    json:"behavior,omitempty"`
 	Technology  map[string]string `yaml:"technology,omitempty"  json:"technology,omitempty"`

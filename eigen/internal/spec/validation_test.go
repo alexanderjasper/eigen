@@ -147,6 +147,83 @@ func TestValidate(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("deprecated_dependency_emits_warning", func(t *testing.T) {
+		// AC-032
+		s := validModule()
+		s.Dependencies = []string{"dep/module"}
+		specsRoot := t.TempDir()
+
+		depDir := filepath.Join(specsRoot, "dep", "module")
+		if err := os.MkdirAll(depDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		depSpec := []byte("status: deprecated\n")
+		if err := os.WriteFile(filepath.Join(depDir, "spec.yaml"), depSpec, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, warnings := Validate(s, specsRoot)
+
+		found := false
+		for _, w := range warnings {
+			if w.Field == "dependencies" && strings.Contains(w.Message, "dep/module") && strings.Contains(w.Message, "deprecated") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected deprecation warning for dep/module, got warnings %v", warnings)
+		}
+	})
+
+	t.Run("non_deprecated_dependency_no_warning", func(t *testing.T) {
+		// AC-033
+		s := validModule()
+		s.Dependencies = []string{"dep/module"}
+		specsRoot := t.TempDir()
+
+		depDir := filepath.Join(specsRoot, "dep", "module")
+		if err := os.MkdirAll(depDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		depSpec := []byte("status: draft\n")
+		if err := os.WriteFile(filepath.Join(depDir, "spec.yaml"), depSpec, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, warnings := Validate(s, specsRoot)
+
+		for _, w := range warnings {
+			if w.Field == "dependencies" {
+				t.Errorf("unexpected dependency warning: %v", w)
+			}
+		}
+	})
+
+	t.Run("removed_dependency_no_deprecation_warning", func(t *testing.T) {
+		// AC-034
+		s := validModule()
+		s.Dependencies = []string{"dep/module"}
+		specsRoot := t.TempDir()
+
+		depDir := filepath.Join(specsRoot, "dep", "module")
+		if err := os.MkdirAll(depDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		depSpec := []byte("status: removed\n")
+		if err := os.WriteFile(filepath.Join(depDir, "spec.yaml"), depSpec, 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		_, warnings := Validate(s, specsRoot)
+
+		for _, w := range warnings {
+			if w.Field == "dependencies" && strings.Contains(w.Message, "deprecated") {
+				t.Errorf("unexpected deprecation warning for removed module: %v", w)
+			}
+		}
+	})
 }
 
 func TestValidateChanges(t *testing.T) {
