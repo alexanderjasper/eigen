@@ -44,6 +44,7 @@ reason: |
   `eigen worktree create / remove` — stored in `.eigen/worktrees.json` at the
   repo root — rather than parsing `git worktree list` output, giving eigen stable,
   structured metadata (branch name, display name, path) without shelling out.
+status: approved
 changes:
   title: Worktree-Aware Developer Experience
   owner: alexander
@@ -115,6 +116,9 @@ changes:
     specs directory without restarting.
 
     `eigen scaffold` hook fix is covered by spec-cli/cmd-scaffold change 008.
+  dependencies:
+    - spec-navigator/api
+    - spec-navigator/ui
   acceptance_criteria:
     - id: AC-001
       description: eigen worktree create makes a worktree at .claude/worktrees/<name>/
@@ -225,6 +229,3 @@ changes:
       then: |
         The new worktree is created correctly at .claude/worktrees/<name>/ relative
         to the git repository root (not relative to the current worktree's directory)
-  dependencies:
-    - spec-navigator/api
-    - spec-navigator/ui

@@ -20,6 +20,7 @@ reason: |
   defaulting to `<gitdir>` itself), and install the hook into that commondir's
   `hooks/` subdirectory. This is the shared hooks directory that git uses for
   all worktrees, so the hook fires on commits in any worktree.
+status: approved
 changes:
   acceptance_criteria:
     - id: AC-016

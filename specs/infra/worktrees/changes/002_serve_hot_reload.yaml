@@ -20,6 +20,7 @@ reason: |
     3. Requiring GET /api/worktrees and module listings to always reflect live state.
     4. Requiring the UI to refresh reactively (via its existing polling loop or
        SSE/websocket if one is already in the design) when the worktree set changes.
+status: approved
 changes:
   behavior: |
     `eigen worktree create <branch-name>` creates a new git worktree at
