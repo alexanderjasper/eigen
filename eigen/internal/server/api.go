@@ -18,58 +18,112 @@ type ModuleSummary struct {
 	Status            string `json:"status"`
 	DeprecationReason string `json:"deprecation_reason,omitempty"`
 	Children          bool   `json:"children"`
+	Worktree          string `json:"worktree"`
+	Branch            string `json:"branch"`
 }
 
-func modulesHandler(specsRoot string) http.HandlerFunc {
+// WorktreeInfo is the JSON shape returned by GET /api/worktrees.
+type WorktreeInfo struct {
+	Name   string `json:"name"`
+	Branch string `json:"branch"`
+	Path   string `json:"path"`
+	Status string `json:"status"` // "active" | "orphaned"
+}
+
+func modulesHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		refs, err := storage.WalkModules(specsRoot, "")
-		if err != nil {
-			jsonError(w, "failed to list modules: "+err.Error(), http.StatusInternalServerError)
-			return
+		state.mu.RLock()
+		order := make([]string, len(state.order))
+		copy(order, state.order)
+		// Snapshot active worktrees.
+		type wtSnap struct {
+			specsRoot string
+			branch    string
+			name      string
 		}
-
-		// Build a set of all paths for children detection.
-		pathSet := make(map[string]bool, len(refs))
-		for _, ref := range refs {
-			pathSet[ref.Path] = true
-		}
-
-		summaries := make([]ModuleSummary, 0, len(refs))
-		for _, ref := range refs {
-			s, err := storage.ReadSpec(specsRoot, ref.Path)
-			if err != nil {
-				// Include with empty fields rather than failing the whole list.
-				summaries = append(summaries, ModuleSummary{Path: ref.Path})
+		snaps := make([]wtSnap, 0, len(order))
+		for _, name := range order {
+			aw, ok := state.worktrees[name]
+			if !ok {
 				continue
 			}
-			hasChildren := false
-			prefix := ref.Path + "/"
-			for p := range pathSet {
-				if strings.HasPrefix(p, prefix) {
-					hasChildren = true
-					break
-				}
-			}
-			if s.Status == "removed" {
-				continue
-			}
-			summaries = append(summaries, ModuleSummary{
-				Path:              ref.Path,
-				Title:             s.Title,
-				Owner:             s.Owner,
-				Status:            s.Status,
-				DeprecationReason: s.DeprecationReason,
-				Children:          hasChildren,
+			snaps = append(snaps, wtSnap{
+				specsRoot: aw.SpecsRoot,
+				branch:    aw.Branch,
+				name:      name,
 			})
 		}
+		state.mu.RUnlock()
 
-		writeJSON(w, summaries)
+		var allSummaries []ModuleSummary
+		for _, snap := range snaps {
+			refs, err := storage.WalkModules(snap.specsRoot, "")
+			if err != nil {
+				continue
+			}
+
+			// Build a set of all paths for children detection within this worktree.
+			pathSet := make(map[string]bool, len(refs))
+			for _, ref := range refs {
+				pathSet[ref.Path] = true
+			}
+
+			for _, ref := range refs {
+				s, err := storage.ReadSpec(snap.specsRoot, ref.Path)
+				if err != nil {
+					allSummaries = append(allSummaries, ModuleSummary{
+						Path:     ref.Path,
+						Worktree: snap.name,
+						Branch:   snap.branch,
+					})
+					continue
+				}
+				if s.Status == "removed" {
+					continue
+				}
+				hasChildren := false
+				prefix := ref.Path + "/"
+				for p := range pathSet {
+					if strings.HasPrefix(p, prefix) {
+						hasChildren = true
+						break
+					}
+				}
+				allSummaries = append(allSummaries, ModuleSummary{
+					Path:              ref.Path,
+					Title:             s.Title,
+					Owner:             s.Owner,
+					Status:            s.Status,
+					DeprecationReason: s.DeprecationReason,
+					Children:          hasChildren,
+					Worktree:          snap.name,
+					Branch:            snap.branch,
+				})
+			}
+		}
+
+		if allSummaries == nil {
+			allSummaries = []ModuleSummary{}
+		}
+		writeJSON(w, allSummaries)
 	}
 }
 
-func moduleDetailHandler(specsRoot string) http.HandlerFunc {
+func moduleDetailHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		path := modulePath(r)
+		wt := r.URL.Query().Get("worktree")
+
+		specsRoot, err := resolveSpecsRoot(state, path, wt)
+		if err != nil {
+			if isAmbiguous(err) {
+				writeJSON409(w, ambiguousErr(err))
+				return
+			}
+			jsonError(w, "module not found: "+err.Error(), http.StatusNotFound)
+			return
+		}
+
 		s, err := storage.ReadSpec(specsRoot, path)
 		if err != nil {
 			jsonError(w, "module not found: "+err.Error(), http.StatusNotFound)
@@ -79,9 +133,21 @@ func moduleDetailHandler(specsRoot string) http.HandlerFunc {
 	}
 }
 
-func moduleChangesHandler(specsRoot string) http.HandlerFunc {
+func moduleChangesHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		path := modulePath(r)
+		path := modulePathForChanges(r)
+		wt := r.URL.Query().Get("worktree")
+
+		specsRoot, err := resolveSpecsRoot(state, path, wt)
+		if err != nil {
+			if isAmbiguous(err) {
+				writeJSON409(w, ambiguousErr(err))
+				return
+			}
+			jsonError(w, "changes not found: "+err.Error(), http.StatusNotFound)
+			return
+		}
+
 		changes, err := storage.ReadChanges(specsRoot, path)
 		if err != nil {
 			jsonError(w, "changes not found: "+err.Error(), http.StatusNotFound)
@@ -91,33 +157,51 @@ func moduleChangesHandler(specsRoot string) http.HandlerFunc {
 	}
 }
 
-// modulePath extracts the module path from /api/modules/<path> or /api/modules/<path>/changes.
-func modulePath(r *http.Request) string {
-	// Strip leading /api/modules/
-	p := strings.TrimPrefix(r.URL.Path, "/api/modules/")
-	// Strip trailing /changes
-	p = strings.TrimSuffix(p, "/changes")
-	return p
-}
+func worktreesHandler(state *serveState) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		state.mu.RLock()
+		order := make([]string, len(state.order))
+		copy(order, state.order)
+		type wtSnap struct {
+			name   string
+			branch string
+			path   string
+		}
+		snaps := make([]wtSnap, 0, len(order))
+		for _, name := range order {
+			aw, ok := state.worktrees[name]
+			if !ok {
+				continue
+			}
+			snaps = append(snaps, wtSnap{
+				name:   name,
+				branch: aw.Branch,
+				path:   aw.Entry.Path,
+			})
+		}
+		state.mu.RUnlock()
 
-// parseChangeActionPath extracts modulePath and filename from
-// /api/modules/<module-path>/changes/<filename>/(approve|reject).
-func parseChangeActionPath(urlPath string) (modPath, filename string) {
-	// Strip /api/modules/ prefix
-	p := strings.TrimPrefix(urlPath, "/api/modules/")
-	// Strip trailing /approve or /reject
-	p = strings.TrimSuffix(p, "/approve")
-	p = strings.TrimSuffix(p, "/reject")
-	// Now p = <module-path>/changes/<filename>
-	// Split on /changes/ to get module path and filename
-	idx := strings.LastIndex(p, "/changes/")
-	if idx < 0 {
-		return "", ""
+		infos := make([]WorktreeInfo, 0, len(snaps))
+		for _, snap := range snaps {
+			status := "active"
+			if snap.name != "main" {
+				if _, err := os.Stat(snap.path); os.IsNotExist(err) {
+					status = "orphaned"
+				}
+			}
+			infos = append(infos, WorktreeInfo{
+				Name:   snap.name,
+				Branch: snap.branch,
+				Path:   snap.path,
+				Status: status,
+			})
+		}
+		writeJSON(w, infos)
 	}
-	return p[:idx], p[idx+len("/changes/"):]
 }
 
-func changeApproveHandler(specsRoot string) http.HandlerFunc {
+// changeApproveHandler handles POST /api/modules/<path>/changes/<filename>/approve.
+func changeApproveHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -127,6 +211,16 @@ func changeApproveHandler(specsRoot string) http.HandlerFunc {
 		modPath, filename := parseChangeActionPath(r.URL.Path)
 		if modPath == "" || filename == "" {
 			jsonError(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		wt := r.URL.Query().Get("worktree")
+		specsRoot, err := resolveSpecsRoot(state, modPath, wt)
+		if err != nil {
+			if isAmbiguous(err) {
+				writeJSON409(w, ambiguousErr(err))
+				return
+			}
+			jsonError(w, "module not found", http.StatusNotFound)
 			return
 		}
 
@@ -143,7 +237,8 @@ func changeApproveHandler(specsRoot string) http.HandlerFunc {
 	}
 }
 
-func changeRejectHandler(specsRoot string) http.HandlerFunc {
+// changeRejectHandler handles POST /api/modules/<path>/changes/<filename>/reject.
+func changeRejectHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -153,6 +248,16 @@ func changeRejectHandler(specsRoot string) http.HandlerFunc {
 		modPath, filename := parseChangeActionPath(r.URL.Path)
 		if modPath == "" || filename == "" {
 			jsonError(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		wt := r.URL.Query().Get("worktree")
+		specsRoot, err := resolveSpecsRoot(state, modPath, wt)
+		if err != nil {
+			if isAmbiguous(err) {
+				writeJSON409(w, ambiguousErr(err))
+				return
+			}
+			jsonError(w, "module not found", http.StatusNotFound)
 			return
 		}
 
@@ -181,8 +286,123 @@ func changeRejectHandler(specsRoot string) http.HandlerFunc {
 	}
 }
 
+// ── Path helpers ──────────────────────────────────────────────────────────────
+
+// modulePath extracts the module path from /api/modules/<path>.
+func modulePath(r *http.Request) string {
+	return strings.TrimPrefix(r.URL.Path, "/api/modules/")
+}
+
+// modulePathForChanges extracts the module path from /api/modules/<path>/changes.
+func modulePathForChanges(r *http.Request) string {
+	p := strings.TrimPrefix(r.URL.Path, "/api/modules/")
+	return strings.TrimSuffix(p, "/changes")
+}
+
+// parseChangeActionPath extracts modulePath and filename from
+// /api/modules/<module-path>/changes/<filename>/(approve|reject).
+func parseChangeActionPath(urlPath string) (modPath, filename string) {
+	p := strings.TrimPrefix(urlPath, "/api/modules/")
+	p = strings.TrimSuffix(p, "/approve")
+	p = strings.TrimSuffix(p, "/reject")
+	idx := strings.LastIndex(p, "/changes/")
+	if idx < 0 {
+		return "", ""
+	}
+	return p[:idx], p[idx+len("/changes/"):]
+}
+
+// ── Resolution helpers ────────────────────────────────────────────────────────
+
+// ambiguityError is returned when a path exists in multiple worktrees and no ?worktree= was given.
+type ambiguityError struct {
+	worktrees []string
+}
+
+func (e *ambiguityError) Error() string {
+	return "ambiguous module path: exists in multiple worktrees: " + strings.Join(e.worktrees, ", ")
+}
+
+func isAmbiguous(err error) bool {
+	var ae *ambiguityError
+	return errors.As(err, &ae)
+}
+
+func ambiguousErr(err error) map[string]interface{} {
+	var ae *ambiguityError
+	if errors.As(err, &ae) {
+		return map[string]interface{}{
+			"error":     err.Error(),
+			"worktrees": ae.worktrees,
+		}
+	}
+	return map[string]interface{}{"error": err.Error()}
+}
+
+// resolveSpecsRoot finds the specsRoot for the given module path.
+// If wt is specified, it resolves to that worktree's specsRoot directly.
+// If wt is empty, it finds which worktrees contain the module.
+// Returns an ambiguityError if the path is ambiguous and wt is empty.
+func resolveSpecsRoot(state *serveState, modPath, wt string) (string, error) {
+	state.mu.RLock()
+	defer state.mu.RUnlock()
+
+	if wt != "" {
+		aw, ok := state.worktrees[wt]
+		if !ok {
+			return "", errors.New("worktree not found: " + wt)
+		}
+		return aw.SpecsRoot, nil
+	}
+
+	// Find all worktrees that contain this module.
+	var matches []string
+	var matchedSpecsRoot string
+	for _, name := range state.order {
+		aw, ok := state.worktrees[name]
+		if !ok {
+			continue
+		}
+		if moduleExists(aw.SpecsRoot, modPath) {
+			matches = append(matches, name)
+			matchedSpecsRoot = aw.SpecsRoot
+		}
+	}
+
+	switch len(matches) {
+	case 0:
+		return "", errors.New("module not found: " + modPath)
+	case 1:
+		return matchedSpecsRoot, nil
+	default:
+		return "", &ambiguityError{worktrees: matches}
+	}
+}
+
+// moduleExists checks if a module at path exists in the given specsRoot.
+func moduleExists(specsRoot, modPath string) bool {
+	refs, err := storage.WalkModules(specsRoot, modPath)
+	if err != nil {
+		return false
+	}
+	for _, ref := range refs {
+		if ref.Path == modPath {
+			return true
+		}
+	}
+	return false
+}
+
+// ── JSON helpers ──────────────────────────────────────────────────────────────
+
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(v)
+}
+
+func writeJSON409(w http.ResponseWriter, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusConflict)
 	json.NewEncoder(w).Encode(v)
 }
 
