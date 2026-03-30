@@ -370,7 +370,9 @@ function filterGroupedTree(query) {
 function highlightActive(path) {
   const nodes = document.querySelectorAll('.tree-label');
   for (const n of nodes) {
-    n.classList.toggle('active', n.closest('.tree-node').dataset.path === path);
+    const treeNode = n.closest('.tree-node');
+    if (!treeNode) continue; // group headers have no .tree-node ancestor
+    n.classList.toggle('active', treeNode.dataset.path === path);
   }
 }
 
