@@ -24,6 +24,9 @@ behavior: |
   state. For acceptance criteria, identity is checked per-criterion by id:
   an AC in changes is a no-op if an AC with the same id already exists in
   the projection with identical description, given, when, and then.
+  For op-based changes, ValidateChanges replays the operations against the
+  current projected value and flags the change if the resulting text is
+  identical to the current state.
 
   Module lifecycle statuses: the status field on SpecModule accepts five
   values — draft, approved, compiled, deprecated, and removed.
@@ -41,6 +44,58 @@ behavior: |
   The SpecModule struct gains a DeprecationReason field (YAML key:
   deprecation_reason) written to spec.yaml when status is deprecated.
   The ChangeSet struct gains a matching DeprecationReason field.
+
+  Inline polymorphic text ops: the ChangeSet fields Description and
+  Behavior change from string to a new TextChange type. TextChange
+  implements yaml.Unmarshaler and accepts two YAML forms:
+
+  1. A YAML scalar (string) — interpreted as a full replacement of the
+     field value. This is backward compatible with existing change files.
+  2. A YAML sequence — interpreted as an ordered list of TextOp structs.
+     Each TextOp has an Op field (one of "replace", "prepend", "append",
+     "delete") and the relevant operands.
+
+  TextChange has methods: IsSet() bool (true if the YAML key was present),
+  IsFullReplace() bool (true when the value is a scalar string), FullText()
+  string (returns the scalar value), and Ops() []TextOp (returns the ops
+  list). When IsFullReplace() is true the engine uses the scalar value as a
+  last-write-wins replacement (same as today). When Ops() is non-empty the
+  engine applies each op sequentially against the current projected value.
+
+  TextOp struct has fields: Op string (yaml "op"), Old string (yaml "old",
+  used by replace), New string (yaml "new", used by replace), and Text
+  string (yaml "text", used by prepend, append, and delete).
+
+  Operations:
+  - "replace": finds the first occurrence of Old in the current value and
+    replaces it with New. If Old is not found, returns a projection error
+    (not a silent no-op). First occurrence only.
+  - "prepend": inserts Text before the current value (Text + current).
+  - "append": inserts Text after the current value (current + Text).
+  - "delete": finds the first occurrence of Text in the current value and
+    removes it. If Text is not found, returns a projection error.
+
+  Example YAML for a full replacement (backward compatible):
+    changes:
+      behavior: |
+        Full text...
+
+  Example YAML for op-based mutation:
+    changes:
+      behavior:
+        - op: append
+          text: |
+            New paragraph...
+        - op: replace
+          old: "find this"
+          new: "with this"
+
+  ValidateChanges replays ops against the current projected value to
+  compute the resulting text. If the result is identical to the current
+  value, ValidateChanges returns a ValidationError for that field with a
+  no-op message, just as it does for plain field no-ops. Note that
+  replace/delete ops that fail to match are caught earlier as projection
+  errors and never reach no-op validation.
 acceptance_criteria:
   - id: AC-001
     description: Simple fields use last-write-wins across changes
@@ -242,7 +297,72 @@ acceptance_criteria:
     given: The implementation is complete
     when: The test files are checked
     then: eigen/internal/spec/projection_test.go includes table-driven cases for deprecated and removed status projection, and eigen/internal/spec/validation_test.go includes cases for the deprecated-dependency warning
+  - id: AC-041
+    description: 'Projection: replace op substitutes first occurrence in field'
+    given: A projected behavior contains "foo bar foo" and a change has behavior as a sequence with op replace, old "foo", new "baz"
+    when: Project() is called
+    then: The resulting behavior is "baz bar foo" (only first occurrence replaced)
+  - id: AC-042
+    description: 'Projection: prepend op inserts text before field value'
+    given: A projected description is "existing text" and a change has description as a sequence with op prepend, text "new intro\n\n"
+    when: Project() is called
+    then: The resulting description is "new intro\n\nexisting text"
+  - id: AC-043
+    description: 'Projection: append op inserts text after field value'
+    given: A projected description is "existing text" and a change has description as a sequence with op append, text "\n\nnew footer"
+    when: Project() is called
+    then: The resulting description is "existing text\n\nnew footer"
+  - id: AC-044
+    description: 'Projection: delete op removes first occurrence of text'
+    given: A projected behavior is "A B C B" and a change has behavior as a sequence with op delete, text "B "
+    when: Project() is called
+    then: The resulting behavior is "A C B" (only first occurrence removed)
+  - id: AC-045
+    description: 'Projection: multiple ops in a single change are applied sequentially'
+    given: A projected behavior is "A B C" and a change has behavior as a sequence with two ops, first replace old "A" new "X", then append text " D"
+    when: Project() is called
+    then: The resulting behavior is "X B C D"
+  - id: AC-046
+    description: 'Projection: scalar string value is a full replacement (backward compatible)'
+    given: A change sets behavior as a plain YAML scalar string "new text"
+    when: Project() is called
+    then: The resulting behavior is "new text" (full replacement, same as current last-write-wins)
+  - id: AC-047
+    description: 'Projection: replace op with no match returns a projection error'
+    given: A projected behavior is "hello world" and a change has behavior as a sequence with op replace, old "xyz", new "abc"
+    when: Project() is called
+    then: Returns an error indicating that the replace target "xyz" was not found in the behavior field
+  - id: AC-048
+    description: 'Projection: delete op with no match returns a projection error'
+    given: A projected behavior is "hello world" and a change has behavior as a sequence with op delete, text "xyz"
+    when: Project() is called
+    then: Returns an error indicating that the delete target "xyz" was not found in the behavior field
+  - id: AC-049
+    description: 'Projection: ops apply against current projected value, not original'
+    given: Change 1 sets description to "A B C" (scalar), Change 2 has description as a sequence with replace old "B" new "X", Change 3 has description as a sequence with replace old "X" new "Y"
+    when: Project() is called
+    then: The resulting description is "A Y C"
+  - id: AC-050
+    description: 'ValidateChanges: op-based change that produces identical text is flagged as no-op'
+    given: A projected behavior is "hello" and a change has behavior as a sequence with op prepend, text "" (empty prepend, result identical)
+    when: ValidateChanges() is called
+    then: Returns a ValidationError for the behavior field with a no-op message
+  - id: AC-051
+    description: 'ValidateChanges: op-based change that modifies the text is not flagged'
+    given: A projected behavior is "hello world" and a change has behavior as a sequence with op replace, old "hello", new "goodbye"
+    when: ValidateChanges() is called
+    then: No ValidationError is returned for the behavior field
+  - id: AC-052
+    description: TextChange type uses yaml.Unmarshaler for polymorphic deserialization
+    given: The implementation is complete
+    when: The types are inspected
+    then: TextChange implements yaml.Unmarshaler; ChangeSet Description and Behavior fields are typed TextChange (not string); TextOp has fields Op, Old, New, Text with yaml tags "op", "old", "new", "text"
+  - id: AC-053
+    description: Test coverage for inline polymorphic text ops
+    given: The implementation is complete
+    when: The test files are checked
+    then: eigen/internal/spec/projection_test.go includes table-driven cases covering replace, prepend, append, delete, multi-op, scalar-full-replace, replace-no-match-error, delete-no-match-error scenarios; eigen/internal/spec/validation_test.go includes cases for op-based no-op detection
 dependencies: []
 technology: {}
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6
