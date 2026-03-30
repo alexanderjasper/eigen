@@ -58,3 +58,13 @@ Small atomic commits as you go — don't batch everything into one large commit.
 - Do not modify spec files
 - Do not skip build verification
 - Follow existing codebase patterns — discover them by reading the code
+
+## Recording Compile Commits
+
+After each commit made during a compilation run, record the commit hash in the change file by running:
+
+```
+eigen spec change-status <module-path> <file> compiled --commit <HEAD-hash>
+```
+
+where `<HEAD-hash>` is obtained via `git rev-parse HEAD` after the commit. This appends the hash to `compiled_commits` on the change file, building up an audit trail of all commits that implement the change. Call this once per commit — every implementing commit must be recorded.
