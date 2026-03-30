@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-validate
 owner: eigen
 title: spec validate
-status: draft
+status: compiled
 description: |
   The spec validate command checks spec modules for required fields,
   acceptance criteria completeness, and dependency existence.

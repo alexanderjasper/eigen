@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-new
 owner: eigen
 title: spec new
-status: draft
+status: compiled
 description: |
   The spec new command scaffolds a new spec module at a given path under
   the specs root. It creates the changes/ directory, writes a templated

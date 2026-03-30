@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-change
 owner: eigen
 title: spec change
-status: draft
+status: compiled
 description: |
   The spec change command records a new change against an existing
   spec module. By default it writes the change template to the changes/

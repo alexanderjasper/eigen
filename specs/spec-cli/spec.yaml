@@ -4,7 +4,7 @@ domain: spec-cli
 module: spec-cli
 owner: eigen
 title: Spec CLI
-status: draft
+status: compiled
 description: |
   The spec CLI is a single static Go binary providing the eigen spec
   subcommands. It defines the entry point, specs-root resolution, and

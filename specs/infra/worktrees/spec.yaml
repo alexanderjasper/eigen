@@ -4,7 +4,7 @@ domain: infra
 module: worktrees
 owner: alexander
 title: Worktree-Aware Developer Experience
-status: draft
+status: compiled
 description: |
   `eigen serve` runs a single HTTP server in the main repository. It discovers
   active worktrees by scanning `.claude/worktrees/` at startup: every subdirectory
