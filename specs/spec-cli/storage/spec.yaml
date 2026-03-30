@@ -4,7 +4,7 @@ domain: spec-cli
 module: storage
 owner: eigen
 title: Storage
-status: draft
+status: compiled
 description: |
   The storage layer (eigen/internal/storage) provides filesystem-backed
   persistence for spec modules and their change histories. It exposes

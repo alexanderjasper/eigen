@@ -540,7 +540,7 @@ function section(title, content) {
 function statusBadge(status) {
   const badge = h('span', 'badge');
   badge.textContent = status || 'unknown';
-  const cls = ['draft', 'stable', 'approved', 'deprecated', 'removed'].includes(status)
+  const cls = ['draft', 'stable', 'approved', 'compiled', 'deprecated', 'removed'].includes(status)
     ? 'badge-' + status
     : 'badge-unknown';
   badge.classList.add(cls);

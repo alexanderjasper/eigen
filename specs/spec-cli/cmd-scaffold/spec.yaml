@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-scaffold
 owner: eigen
 title: scaffold
-status: draft
+status: compiled
 description: |
   The scaffold command initializes a project directory with the eigen Claude
   skills and agent definitions. It writes SKILL.md files for eigen-change-spec,

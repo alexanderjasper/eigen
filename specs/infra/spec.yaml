@@ -4,7 +4,7 @@ domain: infra
 module: infra
 owner: alexander
 title: Infrastructure
-status: draft
+status: compiled
 description: |
   The infra domain contains specs for infrastructure concerns that support
   the eigen project: CI pipelines, release automation, and developer tooling.
