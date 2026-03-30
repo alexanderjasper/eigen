@@ -694,9 +694,10 @@ func TestModulesHandlerMultiWorktree(t *testing.T) {
 		t.Fatalf("decode: %v", err)
 	}
 
-	// Expect 3: spec-cli from main, spec-cli from feature-foo, infra from feature-foo.
-	if len(summaries) != 3 {
-		t.Fatalf("expected 3 summaries, got %d", len(summaries))
+	// Expect 2: spec-cli from main (no unique wt changes), infra from feature-foo (new in wt).
+	// spec-cli is NOT duplicated in the worktree group because it has no unique changes there.
+	if len(summaries) != 2 {
+		t.Fatalf("expected 2 summaries, got %d", len(summaries))
 	}
 
 	// Check that every summary has worktree and branch.

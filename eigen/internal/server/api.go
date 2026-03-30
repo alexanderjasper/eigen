@@ -55,6 +55,35 @@ func modulesHandler(state *serveState) http.HandlerFunc {
 		}
 		state.mu.RUnlock()
 
+		// Build set of module paths "claimed" by a non-main worktree (unique WIP).
+		// These will be hidden from the main group so each module appears only once.
+		var mainSpecsRoot string
+		for _, name := range order {
+			if name == "main" {
+				if aw, ok := state.worktrees[name]; ok {
+					mainSpecsRoot = aw.SpecsRoot
+				}
+				break
+			}
+		}
+		claimedByWorktree := make(map[string]bool)
+		if mainSpecsRoot != "" {
+			for _, snap := range snaps {
+				if snap.name == "main" {
+					continue
+				}
+				wtRefs, err := storage.WalkModules(snap.specsRoot, "")
+				if err != nil {
+					continue
+				}
+				for _, ref := range wtRefs {
+					if hasUniqueChanges(snap.specsRoot, mainSpecsRoot, ref.Path) {
+						claimedByWorktree[ref.Path] = true
+					}
+				}
+			}
+		}
+
 		var allSummaries []ModuleSummary
 		for _, snap := range snaps {
 			refs, err := storage.WalkModules(snap.specsRoot, "")
@@ -68,7 +97,16 @@ func modulesHandler(state *serveState) http.HandlerFunc {
 				pathSet[ref.Path] = true
 			}
 
-			for _, ref := range refs {
+		for _, ref := range refs {
+				// For main: skip modules claimed by a worktree (they appear there instead).
+				// For non-main: skip modules with no unique changes vs main.
+				if snap.name == "main" {
+					if claimedByWorktree[ref.Path] {
+						continue
+					}
+				} else if mainSpecsRoot != "" && !hasUniqueChanges(snap.specsRoot, mainSpecsRoot, ref.Path) {
+					continue
+				}
 				s, err := storage.ReadSpec(snap.specsRoot, ref.Path)
 				if err != nil {
 					allSummaries = append(allSummaries, ModuleSummary{
@@ -387,6 +425,28 @@ func moduleExists(specsRoot, modPath string) bool {
 	}
 	for _, ref := range refs {
 		if ref.Path == modPath {
+			return true
+		}
+	}
+	return false
+}
+
+// hasUniqueChanges reports whether the module at modPath in wtSpecsRoot has at
+// least one change file that does not exist in mainSpecsRoot. Used to decide
+// whether a module is "interesting" in a non-main worktree — i.e. it has work
+// in progress that isn't in main yet.
+func hasUniqueChanges(wtSpecsRoot, mainSpecsRoot, modPath string) bool {
+	mainChanges, mainErr := storage.ReadChanges(mainSpecsRoot, modPath)
+	if mainErr != nil {
+		return true // module doesn't exist in main — it's new in this worktree
+	}
+	mainFiles := make(map[string]bool, len(mainChanges))
+	for _, ch := range mainChanges {
+		mainFiles[ch.Filename] = true
+	}
+	wtChanges, _ := storage.ReadChanges(wtSpecsRoot, modPath)
+	for _, ch := range wtChanges {
+		if !mainFiles[ch.Filename] {
 			return true
 		}
 	}
