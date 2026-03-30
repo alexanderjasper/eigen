@@ -4,7 +4,7 @@ domain: spec-navigator
 module: ui
 owner: eigen
 title: Spec Navigator UI
-status: draft
+status: compiled
 description: |
   The spec navigator UI is a single-page browser application embedded in the
   eigen binary. It renders a two-pane layout: a collapsible module tree on the
