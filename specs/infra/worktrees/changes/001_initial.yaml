@@ -3,7 +3,7 @@ id: chg-001
 sequence: 1
 timestamp: "2026-03-30T09:17:32Z"
 type: created
-summary: Initial spec — worktree-aware developer experience for eigen
+summary: Initial spec — worktree CLI commands and unified multi-worktree eigen serve
 reason: |
   Developers who use git worktrees to work on multiple features simultaneously
   face several rough edges with eigen today:
@@ -12,37 +12,46 @@ reason: |
      the hook path as `<target>/.git/hooks/pre-commit`, but in a worktree `.git`
      is a *file* (containing `gitdir: ...`), not a directory, so the MkdirAll call
      will fail. The hook must be installed into the git common directory
-     (`.git/hooks/` of the main repo, shared across all worktrees).
+     (`.git/hooks/` of the main repo, shared across all worktrees). (Covered by
+     spec-cli/cmd-scaffold change 008.)
 
   2. There is no `eigen worktree create` command. Users must manually run
      `git worktree add .claude/worktrees/<name> <branch>` and then manually
-     copy `.claude/settings.json`, agents, and skills into the new worktree
-     directory — a tedious, error-prone process that often produces stale copies
-     that diverge from the main repo.
+     copy `.claude/settings.json` into the new worktree directory — a tedious,
+     error-prone process that often produces stale copies that diverge from the
+     main repo.
 
   3. The agents and skills under `.claude/` are duplicated into every worktree,
      creating maintenance overhead: if the spec-agent or eigen-change skill is
      updated in the main repo, each worktree copy must be manually refreshed.
 
-  4. `eigen serve` has no per-worktree awareness: running it in two worktrees
-     simultaneously causes a port conflict, and there is no indication in the UI
-     of which branch/worktree is being served.
+  4. `eigen serve` has no multi-worktree awareness: there is no way to view
+     in-flight changes across all feature branches from a single UI. Each worktree
+     is an independent island; the developer must switch context to see what another
+     branch contains.
 
   5. The eigen-change skill workflow (spec → plan → compile) captures the current
      branch name but has no concept of worktrees and does not suggest or create
      a worktree as part of the feature workflow.
 
-  This module specifies an `eigen worktree` subcommand family that makes
-  worktrees a first-class eigen concept, plus the fix to scaffold's hook
-  resolution that makes it safe to run in a worktree context.
+  The original draft of this module proposed running a separate `eigen serve`
+  instance per worktree with a `--port` flag. User feedback rejected this design:
+  a single `eigen serve` process must aggregate specs and modules from the main
+  repo plus all registered worktrees into one unified UI, with clear per-worktree
+  / per-branch attribution. This is the design specified here.
+
+  Worktree discovery relies on the registration list maintained by
+  `eigen worktree create / remove` — stored in `.eigen/worktrees.json` at the
+  repo root — rather than parsing `git worktree list` output, giving eigen stable,
+  structured metadata (branch name, display name, path) without shelling out.
 changes:
   title: Worktree-Aware Developer Experience
   owner: alexander
   status: draft
   description: |
     The infra/worktrees module specifies the `eigen worktree` subcommand family
-    and the changes to `eigen scaffold` needed to give a great developer experience
-    for users who work on multiple features in parallel using git worktrees.
+    and the redesigned `eigen serve` that aggregates specs and modules from the
+    main repository plus every registered worktree into a single unified UI.
 
     The canonical worktree location is `.claude/worktrees/<name>/` inside the
     repository root. Eigen enforces this convention so that worktrees are
@@ -52,44 +61,56 @@ changes:
     The agent and skill files under `.claude/agents/` and `.claude/skills/` are
     *not* duplicated into worktrees. Instead, the worktree's `.claude/` directory
     contains only `settings.json` (copied from the main repo's `.claude/settings.json`
-    at creation time) and a `.git` gitdir file — the rest of Claude's project
-    configuration (agents, skills) is inherited from the main repo's `.claude/`
-    directory, which Claude Code already reads from parent directories.
+    at creation time) — the rest of Claude's project configuration is inherited
+    from the main repo's `.claude/` directory via parent-directory lookup.
 
-    A `eigen serve` invoked inside a worktree displays the current branch name
-    in the page title and accepts an optional `--port` override so two serves
-    can coexist without conflict.
+    Worktree registration state is persisted in `.eigen/worktrees.json` at the
+    git repository root. Each entry records: `name` (slug), `branch`, `path`
+    (absolute), and `created_at`. This file is the canonical source of truth for
+    `eigen serve`'s discovery mechanism; git's own worktree list is consulted only
+    to detect orphans (entries whose path no longer exists).
+
+    `eigen serve` runs a single HTTP server in the main repository. On startup it
+    reads `.eigen/worktrees.json`, opens a file-system watcher on the specs
+    directory of the main repo and on each registered worktree's specs directory,
+    and aggregates all modules/changes into a single combined module list exposed
+    by the API. Every ModuleSummary and module detail carries a `worktree` field
+    identifying which context it belongs to (main or the worktree name), plus the
+    branch name. The UI groups the module tree by worktree/branch so the user can
+    browse all in-flight work from one tab.
   behavior: |
     `eigen worktree create <branch-name>` creates a new git worktree at
     `.claude/worktrees/<name>/` (where `<name>` is derived from `<branch-name>`
     by replacing `/` with `-`) with a new branch named `<branch-name>` branched
     off the current HEAD. It then writes `.claude/settings.json` into the worktree
     by copying the main repo's `.claude/settings.json`, making the worktree
-    immediately usable with Claude Code. It does not copy agents or skills — those
-    are resolved by Claude Code from the main repo's `.claude/` directory via
-    parent-directory lookup. Finally it prints the worktree path and a suggested
-    next step.
+    immediately usable with Claude Code. It does not copy agents or skills.
+    On success it appends an entry to `.eigen/worktrees.json` (creating the file
+    and `.eigen/` directory if they do not exist). Finally it prints the worktree
+    path and a suggested next step.
 
-    `eigen worktree list` lists all worktrees registered with git for the current
-    repository, showing name, branch, path, and HEAD commit (short hash). Worktrees
-    that live at `.claude/worktrees/` are displayed first and marked as eigen-managed;
-    other worktrees are listed below.
+    `eigen worktree list` reads `.eigen/worktrees.json` and cross-checks each
+    entry against the filesystem. It prints a table with columns: NAME, BRANCH,
+    PATH, HEAD (short hash from git), STATUS. Entries whose path no longer exists
+    are shown with STATUS=orphaned. The main worktree (repo root) is listed first,
+    followed by eigen-managed entries in creation order.
 
     `eigen worktree remove <name>` removes the git worktree at
-    `.claude/worktrees/<name>/` using `git worktree remove`, then deletes the
-    directory. It fails with a clear error if the worktree has uncommitted changes
-    unless `--force` is passed.
+    `.claude/worktrees/<name>/` using `git worktree remove`, deletes the directory,
+    and removes the entry from `.eigen/worktrees.json`. It fails with a clear error
+    if the worktree has uncommitted changes unless `--force` is passed.
 
-    `eigen scaffold` gains awareness of the git common directory. When the target
-    directory is a worktree (i.e., `.git` is a file rather than a directory),
-    scaffold resolves the git common directory by reading the gitdir file and
-    following the `commondir` pointer, then writes the hook to
-    `<commondir>/hooks/pre-commit`. This ensures the hook is installed once in the
-    shared hooks location and fires for commits in all worktrees.
+    `eigen serve` (when run from any directory inside the git repository) discovers
+    worktrees by reading `.eigen/worktrees.json` at the repo root. It watches for
+    changes to specs in the main repo's specs directory and in every registered
+    worktree's specs directory simultaneously using a single fs-watcher. The
+    combined module list returned by GET /api/modules includes modules from all
+    contexts, each tagged with their source worktree name and branch. When
+    `.eigen/worktrees.json` is modified (e.g. a new worktree is added while serve
+    is running), serve reloads the registry and begins watching the new worktree's
+    specs directory without restarting.
 
-    `eigen serve` displays the active branch name (from `git branch --show-current`
-    run in the specsRoot's parent) in the browser tab title and in the UI header,
-    so the user can distinguish which worktree's specs are being served.
+    `eigen scaffold` hook fix is covered by spec-cli/cmd-scaffold change 008.
   acceptance_criteria:
     - id: AC-001
       description: eigen worktree create makes a worktree at .claude/worktrees/<name>/
@@ -100,6 +121,14 @@ changes:
         a new branch named feature/my-feature branched from HEAD; the worktree
         directory is created and registered with git
     - id: AC-002
+      description: eigen worktree create writes the registration entry to .eigen/worktrees.json
+      given: The main repo has a git repository root
+      when: eigen worktree create <branch> is run
+      then: |
+        .eigen/worktrees.json is created (if absent) or updated to include a new
+        entry with name, branch, path, and created_at fields for the new worktree;
+        the file remains valid JSON after the write
+    - id: AC-003
       description: eigen worktree create copies settings.json into the worktree
       given: The main repo has .claude/settings.json
       when: eigen worktree create <branch> is run
@@ -107,74 +136,91 @@ changes:
         .claude/settings.json is written into the new worktree directory
         (at .claude/worktrees/<name>/.claude/settings.json) with the same content
         as the main repo's .claude/settings.json; no agent or skill files are written
-    - id: AC-003
+    - id: AC-004
       description: eigen worktree create prints the path and a next-step hint
       given: Worktree creation succeeds
       when: eigen worktree create <branch> is run
       then: |
         Prints the worktree path and suggests opening the worktree in Claude Code
         with `claude --project .claude/worktrees/<name>`
-    - id: AC-004
-      description: eigen worktree list shows all worktrees with branch and path
-      given: One or more worktrees exist
+    - id: AC-005
+      description: eigen worktree list shows all registered worktrees with STATUS column
+      given: .eigen/worktrees.json contains two entries, one with a path that no longer exists
       when: eigen worktree list is run
       then: |
-        Outputs a table with columns: NAME, BRANCH, PATH, HEAD; eigen-managed
-        worktrees (at .claude/worktrees/) are listed first and marked with an
-        indicator; other worktrees are listed below a separator
-    - id: AC-005
-      description: eigen worktree remove deletes the worktree and its directory
+        Outputs a table with columns: NAME, BRANCH, PATH, HEAD, STATUS; the valid
+        entry shows STATUS=active; the missing-path entry shows STATUS=orphaned;
+        the main worktree (repo root) is listed first
+    - id: AC-006
+      description: eigen worktree remove deletes the worktree, directory, and registry entry
       given: A worktree named <name> exists at .claude/worktrees/<name>/
       when: eigen worktree remove <name> is run and the worktree has no uncommitted changes
       then: |
-        The worktree is deregistered from git and its directory is deleted;
-        eigen worktree list no longer shows it
-    - id: AC-006
+        The worktree is deregistered from git, its directory is deleted, and the
+        entry is removed from .eigen/worktrees.json; eigen worktree list no longer
+        shows it
+    - id: AC-007
       description: eigen worktree remove fails with a clear error if the worktree has uncommitted changes
       given: A worktree with uncommitted changes
       when: eigen worktree remove <name> is run without --force
       then: |
         Command exits non-zero and prints a message indicating the worktree has
-        uncommitted changes; the worktree directory is left intact
-    - id: AC-007
+        uncommitted changes; the worktree directory and .eigen/worktrees.json entry
+        are left intact
+    - id: AC-008
       description: eigen worktree remove --force removes a worktree with uncommitted changes
       given: A worktree with uncommitted changes
       when: eigen worktree remove <name> --force is run
-      then: Worktree is removed regardless of uncommitted changes
-    - id: AC-008
-      description: eigen scaffold resolves the git common dir when run in a worktree
-      given: A worktree directory where .git is a file pointing to the git common dir
-      when: eigen scaffold <worktree-path> is run (or scaffold is run from within a worktree)
-      then: |
-        The pre-commit hook is written to <commondir>/hooks/pre-commit (the shared
-        hooks directory of the main repository), not to a path derived from the
-        worktree's .git file; the command exits zero
+      then: Worktree is removed and its .eigen/worktrees.json entry is deleted regardless of uncommitted changes
     - id: AC-009
-      description: eigen scaffold without a target path detects if CWD is a worktree and installs the hook correctly
-      given: CWD is a git worktree (has a .git file, not a .git directory)
-      when: eigen scaffold is run with no path argument
+      description: eigen serve aggregates modules from all registered worktrees
+      given: |
+        .eigen/worktrees.json registers two worktrees (main implicit + one named
+        feature-foo on branch feature/foo); each has a specs/ directory with at
+        least one module
+      when: eigen serve is running and GET /api/modules is called
       then: |
-        Hook is installed into the git common directory's hooks/ folder;
-        scaffold exits zero with a success message
+        The response contains modules from both the main repo and feature-foo;
+        each ModuleSummary includes a worktree field ("main" or "feature-foo")
+        and a branch field ("main-branch-name" or "feature/foo")
     - id: AC-010
-      description: eigen serve shows the active branch name in the UI
-      given: eigen serve is running for a specs directory inside a git repo
-      when: A user opens the spec navigator UI in a browser
+      description: eigen serve watches all worktree spec dirs and hot-reloads on change
+      given: eigen serve is running with two registered worktrees
+      when: A spec file is modified in either worktree's specs directory
       then: |
-        The page title and the header of the UI include the current branch name
-        (e.g. "eigen — feature/my-feature") so the user can distinguish which
-        worktree's specs are being served
+        The API returns updated module data within one file-watch cycle (no server
+        restart required); the change is reflected in the next GET /api/modules
+        response
     - id: AC-011
+      description: eigen serve picks up a newly added worktree without restarting
+      given: eigen serve is running and .eigen/worktrees.json has one entry
+      when: eigen worktree create <branch> is run in another terminal (updating .eigen/worktrees.json)
+      then: |
+        eigen serve detects the registry change, begins watching the new worktree's
+        specs directory, and includes the new worktree's modules in subsequent
+        GET /api/modules responses without a server restart
+    - id: AC-012
+      description: eigen serve does not require --port to run alongside another serve instance
+      given: No separate eigen serve instances are running; a single instance serves all worktrees
+      when: eigen serve is run once from the main repo
+      then: |
+        All worktrees' specs are visible in one UI on one port; there is no need
+        to run multiple serve processes or pass --port flags
+    - id: AC-013
       description: eigen worktree create is idempotent-safe — fails clearly if branch or directory already exists
       given: A worktree or branch with the same name already exists
       when: eigen worktree create <branch> is run
       then: |
         Command exits non-zero and prints a clear error indicating whether the
-        branch or the worktree directory already exists; nothing is created
-    - id: AC-012
+        branch or the worktree directory already exists; nothing is created and
+        .eigen/worktrees.json is not modified
+    - id: AC-014
       description: eigen worktree create works from a worktree CWD as well as the repo root
       given: CWD is an existing worktree at .claude/worktrees/<x>/
       when: eigen worktree create <branch> is run
       then: |
         The new worktree is created correctly at .claude/worktrees/<name>/ relative
         to the git repository root (not relative to the current worktree's directory)
+  dependencies:
+    - spec-navigator/api
+    - spec-navigator/ui
