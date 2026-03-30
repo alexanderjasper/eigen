@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-004
 sequence: 4
-timestamp: 2026-03-30T00:00:00Z
+timestamp: "2026-03-30T00:00:00Z"
 author: alexander
 type: updated
 summary: Drop backoff complexity — fixed interval poller only
@@ -11,6 +11,7 @@ reason: |
   meaningful benefit. Keep the meaningful improvements from chg-003 — setTimeout
   chain, pause/resume on panel visibility, explicit stopReviewPoller cleanup — and
   use a simple fixed 3000ms interval matching the original behavior.
+status: approved
 changes:
   behavior: |
     The session-based review API is removed entirely (unchanged from chg-002).
@@ -47,9 +48,9 @@ changes:
 
     All other UI behaviour is unchanged from chg-002.
   technology:
+    BackoffThreshold: removed
     PollingInterval: 3000ms fixed (no backoff)
     PollingMechanism: setTimeout chain (not setInterval)
-    BackoffThreshold: removed
   acceptance_criteria:
     - id: AC-024
       description: fixed poll interval is 3000ms
@@ -77,6 +78,14 @@ changes:
       when: the timeout would have fired a second time under setInterval
       then: no second fetch is issued until the first fetch resolves and schedules the next poll
     - id: AC-029
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
     - id: AC-030
+      description: ""
+      given: ""
+      when: ""
+      then: ""
       removed: true
