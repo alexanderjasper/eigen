@@ -1,9 +1,8 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-30T07:25:44Z
-author: ""
+timestamp: "2026-03-30T07:25:44Z"
 type: updated
-summary: "Require Format field on Change struct and explicit assignment in spec_new.go and spec_change.go"
+summary: Require Format field on Change struct and explicit assignment in spec_new.go and spec_change.go
 reason: |
   yaml.Marshal only writes a field to the output if the struct being marshaled
   carries that field. The Change struct in types.go did not have a Format field,
@@ -12,6 +11,7 @@ reason: |
   files. AC-006 only required SpecModule to expose Format; this change adds a
   parallel requirement for Change and makes explicit that both CLI commands must
   set Change.Format = "eigen/v1" before calling yaml.Marshal.
+status: approved
 changes:
   acceptance_criteria:
     - id: AC-006
