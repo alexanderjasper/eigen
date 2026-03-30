@@ -51,58 +51,63 @@ Agent(
 After the agent completes:
 
 1. Tell the user: "Spec phase complete. Review in your editor or with `git diff`."
-2. Read each change file's raw YAML and POST the batch to the review API:
-   Build a JSON array of change entries (change_id, file_path, change_yaml) for all
-   change files reported by spec-agent.
-
-   ```bash
-   SESSION_ID=$(curl -s -X POST http://localhost:7171/api/reviews \
-     -H 'Content-Type: application/json' \
-     -d '{"module_path":"<module-path>","changes":[...]}' \
-     | python3 -c "import sys,json; print(json.load(sys.stdin)['session_id'])" 2>/dev/null)
-   ```
-
-   If SESSION_ID is empty (server not running or curl failed): fall back to AskUserQuestion
-   with "Approve the spec?" / "Approve" / "Reject" as before.
+2. Commit the spec files:
+     git add specs/<module-path>/
+     git commit -m "spec(<module>): <summary from spec-agent report>"
 
 3. Tell the user: "Spec written. Open http://localhost:7171 to review and approve/reject in the browser. I'll proceed automatically when you submit."
 
    Start a background poll (run_in_background: true, timeout: 300000):
    ```bash
-   SESSION="<session-id>"
+   MODULE="<module-path>"
    while true; do
-     RESULT=$(curl -s "http://localhost:7171/api/reviews/$SESSION")
-     STATUS=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['status'])" 2>/dev/null)
-     if [ "$STATUS" = "submitted" ]; then
+     RESULT=$(curl -s "http://localhost:7171/api/modules/$MODULE/changes")
+     # Check if all draft changes are now approved
+     ALL_APPROVED=$(echo "$RESULT" | python3 -c "
+   import sys,json
+   changes=json.load(sys.stdin)
+   draft=[c for c in changes if not c.get('status') or c['status']=='draft']
+   print('yes' if len(draft)==0 else 'no')
+   " 2>/dev/null)
+     if [ "$ALL_APPROVED" = "yes" ]; then
+       echo "APPROVED"
+       echo "$RESULT"
+       exit 0
+     fi
+     # Check if any change has a review_comment (rejection feedback)
+     HAS_COMMENT=$(echo "$RESULT" | python3 -c "
+   import sys,json
+   changes=json.load(sys.stdin)
+   comments=[c for c in changes if c.get('review_comment')]
+   print('yes' if comments else 'no')
+   " 2>/dev/null)
+     if [ "$HAS_COMMENT" = "yes" ]; then
+       echo "REJECTED"
        echo "$RESULT"
        exit 0
      fi
      sleep 3
    done
    ```
-   Wait for the background task completion notification. The task output contains the full RESULT JSON.
+   Wait for the background task completion notification.
 
-5. Read decision from the background task output:
-   ```bash
-   DECISION=$(echo "$RESULT" | python3 -c "import sys,json; print(json.load(sys.stdin)['decision'])")
-   ```
-   - "approved":
-       Commit the spec files:
-         git add specs/<module-path>/
-         git commit -m "spec(<module>): <summary from spec-agent report>"
+4. Read the decision from the background task output (first line is APPROVED or REJECTED):
+   - "APPROVED":
        For each change file, run: `eigen spec change-status <module-path> <filename> approved`
        Commit: `chore(<module>): approve spec changes`
        Proceed to Phase 2.
-   - "rejected":
-       Extract change_comments from RESULT:
+   - "REJECTED":
+       Extract review_comment values from the changes JSON:
        ```bash
        FEEDBACK=$(echo "$RESULT" | python3 -c "
        import sys,json
-       d=json.load(sys.stdin)
-       lines=[f'{k}: {v}' for k,v in d.get('change_comments',{}).items() if v]
+       changes=json.load(sys.stdin)
+       lines=[f'{c[\"filename\"]}: {c[\"review_comment\"]}' for c in changes if c.get('review_comment')]
        print('\n'.join(lines) if lines else 'No specific comments provided.')
        ")
        ```
+       Use `eigen spec change-comment <module-path> <filename> <comment>` to record
+       the feedback if needed.
        Run Spec Feedback Loop with FEEDBACK as the user feedback text.
        Repeat from step 2.
 
@@ -136,7 +141,7 @@ After spec-agent returns, commit all pending spec files:
   git add specs/<module-path>/
   git commit -m "spec(<module>): incorporate feedback on <aspect>"
 (Use the aspect/summary from spec-agent's report.)
-Then re-enter the review cycle (re-post to the review API from step 2).
+Then re-enter the review cycle (poll module changes from step 2).
 
 ---
 

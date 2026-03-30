@@ -10,7 +10,7 @@ reason: |
   first so that spec.yaml files are always in canonical form, and then run
   `eigen spec validate` to catch any errors — both steps must pass before a commit
   is accepted.
-status: approved
+status: compiled
 changes:
   behavior: |
     Accepts an optional path argument (defaults to the current working directory),
