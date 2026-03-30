@@ -1,0 +1,100 @@
+format: eigen/v1
+id: chg-003
+sequence: 3
+timestamp: 2026-03-30T07:51:58Z
+author: alexander
+type: updated
+summary: Replace hardcoded setInterval review poller with adaptive setTimeout chain with backoff
+reason: |
+  The current startReviewPoller() uses setInterval at 3000ms with no cleanup path.
+  setInterval can stack requests if the server responds slowly (new tick fires before
+  the previous fetch resolves). 3 seconds is also too aggressive for the idle case —
+  when no draft changes exist the poll fires frequently for no reason. The poller
+  should back off to reduce noise, reset quickly when work appears, and stop entirely
+  while the user is actively reviewing (panel open) so there are no concurrent
+  mutations while the user is deciding.
+changes:
+  behavior: |
+    The session-based review API is removed entirely (unchanged from chg-002).
+
+    Two endpoints remain (unchanged from chg-002):
+    POST /api/modules/<module-path>/changes/<filename>/approve
+    POST /api/modules/<module-path>/changes/<filename>/reject
+
+    review_comment field, SetChangeComment storage function, and eigen spec
+    change-comment CLI command are unchanged from chg-002.
+
+    UI pending-review polling is replaced as follows:
+
+    startReviewPoller() is replaced with a setTimeout-chain implementation.
+    A module-level variable `reviewPollerTimer` holds the current pending
+    setTimeout handle (or null when stopped).
+
+    Polling behaviour:
+    - Default poll interval is 5000ms (5 seconds).
+    - A consecutive-no-draft counter is maintained (starts at 0).
+    - After each poll:
+        * If draft changes are found: reset the consecutive-no-draft counter to
+          0 and schedule the next poll in 5000ms.
+        * If no draft changes are found: increment the consecutive-no-draft
+          counter. If the counter has reached 5 or more, schedule the next
+          poll in 15000ms (backoff). Otherwise schedule in 5000ms.
+    - When the review panel becomes visible (showReviewPanel is called), polling
+      is paused: the pending setTimeout is cleared and reviewPollerTimer is set
+      to null. Polling does not restart until the panel is hidden.
+    - When the review panel is hidden (hideReviewPanel is called), polling
+      resumes from the beginning (consecutive-no-draft counter reset to 0,
+      next poll in 5000ms).
+    - stopReviewPoller() clears the pending timer and sets reviewPollerTimer to
+      null. It is called on hideReviewPanel and may be called at any time to
+      halt polling.
+    - The poller uses a setTimeout chain: the next poll is scheduled only after
+      the current fetch resolves (or rejects), so slow server responses cannot
+      cause poll requests to stack.
+
+    All other UI behaviour is unchanged from chg-002.
+  technology:
+    PollingInterval: 5 seconds (default), 15 seconds (backoff after 5 consecutive no-draft polls)
+    PollingMechanism: setTimeout chain (not setInterval)
+    BackoffThreshold: 5 consecutive polls with no draft changes
+  acceptance_criteria:
+    - id: AC-023
+      description: poller uses setTimeout chain not setInterval
+      given: the review poller is running
+      when: inspecting the implementation
+      then: no setInterval call exists in startReviewPoller; the next poll is scheduled with setTimeout only after the current fetch resolves or rejects
+    - id: AC-024
+      description: default poll interval is 5 seconds
+      given: the review poller has just started and found draft changes on the first poll
+      when: the poll callback completes
+      then: the next poll is scheduled 5000ms later (not 3000ms)
+    - id: AC-025
+      description: poll interval backs off to 15 seconds after 5 consecutive no-draft polls
+      given: the review poller has completed 5 consecutive polls each returning zero draft changes
+      when: the 5th no-draft poll callback completes
+      then: the next poll is scheduled 15000ms later
+    - id: AC-026
+      description: poll interval resets to 5 seconds when draft changes reappear
+      given: the poller is in backoff mode (interval is 15 seconds) due to 5+ no-draft polls
+      when: a poll returns one or more draft changes
+      then: the consecutive-no-draft counter is reset to 0 and the next poll is scheduled 5000ms later
+    - id: AC-027
+      description: polling pauses when the review panel becomes visible
+      given: the review poller is running with a pending setTimeout
+      when: showReviewPanel is called (draft changes found)
+      then: the pending setTimeout is cleared and no new poll is scheduled until the panel is hidden
+    - id: AC-028
+      description: polling resumes when the review panel is hidden
+      given: polling was paused because the review panel was visible
+      when: hideReviewPanel is called
+      then: polling restarts with the consecutive-no-draft counter reset to 0 and the next poll scheduled 5000ms later
+    - id: AC-029
+      description: stopReviewPoller clears the pending timer
+      given: a setTimeout is pending for the next poll
+      when: stopReviewPoller() is called
+      then: the timer is cleared, reviewPollerTimer is null, and no further polls are scheduled
+    - id: AC-030
+      description: slow server response does not cause poll stacking
+      given: the server takes longer than the poll interval to respond to a fetch
+      when: the timeout would have fired a second time under setInterval
+      then: no second fetch is issued until the first fetch resolves and schedules the next poll
