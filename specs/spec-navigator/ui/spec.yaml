@@ -4,7 +4,7 @@ domain: spec-navigator
 module: ui
 owner: eigen
 title: Spec Navigator UI
-status: compiled
+status: draft
 description: |
   The spec navigator UI is a single-page browser application embedded in the
   eigen binary. It renders a two-pane layout: a collapsible module tree on the
@@ -290,7 +290,12 @@ acceptance_criteria:
     then: |
       The element has role="treeitem" and aria-expanded="true" when expanded or
       aria-expanded="false" when collapsed
+  - id: AC-046
+    description: compiled status badge is colour-coded in teal
+    given: a module with status compiled is displayed
+    when: the detail pane renders
+    then: the status badge uses the compiled colour (teal / cyan) and the badge text reads "compiled"
 dependencies: []
 technology: {}
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6

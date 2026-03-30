@@ -1,0 +1,20 @@
+format: eigen/v1
+id: chg-006
+sequence: 6
+timestamp: 2026-03-30T10:47:50Z
+author: alexander
+type: updated
+summary: Add compiled status badge to the UI
+reason: |
+  The status badge function only recognised draft, stable, approved, deprecated,
+  and removed. Once the projection engine started emitting "compiled" as a module
+  status, the badge rendered as the grey "unknown" fallback instead of a distinct
+  compiled indicator. Added a teal badge-compiled style to visually distinguish
+  fully-compiled modules from ones still in draft or pending approval.
+changes:
+  acceptance_criteria:
+    - id: AC-046
+      description: compiled status badge is colour-coded in teal
+      given: a module with status compiled is displayed
+      when: the detail pane renders
+      then: the status badge uses the compiled colour (teal / cyan) and the badge text reads "compiled"
