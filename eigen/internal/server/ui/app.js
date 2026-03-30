@@ -3,17 +3,50 @@
 let allModules = [];
 let activePath = null;
 
+function injectToast() {
+  const toast = document.createElement('div');
+  toast.id = 'toast';
+  const closeBtn = document.createElement('button');
+  closeBtn.id = 'toast-close'; closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close error');
+  closeBtn.addEventListener('click', dismissToast);
+  const msg = document.createElement('span'); msg.id = 'toast-msg';
+  toast.appendChild(closeBtn); toast.appendChild(msg);
+  document.body.appendChild(toast);
+}
+
+function showToast(message) {
+  document.getElementById('toast-msg').textContent = message;
+  document.getElementById('toast').classList.add('visible');
+}
+
+function dismissToast() {
+  const t = document.getElementById('toast');
+  if (t) t.classList.remove('visible');
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 async function init() {
-  const res = await fetch('/api/modules');
-  allModules = await res.json();
-  renderTree(allModules);
-
+  injectToast();
+  const treeEl = document.getElementById('tree');
+  const treeSpinner = document.createElement('div');
+  treeSpinner.className = 'spinner';
+  treeEl.appendChild(treeSpinner);
+  try {
+    const res = await fetch('/api/modules');
+    if (!res.ok) throw new Error('/api/modules returned ' + res.status + ' ' + res.statusText);
+    allModules = await res.json();
+    treeSpinner.remove();
+    renderTree(allModules);
+  } catch (err) {
+    treeSpinner.remove();
+    showToast(err.message);
+    return;
+  }
   document.getElementById('search').addEventListener('input', e => {
     filterTree(e.target.value.trim().toLowerCase());
   });
-
   injectReviewPanel();
   startReviewPoller();
 }
@@ -144,17 +177,27 @@ function highlightActive(path) {
 async function loadDetail(path) {
   activePath = path;
   highlightActive(path);
-
-  const [specRes, changesRes] = await Promise.all([
-    fetch('/api/modules/' + path),
-    fetch('/api/modules/' + path + '/changes'),
-  ]);
-
-  if (!specRes.ok) return;
-  const spec = await specRes.json();
-  const changes = changesRes.ok ? await changesRes.json() : [];
-
-  renderDetail(spec, changes);
+  const rightEl = document.getElementById('right');
+  document.getElementById('detail').style.display = 'none';
+  document.getElementById('detail-empty').style.display = 'none';
+  const detailSpinner = document.createElement('div');
+  detailSpinner.className = 'spinner';
+  rightEl.appendChild(detailSpinner);
+  try {
+    const [specRes, changesRes] = await Promise.all([
+      fetch('/api/modules/' + path),
+      fetch('/api/modules/' + path + '/changes'),
+    ]);
+    if (!specRes.ok) throw new Error('/api/modules/' + path + ' returned ' + specRes.status);
+    const spec = await specRes.json();
+    const changes = changesRes.ok ? await changesRes.json() : [];
+    detailSpinner.remove();
+    renderDetail(spec, changes);
+  } catch (err) {
+    detailSpinner.remove();
+    showToast(err.message);
+    document.getElementById('detail-empty').style.display = '';
+  }
 }
 
 function renderDetail(spec, changes) {
@@ -337,11 +380,12 @@ function showReviewPanel(draftChanges) {
     approveBtn.className = 'btn-approve';
     approveBtn.textContent = 'Approve';
     approveBtn.addEventListener('click', async () => {
+      approveBtn.disabled = true; rejectBtn.disabled = true;
       try {
-        await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve', {
-          method: 'POST',
-        });
-      } catch (_) { /* poller will refresh */ }
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve', { method: 'POST' });
+        if (!res.ok) throw new Error('Approve failed: ' + res.status);
+      } catch (err) { showToast(err.message); }
+      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
     });
 
     const rejectBtn = document.createElement('button');
@@ -350,13 +394,15 @@ function showReviewPanel(draftChanges) {
     rejectBtn.addEventListener('click', async () => {
       const comment = prompt('Rejection comment:');
       if (!comment) return;
+      approveBtn.disabled = true; rejectBtn.disabled = true;
       try {
-        await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ comment }),
         });
-      } catch (_) { /* poller will refresh */ }
+        if (!res.ok) throw new Error('Reject failed: ' + res.status);
+      } catch (err) { showToast(err.message); }
+      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
     });
 
     actions.append(approveBtn, rejectBtn);
@@ -374,6 +420,4 @@ function hideReviewPanel() {
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-init().catch(err => {
-  document.getElementById('detail-empty').textContent = 'Failed to load: ' + err.message;
-});
+init();

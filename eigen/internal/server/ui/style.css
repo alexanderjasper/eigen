@@ -381,3 +381,35 @@ html, body {
 .btn-reject:hover {
   background: rgba(239,68,68,.3);
 }
+
+/* Spinner */
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 24px auto;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Error toast */
+#toast {
+  position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 200;
+  background: rgba(239,68,68,.15); border: 1px solid var(--status-deprecated);
+  color: var(--status-deprecated); border-radius: 8px;
+  padding: 10px 40px 10px 16px; font-size: 13px;
+  max-width: min(640px, 90vw); white-space: pre-wrap; word-break: break-word;
+  display: none;
+}
+#toast.visible { display: block; }
+#toast-close {
+  position: absolute; top: 8px; right: 10px;
+  background: none; border: none; color: inherit; font-size: 16px; cursor: pointer;
+}
+
+/* Disabled approve/reject buttons */
+.btn-approve:disabled, .btn-reject:disabled {
+  opacity: 0.4; cursor: not-allowed; pointer-events: none;
+}
