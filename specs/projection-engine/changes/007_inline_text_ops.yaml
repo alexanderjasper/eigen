@@ -1,6 +1,6 @@
 format: eigen/v1
-id: chg-006
-sequence: 6
+id: chg-007
+sequence: 7
 timestamp: "2026-03-30T10:52:01Z"
 author: alexander
 type: updated
@@ -23,154 +23,123 @@ compiled_commits:
   - 628b687
   - db72445
 changes:
-  behavior: |
-    Changes are applied in ascending sequence order. Simple fields (title, owner,
-    status, description, behavior, technology) use last-write-wins semantics.
-    Acceptance criteria are merged by id: new ids are added, existing ids are
-    updated in place, and criteria with removed: true are dropped from the
-    projection. After each projection the spec.yaml metadata fields last_change
-    and changes_count are updated automatically.
+  behavior:
+    - op: append
+      text: |
 
-    ValidateChanges(current SpecModule, changes ChangeSet) compares each
-    present field in changes against the current projection and returns a
-    ValidationError for each field whose value is identical to the current
-    state. For acceptance criteria, identity is checked per-criterion by id:
-    an AC in changes is a no-op if an AC with the same id already exists in
-    the projection with identical description, given, when, and then.
-    For op-based changes, ValidateChanges replays the operations against the
-    current projected value and flags the change if the resulting text is
-    identical to the current state.
+        Inline polymorphic text ops: the ChangeSet fields Description and
+        Behavior change from string to a new TextChange type. TextChange
+        implements yaml.Unmarshaler and accepts two YAML forms:
 
-    Module lifecycle statuses: the status field on SpecModule accepts five
-    values — draft, approved, compiled, deprecated, and removed.
+        1. A YAML scalar (string) — interpreted as a full replacement of the
+           field value. This is backward compatible with existing change files.
+        2. A YAML sequence — interpreted as an ordered list of TextOp structs.
+           Each TextOp has an Op field (one of "replace", "prepend", "append",
+           "delete") and the relevant operands.
 
-    A change may set status: deprecated alongside a deprecation_reason field
-    that explains what replaces the module. A change may set status: removed
-    to hide the module from default views; the spec.yaml is preserved in the
-    repository and remains fully accessible via git history.
+        TextChange has methods: IsSet() bool (true if the YAML key was present),
+        IsFullReplace() bool (true when the value is a scalar string), FullText()
+        string (returns the scalar value), and Ops() []TextOp (returns the ops
+        list). When IsFullReplace() is true the engine uses the scalar value as a
+        last-write-wins replacement (same as today). When Ops() is non-empty the
+        engine applies each op sequentially against the current projected value.
 
-    Validate() emits a ValidationWarning (non-blocking) for each dependency
-    whose projected status is deprecated. It does not warn about removed
-    dependencies — a module that depends on a removed module is an error
-    handled by the existing broken-dependency check.
+        TextOp struct has fields: Op string (yaml "op"), Old string (yaml "old",
+        used by replace), New string (yaml "new", used by replace), and Text
+        string (yaml "text", used by prepend, append, and delete).
 
-    The SpecModule struct gains a DeprecationReason field (YAML key:
-    deprecation_reason) written to spec.yaml when status is deprecated.
-    The ChangeSet struct gains a matching DeprecationReason field.
+        Operations:
+        - "replace": finds the first occurrence of Old in the current value and
+          replaces it with New. If Old is not found, returns a projection error
+          (not a silent no-op). First occurrence only.
+        - "prepend": inserts Text before the current value (Text + current).
+        - "append": inserts Text after the current value (current + Text).
+        - "delete": finds the first occurrence of Text in the current value and
+          removes it. If Text is not found, returns a projection error.
 
-    Inline polymorphic text ops: the ChangeSet fields Description and
-    Behavior change from string to a new TextChange type. TextChange
-    implements yaml.Unmarshaler and accepts two YAML forms:
+        Example YAML for a full replacement (backward compatible):
+          changes:
+            behavior: |
+              Full text...
 
-    1. A YAML scalar (string) — interpreted as a full replacement of the
-       field value. This is backward compatible with existing change files.
-    2. A YAML sequence — interpreted as an ordered list of TextOp structs.
-       Each TextOp has an Op field (one of "replace", "prepend", "append",
-       "delete") and the relevant operands.
+        Example YAML for op-based mutation:
+          changes:
+            behavior:
+              - op: append
+                text: |
+                  New paragraph...
+              - op: replace
+                old: "find this"
+                new: "with this"
 
-    TextChange has methods: IsSet() bool (true if the YAML key was present),
-    IsFullReplace() bool (true when the value is a scalar string), FullText()
-    string (returns the scalar value), and Ops() []TextOp (returns the ops
-    list). When IsFullReplace() is true the engine uses the scalar value as a
-    last-write-wins replacement (same as today). When Ops() is non-empty the
-    engine applies each op sequentially against the current projected value.
-
-    TextOp struct has fields: Op string (yaml "op"), Old string (yaml "old",
-    used by replace), New string (yaml "new", used by replace), and Text
-    string (yaml "text", used by prepend, append, and delete).
-
-    Operations:
-    - "replace": finds the first occurrence of Old in the current value and
-      replaces it with New. If Old is not found, returns a projection error
-      (not a silent no-op). First occurrence only.
-    - "prepend": inserts Text before the current value (Text + current).
-    - "append": inserts Text after the current value (current + Text).
-    - "delete": finds the first occurrence of Text in the current value and
-      removes it. If Text is not found, returns a projection error.
-
-    Example YAML for a full replacement (backward compatible):
-      changes:
-        behavior: |
-          Full text...
-
-    Example YAML for op-based mutation:
-      changes:
-        behavior:
-          - op: append
-            text: |
-              New paragraph...
-          - op: replace
-            old: "find this"
-            new: "with this"
-
-    ValidateChanges replays ops against the current projected value to
-    compute the resulting text. If the result is identical to the current
-    value, ValidateChanges returns a ValidationError for that field with a
-    no-op message, just as it does for plain field no-ops. Note that
-    replace/delete ops that fail to match are caught earlier as projection
-    errors and never reach no-op validation.
+        ValidateChanges replays ops against the current projected value to
+        compute the resulting text. If the result is identical to the current
+        value, ValidateChanges returns a ValidationError for that field with a
+        no-op message, just as it does for plain field no-ops. Note that
+        replace/delete ops that fail to match are caught earlier as projection
+        errors and never reach no-op validation.
   acceptance_criteria:
-    - id: AC-041
+    - id: AC-045
       description: 'Projection: replace op substitutes first occurrence in field'
       given: A projected behavior contains "foo bar foo" and a change has behavior as a sequence with op replace, old "foo", new "baz"
       when: Project() is called
       then: The resulting behavior is "baz bar foo" (only first occurrence replaced)
-    - id: AC-042
+    - id: AC-046
       description: 'Projection: prepend op inserts text before field value'
       given: A projected description is "existing text" and a change has description as a sequence with op prepend, text "new intro\n\n"
       when: Project() is called
       then: The resulting description is "new intro\n\nexisting text"
-    - id: AC-043
+    - id: AC-047
       description: 'Projection: append op inserts text after field value'
       given: A projected description is "existing text" and a change has description as a sequence with op append, text "\n\nnew footer"
       when: Project() is called
       then: The resulting description is "existing text\n\nnew footer"
-    - id: AC-044
+    - id: AC-048
       description: 'Projection: delete op removes first occurrence of text'
       given: A projected behavior is "A B C B" and a change has behavior as a sequence with op delete, text "B "
       when: Project() is called
       then: The resulting behavior is "A C B" (only first occurrence removed)
-    - id: AC-045
+    - id: AC-049
       description: 'Projection: multiple ops in a single change are applied sequentially'
       given: A projected behavior is "A B C" and a change has behavior as a sequence with two ops, first replace old "A" new "X", then append text " D"
       when: Project() is called
       then: The resulting behavior is "X B C D"
-    - id: AC-046
+    - id: AC-050
       description: 'Projection: scalar string value is a full replacement (backward compatible)'
       given: A change sets behavior as a plain YAML scalar string "new text"
       when: Project() is called
       then: The resulting behavior is "new text" (full replacement, same as current last-write-wins)
-    - id: AC-047
+    - id: AC-051
       description: 'Projection: replace op with no match returns a projection error'
       given: A projected behavior is "hello world" and a change has behavior as a sequence with op replace, old "xyz", new "abc"
       when: Project() is called
       then: Returns an error indicating that the replace target "xyz" was not found in the behavior field
-    - id: AC-048
+    - id: AC-052
       description: 'Projection: delete op with no match returns a projection error'
       given: A projected behavior is "hello world" and a change has behavior as a sequence with op delete, text "xyz"
       when: Project() is called
       then: Returns an error indicating that the delete target "xyz" was not found in the behavior field
-    - id: AC-049
+    - id: AC-053
       description: 'Projection: ops apply against current projected value, not original'
       given: Change 1 sets description to "A B C" (scalar), Change 2 has description as a sequence with replace old "B" new "X", Change 3 has description as a sequence with replace old "X" new "Y"
       when: Project() is called
       then: The resulting description is "A Y C"
-    - id: AC-050
+    - id: AC-054
       description: 'ValidateChanges: op-based change that produces identical text is flagged as no-op'
       given: A projected behavior is "hello" and a change has behavior as a sequence with op prepend, text "" (empty prepend, result identical)
       when: ValidateChanges() is called
       then: Returns a ValidationError for the behavior field with a no-op message
-    - id: AC-051
+    - id: AC-055
       description: 'ValidateChanges: op-based change that modifies the text is not flagged'
       given: A projected behavior is "hello world" and a change has behavior as a sequence with op replace, old "hello", new "goodbye"
       when: ValidateChanges() is called
       then: No ValidationError is returned for the behavior field
-    - id: AC-052
+    - id: AC-056
       description: TextChange type uses yaml.Unmarshaler for polymorphic deserialization
       given: The implementation is complete
       when: The types are inspected
       then: TextChange implements yaml.Unmarshaler; ChangeSet Description and Behavior fields are typed TextChange (not string); TextOp has fields Op, Old, New, Text with yaml tags "op", "old", "new", "text"
-    - id: AC-053
+    - id: AC-057
       description: Test coverage for inline polymorphic text ops
       given: The implementation is complete
       when: The test files are checked
