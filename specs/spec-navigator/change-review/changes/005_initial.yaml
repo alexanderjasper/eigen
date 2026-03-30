@@ -1,0 +1,54 @@
+format: eigen/v1
+id: chg-005
+sequence: 5
+timestamp: 2026-03-30T18:19:36Z
+author: alexander
+type: updated
+summary: Fix worktree query param omitted for main worktree in approve/reject requests
+reason: |
+  When a module exists in both the main worktree and a feature worktree, the
+  review UI's approve/reject fetch calls omit the ?worktree= query parameter
+  for changes belonging to the main worktree. The server cannot disambiguate
+  the module path and returns 409 Conflict. The loadDetail function already
+  passes the worktree param unconditionally; the review card action buttons
+  need the same treatment. (GitHub issue #12)
+changes:
+  behavior: |
+    In the review card rendering (createChangeCard or equivalent), the
+    worktree query parameter construction for approve and reject fetch calls
+    is changed from:
+
+      const wtParam = change.worktree && change.worktree !== 'main'
+        ? '?worktree=' + encodeURIComponent(change.worktree)
+        : '';
+
+    to:
+
+      const wtParam = change.worktree
+        ? '?worktree=' + encodeURIComponent(change.worktree)
+        : '';
+
+    This ensures the ?worktree= parameter is always sent when a change has a
+    worktree field, including when the worktree is 'main'. All other behavior
+    is unchanged.
+  acceptance_criteria:
+    - id: AC-031
+      description: approve request for main worktree includes worktree query parameter
+      given: a draft change file belongs to the main worktree (change.worktree is 'main')
+      when: the user clicks approve in the review UI
+      then: the fetch URL includes ?worktree=main and the server returns 200 (not 409)
+    - id: AC-032
+      description: approve request for non-main worktree still includes worktree query parameter
+      given: a draft change file belongs to a feature worktree (e.g. change.worktree is 'my-feature')
+      when: the user clicks approve in the review UI
+      then: the fetch URL includes ?worktree=my-feature and the server returns 200
+    - id: AC-033
+      description: reject request for main worktree includes worktree query parameter
+      given: a draft change file belongs to the main worktree (change.worktree is 'main')
+      when: the user clicks reject with a comment in the review UI
+      then: the fetch URL includes ?worktree=main and the server returns 200 (not 409)
+    - id: AC-034
+      description: worktree param omitted when change has no worktree field
+      given: a draft change file has no worktree field (change.worktree is falsy)
+      when: the user clicks approve or reject in the review UI
+      then: the fetch URL has no ?worktree= query parameter
