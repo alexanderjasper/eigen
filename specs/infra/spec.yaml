@@ -1,0 +1,26 @@
+format: eigen/v1
+id: infra
+domain: infra
+module: infra
+owner: alexander
+title: Infrastructure
+status: draft
+description: |
+  The infra domain contains specs for infrastructure concerns that support
+  the eigen project: CI pipelines, release automation, and developer tooling.
+  These specs describe observable behavior of external systems (GitHub Actions,
+  scripts) rather than Go source code.
+behavior: |
+  Each sub-module under infra describes a specific infrastructure artifact.
+  Acceptance criteria are expressed as observable workflow outcomes rather
+  than code-level contracts.
+acceptance_criteria:
+  - id: AC-001
+    description: infra domain is a navigable parent in spec list
+    given: Sub-modules exist under infra/
+    when: eigen spec list is run
+    then: All infra/* sub-modules appear in the listing
+dependencies: []
+technology: {}
+last_change: chg-001
+changes_count: 1

@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-cli/cmd-show
 domain: spec-cli
 module: cmd-show
@@ -5,16 +6,16 @@ owner: eigen
 title: spec show
 status: draft
 description: |
-    The spec show command prints the current spec.yaml of a module to stdout.
+  The spec show command prints the current spec.yaml of a module to stdout.
 behavior: |
-    Accepts a single slash-delimited path argument. Reads and prints
-    specs/<path>/spec.yaml verbatim to stdout.
+  Accepts a single slash-delimited path argument. Reads and prints
+  specs/<path>/spec.yaml verbatim to stdout.
 acceptance_criteria:
-    - id: AC-001
-      description: Prints the current spec.yaml to stdout
-      given: A valid existing module
-      when: eigen spec show <path> is run
-      then: Prints the contents of spec.yaml to stdout
+  - id: AC-001
+    description: Prints the current spec.yaml to stdout
+    given: A valid existing module
+    when: eigen spec show <path> is run
+    then: Prints the contents of spec.yaml to stdout
 dependencies: []
 technology: {}
 last_change: chg-001

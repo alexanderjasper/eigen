@@ -21,7 +21,7 @@ reason: |
   hook installation logic entirely. AC-015 makes the on-by-default nature of hook
   installation an explicit, independently testable criterion so that the implementation
   gap is unambiguous.
-status: approved
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-015

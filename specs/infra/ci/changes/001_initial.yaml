@@ -1,0 +1,71 @@
+format: eigen/v1
+id: chg-001
+sequence: 1
+timestamp: "2026-03-30T08:12:30Z"
+author: alexander
+type: created
+summary: Initial spec for the GitHub Actions CI workflow
+reason: |
+  Without automated CI, compilation errors and broken tests can land on main
+  undetected. A mandatory pipeline enforces that the binary builds, tests pass,
+  and all specs remain valid on every push and pull request.
+status: compiled
+compiled_commits:
+  - 647318af2bcb941257b7cd976d1bac69f592b279
+changes:
+  title: GitHub Actions CI
+  owner: alexander
+  status: draft
+  description: |
+    A GitHub Actions workflow file at .github/workflows/ci.yml that runs on
+    every push and every pull-request event. The pipeline has three sequential
+    jobs: verify the binary compiles, run the unit test suite, and validate all
+    specs in the repository using the built eigen binary.
+  behavior: |
+    The workflow triggers on push to any branch and on pull_request targeting
+    any branch. It runs on ubuntu-latest. Steps execute inside the eigen/
+    directory where go.mod lives. The validate job builds the eigen binary first,
+    then invokes `eigen spec validate` against the specs/ directory at the repo
+    root. If any job fails the workflow exits non-zero and GitHub marks the check
+    as failed, blocking merge when branch protection is configured.
+  acceptance_criteria:
+    - id: AC-001
+      description: Workflow triggers on push to any branch
+      given: A commit is pushed to any branch of the repository
+      when: The push event fires on GitHub
+      then: The CI workflow is triggered and all three jobs run
+    - id: AC-002
+      description: Workflow triggers on pull request
+      given: A pull request is opened, synchronized, or reopened
+      when: The pull_request event fires on GitHub
+      then: The CI workflow is triggered and all three jobs run
+    - id: AC-003
+      description: Build job verifies the binary compiles
+      given: The CI workflow is triggered
+      when: The build job runs `go build ./...` inside eigen/
+      then: The job exits 0 when the code compiles and non-zero when it does not
+    - id: AC-004
+      description: Test job runs the full unit test suite
+      given: The CI workflow is triggered
+      when: The test job runs `go test ./...` inside eigen/
+      then: The job exits 0 when all tests pass and non-zero when any test fails
+    - id: AC-005
+      description: Validate job runs eigen spec validate against specs/
+      given: The CI workflow is triggered
+      when: The validate job builds the eigen binary and runs `eigen spec validate`
+      then: The job exits 0 when all specs are valid and non-zero when any spec is invalid
+    - id: AC-006
+      description: A compilation failure causes the workflow to fail
+      given: A push introduces a Go compilation error
+      when: The build job runs
+      then: The workflow exits non-zero and GitHub marks the check as failed
+    - id: AC-007
+      description: A failing unit test causes the workflow to fail
+      given: A push introduces a failing unit test
+      when: The test job runs
+      then: The workflow exits non-zero and GitHub marks the check as failed
+    - id: AC-008
+      description: An invalid spec causes the workflow to fail
+      given: A push introduces a spec that fails validation
+      when: The validate job runs
+      then: The workflow exits non-zero and GitHub marks the check as failed
