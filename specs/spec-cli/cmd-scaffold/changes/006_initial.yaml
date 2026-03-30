@@ -63,7 +63,7 @@ changes:
     - id: AC-014
       description: Hook script structure does not preclude future addition of eigen spec format
       given: The pre-commit hook installed by eigen scaffold
-      when: A future `eigen spec format` command becomes available
+      when: "A future `eigen spec format` command becomes available"
       then: |
         The hook block is structured so that "eigen spec format" (change file
         re-canonicalization) can be added as a step before "eigen spec project-all"
