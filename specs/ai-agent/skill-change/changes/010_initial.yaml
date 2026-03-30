@@ -14,7 +14,7 @@ reason: |
   (3) GitHub #14: All python3 invocations use 2>/dev/null, silently swallowing HTTP
       errors (409, 5xx, network failures). Both check variables become empty strings
       and the loop spins forever with no diagnostic output.
-status: approved
+status: draft
 changes:
   behavior: |
     The /change skill orchestrates spec -> plan -> compile. At setup it captures both
