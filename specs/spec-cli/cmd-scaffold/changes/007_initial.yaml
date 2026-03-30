@@ -1,10 +1,8 @@
-format: eigen/v1
 id: chg-007
 sequence: 7
-timestamp: 2026-03-30T07:44:26Z
-author: ""
+timestamp: "2026-03-30T07:44:26Z"
 type: updated
-summary: "emphasize hook installation as on-by-default in eigen scaffold; scope note excludes eigen spec new"
+summary: emphasize hook installation as on-by-default in eigen scaffold; scope note excludes eigen spec new
 reason: |
   User feedback: "The hook should also be installed when scaffolding a project with eigen."
 
@@ -23,6 +21,7 @@ reason: |
   hook installation logic entirely. AC-015 makes the on-by-default nature of hook
   installation an explicit, independently testable criterion so that the implementation
   gap is unambiguous.
+status: approved
 changes:
   acceptance_criteria:
     - id: AC-015

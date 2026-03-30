@@ -1,6 +1,6 @@
 id: chg-004
 sequence: 4
-timestamp: 2026-03-30T07:36:44Z
+timestamp: "2026-03-30T07:36:44Z"
 author: alexander
 type: updated
 summary: Add pre-commit hook installation that runs eigen spec validate on staged spec files
@@ -10,6 +10,7 @@ reason: |
   during scaffold makes this opt-in by default and skippable via --no-hooks.
   The hook avoids slowing down code-only commits by checking whether any
   specs/ paths are staged before invoking validation.
+status: approved
 changes:
   behavior: |
     Accepts an optional path argument (defaults to the current working directory),
