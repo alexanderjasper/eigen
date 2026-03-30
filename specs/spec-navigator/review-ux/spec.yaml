@@ -1,0 +1,244 @@
+format: eigen/v1
+id: spec-navigator/review-ux
+domain: spec-navigator
+module: review-ux
+owner: alexander
+title: Review UX
+status: draft
+description: |
+  spec-navigator/review-ux defines the enhanced review experience in the
+  spec navigator UI. It covers three concerns:
+
+  1. List-to-detail navigation: when draft changes are detected, the review
+     panel shows a scrollable list of change summaries. Clicking a summary
+     opens the full change detail within the panel. Next/prev buttons (and
+     keyboard shortcuts) let the user step through items without returning
+     to the list.
+
+  2. Always-visible comment textarea: each change card in the review panel
+     has a permanently visible textarea for comments. The user can type a
+     comment independently of approving or rejecting. On approve, any text
+     in the textarea is sent as an optional comment. On reject, the textarea
+     content is sent as the required comment (no browser prompt()).
+
+  3. Resizable panes: both the left sidebar (#left) and the review panel
+     (#review-panel) get a drag handle on their inner edge. Dragging resizes
+     the pane. The detail/main area flexes to fill remaining space. Minimum
+     widths prevent panes from collapsing to zero.
+
+  This module does not change the review API endpoints, polling logic, or
+  data model. It depends on spec-navigator/change-review for the API and
+  spec-navigator/ui for the base layout.
+behavior: |
+  Review list view:
+  - When showReviewPanel is called with draft changes, the panel first
+    renders a list view: each change is a clickable row showing its
+    filename, summary, and status badge.
+  - A count indicator (e.g. "3 changes pending") is shown at the top.
+  - Clicking a row transitions the panel to detail view for that change,
+    showing the full YAML preview, comment textarea, and approve/reject
+    buttons.
+  - A "Back to list" link at the top of the detail view returns to the
+    list view.
+
+  Next/prev navigation:
+  - In detail view, "Previous" and "Next" buttons appear at the top of the
+    card. They navigate to the adjacent change in the list order.
+  - The "Previous" button is hidden (or disabled) on the first item; "Next"
+    is hidden (or disabled) on the last item.
+  - Keyboard shortcuts: pressing "j" or "n" goes to the next change;
+    "k" or "p" goes to the previous change. These shortcuts are only active
+    when the comment textarea is not focused.
+
+  Always-visible comment textarea:
+  - Each change detail view includes a <textarea> with the class
+    "review-comments" that is always rendered (not gated behind reject).
+  - The textarea placeholder reads "Add a comment (optional for approve,
+    required for reject)...".
+  - If the change already has a review_comment from a prior rejection, the
+    textarea is pre-populated with that text.
+  - On approve: if the textarea is non-empty, the comment is sent in the
+    POST body as { comment: "..." }. If empty, no comment field is sent.
+  - On reject: the textarea must be non-empty. If the user clicks Reject
+    with an empty textarea, an inline validation message appears below the
+    textarea ("A comment is required to reject.") and the POST is not sent.
+    No browser prompt() is used.
+
+  Resizable left sidebar:
+  - A vertical drag handle element (class "resize-handle") is appended as
+    the last child of #left (right edge).
+  - Mousedown on the handle initiates a resize. Mousemove updates the
+    CSS variable --left-width. Mouseup ends the resize.
+  - Minimum width: 180px. Maximum width: 50% of viewport width.
+  - The cursor changes to col-resize during drag.
+  - The handle is 6px wide, centered on the border, and shows a subtle
+    visual indicator on hover.
+
+  Resizable review panel:
+  - A vertical drag handle element (class "resize-handle") is prepended as
+    the first child of #review-panel (left edge).
+  - Mousedown on the handle initiates a resize. Mousemove updates the
+    panel width. Mouseup ends the resize.
+  - Minimum width: 320px. Maximum width: 80% of viewport width.
+  - The cursor changes to col-resize during drag.
+
+  General:
+  - Drag handles use pointer events (pointerdown/pointermove/pointerup)
+    for touch compatibility.
+  - During a drag, a transparent overlay is added to prevent iframes or
+    text selection from interfering.
+  - Pane widths persist in localStorage under keys "eigen-left-width" and
+    "eigen-review-width". On page load, stored values are applied if present.
+acceptance_criteria:
+  - id: AC-001
+    description: review panel shows list view when draft changes are detected
+    given: the review poller detects 3 draft changes
+    when: showReviewPanel is called
+    then: the review panel displays a scrollable list with 3 rows, each showing filename and summary; no YAML preview or approve/reject buttons are visible
+  - id: AC-002
+    description: clicking a list row opens the detail view for that change
+    given: the review panel is showing the list view with 3 items
+    when: the user clicks the second row
+    then: the panel transitions to detail view showing the second change's YAML preview, comment textarea, and approve/reject buttons
+  - id: AC-003
+    description: back to list link returns to the list view
+    given: the review panel is in detail view for a change
+    when: the user clicks "Back to list"
+    then: the panel returns to the list view with all items visible
+  - id: AC-004
+    description: next button advances to the next change in detail view
+    given: the user is viewing the first of 3 changes in detail view
+    when: the user clicks the "Next" button
+    then: the panel shows the second change's detail
+  - id: AC-005
+    description: previous button goes to the prior change in detail view
+    given: the user is viewing the second of 3 changes in detail view
+    when: the user clicks the "Previous" button
+    then: the panel shows the first change's detail
+  - id: AC-006
+    description: next button is disabled on the last item
+    given: the user is viewing the last change in detail view
+    when: the panel renders
+    then: the "Next" button is disabled or hidden
+  - id: AC-007
+    description: previous button is disabled on the first item
+    given: the user is viewing the first change in detail view
+    when: the panel renders
+    then: the "Previous" button is disabled or hidden
+  - id: AC-008
+    description: keyboard shortcut j/n advances to next change
+    given: the user is in detail view and the comment textarea is not focused
+    when: the user presses "j" or "n"
+    then: the panel advances to the next change
+  - id: AC-009
+    description: keyboard shortcut k/p goes to previous change
+    given: the user is in detail view and the comment textarea is not focused
+    when: the user presses "k" or "p"
+    then: the panel goes to the previous change
+  - id: AC-010
+    description: keyboard shortcuts are inactive when textarea is focused
+    given: the comment textarea has focus
+    when: the user presses "j", "k", "n", or "p"
+    then: the keypress is handled normally by the textarea (no navigation occurs)
+  - id: AC-011
+    description: comment textarea is always visible in detail view
+    given: the review panel is showing detail view for a change
+    when: the panel renders
+    then: a textarea with class "review-comments" is visible, regardless of whether the user intends to approve or reject
+  - id: AC-012
+    description: comment textarea is pre-populated with prior review_comment
+    given: a change has review_comment "needs edge cases" from a prior rejection
+    when: the detail view for that change renders
+    then: the textarea contains "needs edge cases"
+  - id: AC-013
+    description: approve sends optional comment from textarea
+    given: the user has typed "looks good" in the textarea
+    when: the user clicks Approve
+    then: 'the POST to /approve includes { comment: "looks good" } in the body'
+  - id: AC-014
+    description: approve with empty textarea sends no comment
+    given: the textarea is empty
+    when: the user clicks Approve
+    then: the POST to /approve is sent with no comment field in the body
+  - id: AC-015
+    description: reject requires non-empty textarea
+    given: the textarea is empty
+    when: the user clicks Reject
+    then: no POST is sent; an inline validation message "A comment is required to reject." appears below the textarea
+  - id: AC-016
+    description: reject sends textarea content as comment
+    given: the user has typed "missing edge cases" in the textarea
+    when: the user clicks Reject
+    then: 'the POST to /reject includes { comment: "missing edge cases" } in the body'
+  - id: AC-017
+    description: no browser prompt is used for rejection
+    given: the reject flow is initiated
+    when: the user clicks Reject
+    then: window.prompt is never called; the comment comes from the textarea
+  - id: AC-018
+    description: left sidebar is resizable via drag handle
+    given: the page has loaded
+    when: the user drags the handle on the right edge of the left sidebar
+    then: the sidebar width changes to follow the cursor; the main content area adjusts accordingly
+  - id: AC-019
+    description: left sidebar respects minimum width
+    given: the user is dragging the left sidebar handle
+    when: the cursor moves to 100px from the left edge
+    then: the sidebar width does not go below 180px
+  - id: AC-020
+    description: left sidebar respects maximum width
+    given: the user is dragging the left sidebar handle
+    when: the cursor moves past 50% of the viewport width
+    then: the sidebar width does not exceed 50% of the viewport
+  - id: AC-021
+    description: review panel is resizable via drag handle
+    given: the review panel is visible
+    when: the user drags the handle on the left edge of the review panel
+    then: the panel width changes to follow the cursor; the main content area adjusts accordingly
+  - id: AC-022
+    description: review panel respects minimum width
+    given: the user is dragging the review panel handle
+    when: the cursor moves to make the panel narrower than 320px
+    then: the panel width does not go below 320px
+  - id: AC-023
+    description: review panel respects maximum width
+    given: the user is dragging the review panel handle
+    when: the cursor moves to make the panel wider than 80% of the viewport
+    then: the panel width does not exceed 80% of the viewport
+  - id: AC-024
+    description: drag handle shows col-resize cursor
+    given: the user hovers over a resize handle
+    when: the cursor enters the handle element
+    then: the cursor changes to col-resize
+  - id: AC-025
+    description: pane widths persist in localStorage
+    given: the user has resized the left sidebar to 350px
+    when: the page is reloaded
+    then: the left sidebar renders at 350px width (read from localStorage key "eigen-left-width")
+  - id: AC-026
+    description: review panel width persists in localStorage
+    given: the user has resized the review panel to 600px
+    when: the review panel next becomes visible
+    then: the review panel renders at 600px width (read from localStorage key "eigen-review-width")
+  - id: AC-027
+    description: drag overlay prevents text selection during resize
+    given: the user is actively dragging a resize handle
+    when: the cursor moves over text content
+    then: no text selection occurs; a transparent overlay covers the page during the drag
+  - id: AC-028
+    description: count indicator shows number of pending changes
+    given: the review poller detects 5 draft changes
+    when: the list view renders
+    then: a count indicator at the top reads "5 changes pending"
+dependencies:
+  - spec-navigator/change-review
+  - spec-navigator/ui
+technology:
+  LocalStorageKeys: eigen-left-width, eigen-review-width
+  PointerEvents: pointerdown, pointermove, pointerup
+  ResizeMaxLeft: 50vw
+  ResizeMaxReview: 80vw
+  ResizeMinLeft: 180px
+  ResizeMinReview: 320px
+last_change: chg-001
+changes_count: 1
