@@ -1,0 +1,76 @@
+id: chg-004
+sequence: 4
+timestamp: 2026-03-30T07:36:44Z
+author: alexander
+type: updated
+summary: Add pre-commit hook installation that runs eigen spec validate on staged spec files
+reason: |
+  Spec validation should be enforced automatically at commit time so that invalid
+  specs cannot be merged into the repository. Installing a git pre-commit hook
+  during scaffold makes this opt-in by default and skippable via --no-hooks.
+  The hook avoids slowing down code-only commits by checking whether any
+  specs/ paths are staged before invoking validation.
+changes:
+  behavior: |
+    Accepts an optional path argument (defaults to the current working directory),
+    an optional --force flag, and an optional --no-hooks flag. Creates
+    .claude/skills/eigen-change-spec/SKILL.md, .claude/skills/eigen-change-compile/SKILL.md,
+    and .claude/skills/eigen-change/SKILL.md with the canonical skill content embedded
+    in the binary. Creates .claude/agents/spec-agent.md, .claude/agents/plan-agent.md,
+    and .claude/agents/compile-agent.md with the canonical agent definitions embedded
+    in the binary. Creates the specs/ directory if it does not already exist. Without
+    --force, fails with a non-zero exit code if any skill or agent file already exists,
+    listing each conflicting path, and writes nothing. With --force, removes any
+    existing skill and agent files before writing, then proceeds normally. Prints a
+    success message listing all created files and a next-step hint to run eigen spec new.
+
+    Unless --no-hooks is passed, also installs a git pre-commit hook under
+    .git/hooks/pre-commit. If .git/hooks/pre-commit already exists, the eigen hook
+    block is appended to the file rather than overwriting it. The hook script checks
+    whether any files under specs/ are staged; if none are staged it exits 0 immediately.
+    If spec files are staged it runs `eigen spec validate`; on failure it prints a clear
+    error message and exits non-zero, rejecting the commit. With --no-hooks, the hook
+    installation step is skipped entirely; existing hook files are left unchanged.
+  acceptance_criteria:
+    - id: AC-008
+      description: Installs a pre-commit hook that runs eigen spec validate when spec files are staged
+      given: A target directory whose .git/hooks/pre-commit does not exist
+      when: eigen scaffold is run without --no-hooks
+      then: |
+        .git/hooks/pre-commit is created (mode 0755) containing a script that:
+        (1) uses `git diff --cached --name-only` to list staged files,
+        (2) exits 0 immediately if no file path starts with specs/,
+        (3) runs `eigen spec validate` otherwise,
+        (4) on non-zero exit from validate, prints an error message to stderr and
+            exits non-zero so the commit is rejected
+    - id: AC-009
+      description: Appends hook block to existing pre-commit file rather than overwriting
+      given: .git/hooks/pre-commit already exists with custom content
+      when: eigen scaffold is run without --no-hooks
+      then: |
+        The original content of .git/hooks/pre-commit is preserved intact and the
+        eigen spec validate block is appended after it; the file remains executable
+    - id: AC-010
+      description: --no-hooks skips hook installation
+      given: A target directory with or without an existing .git/hooks/pre-commit
+      when: eigen scaffold --no-hooks is run
+      then: |
+        No changes are made to .git/hooks/; any existing pre-commit file is
+        left untouched; skill and agent files are created normally
+    - id: AC-011
+      description: Hook exits 0 without running validation when no spec files are staged
+      given: A repository whose pre-commit hook was installed by eigen scaffold
+      when: A git commit is made that stages only non-spec files (nothing under specs/)
+      then: The pre-commit hook exits 0 without invoking eigen spec validate
+    - id: AC-012
+      description: Hook rejects commit when eigen spec validate fails
+      given: A repository whose pre-commit hook was installed by eigen scaffold, and at least one specs/ file is staged
+      when: A git commit is attempted and eigen spec validate exits non-zero
+      then: |
+        The pre-commit hook prints a clear error message to stderr indicating that
+        spec validation failed and exits non-zero, causing git to reject the commit
+    - id: AC-013
+      description: Hook installation is reported in scaffold success output
+      given: Hook installation succeeds (--no-hooks not passed)
+      when: eigen scaffold completes successfully
+      then: The path .git/hooks/pre-commit is included in the list of created/modified files printed to stdout
