@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // LintError describes a YAML authoring error found in a change file.
@@ -179,6 +181,20 @@ func Validate(s SpecModule, specsRoot string) ([]ValidationError, []ValidationWa
 				Field:   "dependencies",
 				Message: fmt.Sprintf("module %q not found at %s", dep, depPath),
 			})
+			continue
+		}
+		// Check if the dependency's spec.yaml is deprecated.
+		depSpecPath := filepath.Join(depPath, "spec.yaml")
+		if depData, readErr := os.ReadFile(depSpecPath); readErr == nil {
+			var depSpec struct {
+				Status string `yaml:"status"`
+			}
+			if yaml.Unmarshal(depData, &depSpec) == nil && depSpec.Status == "deprecated" {
+				warnings = append(warnings, ValidationWarning{
+					Field:   "dependencies",
+					Message: fmt.Sprintf("module %q is deprecated", dep),
+				})
+			}
 		}
 	}
 

@@ -1,0 +1,41 @@
+format: eigen/v1
+id: chg-008
+sequence: 8
+timestamp: "2026-03-30T09:18:28Z"
+type: updated
+summary: Fix hook installation when scaffold target is a git worktree
+reason: |
+  eigen scaffold constructs the pre-commit hook path as
+  `<target>/.git/hooks/pre-commit`. In a standard repository `.git` is a
+  directory and this works correctly. However, in a git worktree the `.git`
+  entry is a *file* containing a `gitdir:` pointer to the worktree's git
+  metadata directory inside the main repository's `.git/worktrees/` tree.
+  When scaffold is pointed at a worktree path (or run from inside a worktree
+  with no explicit target), `os.MkdirAll` on a path that crosses a regular file
+  will fail, silently aborting hook installation.
+
+  The fix: before constructing the hook path, detect whether `.git` in the
+  target is a file or directory. If it is a file, read it, parse the `gitdir:`
+  line, resolve the commondir (by reading `<gitdir>/commondir` if it exists,
+  defaulting to `<gitdir>` itself), and install the hook into that commondir's
+  `hooks/` subdirectory. This is the shared hooks directory that git uses for
+  all worktrees, so the hook fires on commits in any worktree.
+status: approved
+changes:
+  acceptance_criteria:
+    - id: AC-016
+      description: scaffold resolves git common dir when target has a .git file (worktree)
+      given: The scaffold target directory contains a .git file (not a .git directory) pointing to a worktree git metadata path
+      when: eigen scaffold <path> is run
+      then: |
+        The pre-commit hook is written to the git common directory's hooks/
+        subdirectory (the main repository's .git/hooks/pre-commit), not to a
+        path derived from the worktree .git file; MkdirAll does not fail;
+        eigen scaffold exits zero and includes the hook path in its output
+    - id: AC-017
+      description: scaffold hook resolution falls back to .git directory path when target is not a worktree
+      given: The scaffold target directory contains a .git directory (standard repo, not a worktree)
+      when: eigen scaffold <path> is run
+      then: |
+        Behavior is unchanged from the current implementation: the hook is written
+        to <target>/.git/hooks/pre-commit; no regression in the standard case

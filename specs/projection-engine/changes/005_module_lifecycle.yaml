@@ -1,0 +1,117 @@
+format: eigen/v1
+id: chg-005
+sequence: 5
+timestamp: "2026-03-30T09:13:01Z"
+author: alexander
+type: updated
+summary: Add deprecated and removed lifecycle statuses for spec modules
+reason: |
+  Currently the only way to retire behavior from the system is to mark
+  individual acceptance criteria removed: true. There is no first-class
+  way to deprecate or remove an entire module. Adding deprecated and
+  removed module statuses gives operators a clear lifecycle path: mark a
+  module deprecated (with a reason explaining what replaces it), surface
+  a warning to consumers of that module, and ultimately mark it removed
+  so it disappears from default views while remaining in git history.
+status: compiled
+compiled_commits:
+  - 763da82
+  - fbd653d
+changes:
+  behavior: |
+    Changes are applied in ascending sequence order. Simple fields (title, owner,
+    status, description, behavior, technology) use last-write-wins semantics.
+    Acceptance criteria are merged by id: new ids are added, existing ids are
+    updated in place, and criteria with removed: true are dropped from the
+    projection. After each projection the spec.yaml metadata fields last_change
+    and changes_count are updated automatically.
+
+    ValidateChanges(current SpecModule, changes ChangeSet) compares each
+    present field in changes against the current projection and returns a
+    ValidationError for each field whose value is identical to the current
+    state. For acceptance criteria, identity is checked per-criterion by id:
+    an AC in changes is a no-op if an AC with the same id already exists in
+    the projection with identical description, given, when, and then.
+
+    Module lifecycle statuses: the status field on SpecModule accepts five
+    values — draft, approved, compiled, deprecated, and removed.
+
+    A change may set status: deprecated alongside a deprecation_reason field
+    that explains what replaces the module. A change may set status: removed
+    to hide the module from default views; the spec.yaml is preserved in the
+    repository and remains fully accessible via git history.
+
+    Validate() emits a ValidationWarning (non-blocking) for each dependency
+    whose projected status is deprecated. It does not warn about removed
+    dependencies — a module that depends on a removed module is an error
+    handled by the existing broken-dependency check.
+
+    The SpecModule struct gains a DeprecationReason field (YAML key:
+    deprecation_reason) written to spec.yaml when status is deprecated.
+    The ChangeSet struct gains a matching DeprecationReason field.
+  acceptance_criteria:
+    - id: AC-028
+      description: 'Module status: deprecated is a valid value'
+      given: A change sets status to deprecated
+      when: Project() is called
+      then: The resulting SpecModule has Status "deprecated"
+    - id: AC-029
+      description: 'Module status: removed is a valid value'
+      given: A change sets status to removed
+      when: Project() is called
+      then: The resulting SpecModule has Status "removed"
+    - id: AC-030
+      description: deprecation_reason is preserved in the projection
+      given: A change sets status to deprecated and deprecation_reason to "Use module foo instead"
+      when: Project() is called
+      then: The resulting SpecModule has DeprecationReason "Use module foo instead"
+    - id: AC-031
+      description: deprecation_reason is cleared when status moves away from deprecated
+      given: Change 1 sets status deprecated with a deprecation_reason, Change 2 sets status draft
+      when: Project() is called
+      then: The resulting SpecModule has DeprecationReason empty
+    - id: AC-032
+      description: 'Validation: depending on a deprecated module emits a warning'
+      given: Module A depends on module B, and module B's spec.yaml has status deprecated
+      when: Validate() is called for module A with a specsRoot that contains B's spec.yaml
+      then: A ValidationWarning is returned for the dependency naming module B as deprecated
+    - id: AC-033
+      description: 'Validation: depending on a non-deprecated module emits no warning'
+      given: Module A depends on module B, and module B's spec.yaml has status draft
+      when: Validate() is called for module A
+      then: No ValidationWarning is returned for that dependency
+    - id: AC-034
+      description: 'Validation: removed module does not emit a deprecation warning'
+      given: Module A depends on module B, and module B's spec.yaml has status removed
+      when: Validate() is called for module A
+      then: No ValidationWarning is returned about deprecation for that dependency (the existing broken-dependency error check covers removed modules separately)
+    - id: AC-035
+      description: eigen spec list hides removed modules by default
+      given: A removed module exists in the specs directory
+      when: eigen spec list is run without flags
+      then: The removed module does not appear in the output
+    - id: AC-036
+      description: eigen spec list --all shows removed modules
+      given: A removed module exists in the specs directory
+      when: eigen spec list --all is run
+      then: The removed module appears in the output with status "removed"
+    - id: AC-037
+      description: eigen spec list shows a deprecated indicator for deprecated modules
+      given: A module with status deprecated exists
+      when: eigen spec list is run
+      then: The module appears in the output with status "deprecated" visually distinct (e.g. marked [deprecated] or shown in a distinct column value)
+    - id: AC-038
+      description: eigen serve UI shows a deprecated badge on deprecated modules
+      given: A module with status deprecated is loaded by the spec navigator
+      when: A user views the module in the eigen serve UI
+      then: The module detail page and list entry display a visible deprecated indicator with the deprecation_reason text
+    - id: AC-039
+      description: eigen serve UI omits removed modules from default navigation
+      given: A module with status removed exists
+      when: A user opens the spec navigator UI without any special filter
+      then: The removed module does not appear in the module list or navigation tree
+    - id: AC-040
+      description: Test coverage for deprecated/removed projection paths
+      given: The implementation is complete
+      when: The test files are checked
+      then: eigen/internal/spec/projection_test.go includes table-driven cases for deprecated and removed status projection, and eigen/internal/spec/validation_test.go includes cases for the deprecated-dependency warning

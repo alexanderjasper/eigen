@@ -40,6 +40,12 @@ func Project(path string, changes []*Change) SpecModule {
 		}
 		if cs.Status != "" {
 			s.Status = cs.Status
+			if cs.Status != "deprecated" {
+				s.DeprecationReason = "" // clear when leaving deprecated
+			}
+		}
+		if cs.DeprecationReason != "" {
+			s.DeprecationReason = cs.DeprecationReason
 		}
 		if cs.Description != "" {
 			s.Description = cs.Description

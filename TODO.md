@@ -218,7 +218,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 12. Configurable review polling with backoff
+### ~~12. Configurable review polling with backoff~~ ✅ Done
 
 **Module**: `spec-navigator/change-review`
 **What**: The review panel polls `GET /api/reviews/pending` every 3 seconds with a hardcoded `setInterval` and no cleanup. Improve this.
@@ -237,30 +237,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ## P3 — Strategic / Future
 
-### 13. Generate executable test stubs from acceptance criteria
-
-**What**: The README says acceptance criteria define "compiled correctly" — but currently the compile-agent interprets them manually. Add a command that generates test file skeletons from the given/when/then criteria in a spec.
-
-**Behavior**:
-- New command: `eigen spec tests <path>` — reads spec.yaml for a module and generates a test file
-- Output format is configurable (Go test, Jest, pytest, etc.) via a `--format` flag
-- Each AC becomes one test function with the given/when/then as comments
-- The test body is a TODO placeholder — the compile-agent fills in the implementation
-- If the test file already exists, only add new tests for ACs not already present
-
-**Open questions**: Output directory convention, language detection, whether this belongs in the CLI or in the compile-agent prompt. This item needs more design before spec authoring.
-
----
-
-### 14. Spec enforcement in CI (code changes require spec changes)
-
-**What**: Add a CI check that verifies any PR touching implementation code also includes corresponding spec changes. This enforces the "specs precede code" principle at the repository level.
-
-**Open questions**: How to define the mapping between code paths and spec modules. Whether to use file path conventions, a manifest file, or git diff heuristics. This item needs more design before spec authoring.
-
----
-
-### 15. Module deprecation and removal lifecycle
+### ~~13. Module deprecation and removal lifecycle~~ ✅ Done
 
 **Module**: `projection-engine`
 **What**: Currently there's no way to deprecate or remove a spec module — only individual acceptance criteria can be marked `removed: true`. Add a lifecycle for modules themselves.

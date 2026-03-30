@@ -11,8 +11,11 @@ import (
 	"github.com/alexanderjasper/eigen/internal/storage"
 )
 
+var specListAllFlag bool
+
 func init() {
 	specCmd.AddCommand(specListCmd)
+	specListCmd.Flags().BoolVar(&specListAllFlag, "all", false, "Include removed modules")
 }
 
 var specListCmd = &cobra.Command{
@@ -26,7 +29,10 @@ var specListCmd = &cobra.Command{
 var statusColors = map[string]func(...interface{}) string{
 	"draft":      color.New(color.FgYellow).SprintFunc(),
 	"stable":     color.New(color.FgGreen).SprintFunc(),
+	"approved":   color.New(color.FgGreen).SprintFunc(),
+	"compiled":   color.New(color.FgCyan).SprintFunc(),
 	"deprecated": color.New(color.FgRed).SprintFunc(),
+	"removed":    color.New(color.FgHiBlack).SprintFunc(),
 }
 
 func runSpecList(cmd *cobra.Command, args []string) error {
@@ -55,11 +61,17 @@ func runSpecList(cmd *cobra.Command, args []string) error {
 			fmt.Fprintf(w, "%s\t?\t?\t(error reading spec)\n", ref.Path)
 			continue
 		}
-		statusStr := s.Status
-		if colorFn, ok := statusColors[s.Status]; ok {
-			statusStr = colorFn(s.Status)
+		if s.Status == "removed" && !specListAllFlag {
+			continue
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ref.Path, s.Owner, statusStr, s.Title)
+		displayStatus := s.Status
+		if s.Status == "deprecated" {
+			displayStatus = s.Status + " [deprecated]"
+		}
+		if colorFn, ok := statusColors[s.Status]; ok {
+			displayStatus = colorFn(displayStatus)
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ref.Path, s.Owner, displayStatus, s.Title)
 	}
 	w.Flush()
 	return nil

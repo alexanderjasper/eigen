@@ -299,6 +299,11 @@ function renderDetail(spec, changes) {
     owner.textContent = spec.owner;
     metaRow.appendChild(owner);
   }
+  if (spec.deprecation_reason) {
+    const depReason = h('div', 'deprecation-reason');
+    depReason.textContent = 'Deprecated: ' + spec.deprecation_reason;
+    metaRow.appendChild(depReason);
+  }
   el.appendChild(title);
   el.appendChild(metaRow);
 
@@ -400,7 +405,7 @@ function section(title, content) {
 function statusBadge(status) {
   const badge = h('span', 'badge');
   badge.textContent = status || 'unknown';
-  const cls = ['draft', 'stable', 'deprecated'].includes(status)
+  const cls = ['draft', 'stable', 'approved', 'deprecated', 'removed'].includes(status)
     ? 'badge-' + status
     : 'badge-unknown';
   badge.classList.add(cls);
