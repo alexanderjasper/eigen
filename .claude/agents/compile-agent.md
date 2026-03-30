@@ -24,6 +24,27 @@ Read `PLAN_CONTENT` completely before writing a single line of code. The plan te
 
 If the plan is ambiguous or contradicts the spec, **stop and report** the ambiguity rather than guessing.
 
+### 1b. Auto-promote metadata-only changes
+
+Before implementing code changes, scan all approved change files for the module. For each approved change, classify it as metadata-only if it only modifies:
+
+- `description`
+- `behavior`
+- `given`/`when`/`then` on existing ACs
+- `dependencies`
+- `summary`
+- `reason`
+
+A change is NOT metadata-only if it:
+- Adds new acceptance criteria
+- Modifies AC descriptions to specify new observable behavior
+
+For each metadata-only change, auto-promote it:
+1. Run: `eigen spec change-status <module-path> <filename> compiled`
+2. Commit: `chore(<module>): mark <filename> compiled -- no code changes required`
+
+This prevents metadata-only changes from blocking module status promotion.
+
 ### 2. Explore the codebase
 
 Use Glob, Grep, and Read to examine the specific files the plan references. Understand existing patterns before modifying anything. Do not assume any specific framework or language — read the code to understand conventions and then follow them.
