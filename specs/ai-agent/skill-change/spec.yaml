@@ -202,7 +202,12 @@ acceptance_criteria:
     given: The eigen serve API is returning errors (409, 5xx, or unreachable)
     when: 5 consecutive polling attempts fail
     then: The loop exits with a diagnostic error message instead of spinning indefinitely
-dependencies: []
+dependencies:
+  - Agent tool (with subagent_type parameter)
+  - spec-subagent definition
+  - plan-subagent definition
+  - compile-subagent definition
+  - Integration with .claude/skills/ infrastructure
 technology:
   AgentTypes: spec-subagent, plan-subagent, compile-subagent
   Invocation: /change "feature description" [--short-name "name"]

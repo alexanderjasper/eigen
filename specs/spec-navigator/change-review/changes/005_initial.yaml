@@ -12,7 +12,7 @@ reason: |
   the module path and returns 409 Conflict. The loadDetail function already
   passes the worktree param unconditionally; the review card action buttons
   need the same treatment. (GitHub issue #12)
-status: draft
+status: approved
 changes:
   behavior: |
     In the review card rendering (createChangeCard or equivalent), the
