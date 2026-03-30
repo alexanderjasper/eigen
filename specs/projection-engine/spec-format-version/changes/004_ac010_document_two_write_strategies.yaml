@@ -1,9 +1,8 @@
 id: chg-004
 sequence: 4
-timestamp: 2026-03-30T00:00:00Z
-author: ""
+timestamp: "2026-03-30T00:00:00Z"
 type: updated
-summary: "Correct AC-010 to document two distinct YAML-writing strategies across spec_new.go and spec_change.go"
+summary: Correct AC-010 to document two distinct YAML-writing strategies across spec_new.go and spec_change.go
 reason: |
   The previous AC-010 described both spec_new.go and spec_change.go as using
   yaml.Marshal on a Change struct, but that is incorrect for spec_change.go.
@@ -15,10 +14,11 @@ reason: |
   without re-marshaling, so the format line is naturally preserved from the
   template string. The AC must document both approaches so an implementer
   uses the correct strategy for each command.
+status: approved
 changes:
   acceptance_criteria:
     - id: AC-010
-      description: "spec_new.go and spec_change.go use correct per-command strategies to write format: eigen/v1"
+      description: 'spec_new.go and spec_change.go use correct per-command strategies to write format: eigen/v1'
       given: The implementation is complete
       when: eigen/internal/spec/spec_new.go and eigen/internal/spec/spec_change.go are inspected
       then: |
