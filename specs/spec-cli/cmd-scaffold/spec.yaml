@@ -145,7 +145,16 @@ acceptance_criteria:
       without requiring changes to how the hook block is identified or appended;
       specifically the hook block is delimited by recognizable begin/end markers
       so it can be replaced atomically on re-scaffold
+  - id: AC-015
+    description: Hook installation is on by default and is part of the primary eigen scaffold success path
+    given: A target directory with a .git/ directory and no existing pre-commit hook
+    when: eigen scaffold is run with no flags
+    then: |
+      .git/hooks/pre-commit is created and the scaffold command exits zero;
+      the user does not need to pass any flag to opt in to hook installation —
+      hook installation is the default behavior and skipping it requires the
+      explicit --no-hooks flag
 dependencies: []
 technology: {}
-last_change: chg-006
-changes_count: 6
+last_change: chg-007
+changes_count: 7
