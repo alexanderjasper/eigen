@@ -11,7 +11,9 @@ reason: |
   case where a compile-agent makes multiple commits while implementing a single
   change. Each commit hash is appended to the array as it is made, so the full
   set of implementing commits is recorded.
-status: approved
+status: compiled
+compiled_commits:
+  - 4d3f54d45c8a78b1effcdb3c53f8d807ea07e810
 changes:
   title: Compiled Change Audit Trail
   owner: eigen
