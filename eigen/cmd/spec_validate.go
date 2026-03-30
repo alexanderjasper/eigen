@@ -50,7 +50,10 @@ func runSpecValidate(cmd *cobra.Command, args []string) error {
 			continue
 		}
 
-		errs := spec.Validate(s, specsRoot)
+		errs, warnings := spec.Validate(s, specsRoot)
+		for _, w := range warnings {
+			fmt.Fprintf(os.Stderr, "    warning: %s\n", w.String())
+		}
 		if len(errs) == 0 {
 			fmt.Printf("%s %s\n", okColor("✓"), path)
 			continue
