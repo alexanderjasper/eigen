@@ -1,0 +1,75 @@
+format: eigen/v1
+id: chg-006
+sequence: 6
+timestamp: 2026-03-30T10:47:19Z
+author: alexander
+type: updated
+summary: Auto-promote module status to compiled when all changes are compiled
+reason: |
+  The module status in spec.yaml was always showing "draft" in the UI even
+  after all changes had been marked compiled via `eigen spec change-status`.
+  Compiling a change only updated the change event's own top-level status
+  field, never the ChangeSet.Status field that the projection reads.
+  The fix: after folding all changes, if every change's top-level Status is
+  "compiled", promote the resulting module status to "compiled" — unless the
+  module has been explicitly deprecated or removed, which takes precedence.
+changes:
+  behavior: |
+    Changes are applied in ascending sequence order. Simple fields (title, owner,
+    status, description, behavior, technology) use last-write-wins semantics.
+    Acceptance criteria are merged by id: new ids are added, existing ids are
+    updated in place, and criteria with removed: true are dropped from the
+    projection. After each projection the spec.yaml metadata fields last_change
+    and changes_count are updated automatically.
+
+    ValidateChanges(current SpecModule, changes ChangeSet) compares each
+    present field in changes against the current projection and returns a
+    ValidationError for each field whose value is identical to the current
+    state. For acceptance criteria, identity is checked per-criterion by id:
+    an AC in changes is a no-op if an AC with the same id already exists in
+    the projection with identical description, given, when, and then.
+
+    Module lifecycle statuses: the status field on SpecModule accepts five
+    values — draft, approved, compiled, deprecated, and removed.
+
+    A change may set status: deprecated alongside a deprecation_reason field
+    that explains what replaces the module. A change may set status: removed
+    to hide the module from default views; the spec.yaml is preserved in the
+    repository and remains fully accessible via git history.
+
+    Validate() emits a ValidationWarning (non-blocking) for each dependency
+    whose projected status is deprecated. It does not warn about removed
+    dependencies — a module that depends on a removed module is an error
+    handled by the existing broken-dependency check.
+
+    The SpecModule struct gains a DeprecationReason field (YAML key:
+    deprecation_reason) written to spec.yaml when status is deprecated.
+    The ChangeSet struct gains a matching DeprecationReason field.
+
+    Compiled status auto-promotion: after all changes have been folded, if
+    every change in the module has a top-level Status of "compiled", the
+    projected module status is automatically set to "compiled" — regardless
+    of any ChangeSet.Status values set earlier in the change history. This
+    promotion does not apply when the module's effective status is "deprecated"
+    or "removed"; those terminal statuses take precedence.
+  acceptance_criteria:
+    - id: AC-041
+      description: Module status is promoted to compiled when all changes are compiled
+      given: A module whose every change has top-level Status "compiled"
+      when: Project() is called
+      then: The resulting SpecModule has Status "compiled", even if an earlier change set ChangeSet.Status to "draft"
+    - id: AC-042
+      description: Mixed compiled/non-compiled changes do not trigger promotion
+      given: A module with two changes where one has Status "compiled" and one has Status "draft"
+      when: Project() is called
+      then: The module status reflects the last explicit ChangeSet.Status value, not "compiled"
+    - id: AC-043
+      description: deprecated status takes precedence over compiled promotion
+      given: A module where all changes have top-level Status "compiled" but the last change sets ChangeSet.Status to "deprecated"
+      when: Project() is called
+      then: The resulting SpecModule has Status "deprecated", not "compiled"
+    - id: AC-044
+      description: removed status takes precedence over compiled promotion
+      given: A module where all changes have top-level Status "compiled" but the last change sets ChangeSet.Status to "removed"
+      when: Project() is called
+      then: The resulting SpecModule has Status "removed", not "compiled"
