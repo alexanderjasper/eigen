@@ -29,7 +29,7 @@ func validModule() SpecModule {
 func TestValidate(t *testing.T) {
 	t.Run("missing_required_fields", func(t *testing.T) {
 		s := SpecModule{}
-		errs := Validate(s, t.TempDir())
+		errs, _ := Validate(s, t.TempDir())
 
 		// Expect errors for: id, domain, module, owner, title, description, behavior
 		wantFields := map[string]bool{
@@ -56,7 +56,7 @@ func TestValidate(t *testing.T) {
 		s.AcceptanceCriteria = []AcceptanceCriterion{
 			{ID: "AC-X", Description: "desc"}, // missing given, when, then
 		}
-		errs := Validate(s, t.TempDir())
+		errs, _ := Validate(s, t.TempDir())
 
 		wantFields := map[string]bool{
 			"acceptance_criteria[AC-X].given": false,
@@ -80,7 +80,7 @@ func TestValidate(t *testing.T) {
 		s.Dependencies = []string{"nonexistent/module"}
 		specsRoot := t.TempDir()
 
-		errs := Validate(s, specsRoot)
+		errs, _ := Validate(s, specsRoot)
 
 		found := false
 		for _, e := range errs {
@@ -105,11 +105,45 @@ func TestValidate(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		errs := Validate(s, specsRoot)
+		errs, _ := Validate(s, specsRoot)
 
 		for _, e := range errs {
 			if e.Field == "dependencies" {
 				t.Errorf("unexpected dependency error: %v", e)
+			}
+		}
+	})
+
+	t.Run("missing_format_produces_warning", func(t *testing.T) {
+		s := validModule()
+		// Format is not set — should produce a warning, not an error.
+		errs, warnings := Validate(s, t.TempDir())
+
+		for _, e := range errs {
+			if e.Field == "format" {
+				t.Errorf("unexpected error for format field: %v", e)
+			}
+		}
+		found := false
+		for _, w := range warnings {
+			if w.Field == "format" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected warning for missing format field, got %v", warnings)
+		}
+	})
+
+	t.Run("present_format_no_warning", func(t *testing.T) {
+		s := validModule()
+		s.Format = "eigen/v1"
+		_, warnings := Validate(s, t.TempDir())
+
+		for _, w := range warnings {
+			if w.Field == "format" {
+				t.Errorf("unexpected warning for format field: %v", w)
 			}
 		}
 	})

@@ -8,6 +8,9 @@ func TestProject(t *testing.T) {
 	t.Run("empty_changes", func(t *testing.T) {
 		got := Project("d/m", nil)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if got.ID != "d/m" {
 			t.Errorf("ID = %q, want %q", got.ID, "d/m")
 		}
@@ -74,6 +77,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if got.Title != "My Title" {
 			t.Errorf("Title = %q, want %q", got.Title, "My Title")
 		}
@@ -134,6 +140,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if got.Title != "Second" {
 			t.Errorf("Title = %q, want %q", got.Title, "Second")
 		}
@@ -176,6 +185,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if len(got.AcceptanceCriteria) != 2 {
 			t.Fatalf("len(AC) = %d, want 2", len(got.AcceptanceCriteria))
 		}
@@ -215,6 +227,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if len(got.AcceptanceCriteria) != 0 {
 			t.Errorf("len(AC) = %d, want 0", len(got.AcceptanceCriteria))
 		}
@@ -240,6 +255,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if len(got.Dependencies) != 1 || got.Dependencies[0] != "C" {
 			t.Errorf("Dependencies = %v, want [C]", got.Dependencies)
 		}
@@ -265,6 +283,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if len(got.Technology) != 2 {
 			t.Fatalf("len(Technology) = %d, want 2", len(got.Technology))
 		}
@@ -285,6 +306,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		if got.LastChange != "chg-003" {
 			t.Errorf("LastChange = %q, want chg-003", got.LastChange)
 		}
@@ -303,6 +327,9 @@ func TestProject(t *testing.T) {
 
 		got := Project("d/m", changes)
 
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
+		}
 		// Applied in order 1,2,3 so last-write-wins means title="third"
 		if got.Title != "third" {
 			t.Errorf("Title = %q, want %q", got.Title, "third")
@@ -312,6 +339,26 @@ func TestProject(t *testing.T) {
 		}
 		if got.ChangesCount != 3 {
 			t.Errorf("ChangesCount = %d, want 3", got.ChangesCount)
+		}
+	})
+
+	t.Run("format_not_sourced_from_changes", func(t *testing.T) {
+		// Even if a Change carries a Format field, Project must always return "eigen/v1".
+		// (ChangeSet has no Format field so the loop can never overwrite it — this test
+		// documents the intent explicitly.)
+		changes := []*Change{
+			{
+				ID:       "chg-001",
+				Sequence: 1,
+				Format:   "some-other-version",
+				Changes:  ChangeSet{Title: "t1"},
+			},
+		}
+
+		got := Project("d/m", changes)
+
+		if got.Format != "eigen/v1" {
+			t.Errorf("Format = %q, want %q (must not be sourced from change)", got.Format, "eigen/v1")
 		}
 	})
 }
