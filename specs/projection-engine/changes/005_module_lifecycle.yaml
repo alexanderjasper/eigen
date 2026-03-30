@@ -13,7 +13,9 @@ reason: |
   module deprecated (with a reason explaining what replaces it), surface
   a warning to consumers of that module, and ultimately mark it removed
   so it disappears from default views while remaining in git history.
-status: approved
+status: compiled
+compiled_commits:
+  - 763da82
 changes:
   behavior: |
     Changes are applied in ascending sequence order. Simple fields (title, owner,
