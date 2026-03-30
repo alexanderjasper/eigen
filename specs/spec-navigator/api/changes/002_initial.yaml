@@ -1,0 +1,104 @@
+format: eigen/v1
+id: chg-002
+sequence: 2
+timestamp: "2026-03-30T09:26:24Z"
+type: updated
+summary: Add worktree context fields to module endpoints for multi-worktree aggregation
+reason: |
+  The redesigned `eigen serve` aggregates specs from the main repository and all
+  registered worktrees into a single HTTP server. The API must tag every module
+  with its source worktree so the UI can group and label modules by branch.
+
+  Additionally, the API must expose the registered worktree list so the UI can
+  render the per-worktree grouping header without parsing individual module fields,
+  and a registry-watch mechanism must allow the UI to receive live updates when a
+  new worktree is added.
+status: approved
+changes:
+  description: |
+    The spec navigator API is a set of JSON endpoints served by eigen serve.
+    It exposes module listings and per-module detail (projection + changes)
+    so the frontend can render the spec tree and detail pane, grouped by worktree.
+    It also serves the review session endpoints used by the change-review flow.
+
+    Each ModuleSummary and full SpecModule response now includes two additional
+    fields: `worktree` (the registered name, or "main" for the main repository)
+    and `branch` (the git branch name of that worktree). These fields allow the
+    UI to group and label modules without making additional API calls.
+
+    A GET /api/worktrees endpoint exposes the current registered worktree list so
+    the UI can render navigation groupings independently of module data.
+  behavior: |
+    GET /api/modules returns a flat list of ModuleSummary objects for all modules
+    across all registered worktrees plus the main repository. Each summary includes
+    path, title, owner, status, children flag, `worktree` (name or "main"), and
+    `branch` (git branch string). Results from the main repo appear first; results
+    from each registered worktree follow in registration order.
+
+    GET /api/modules/*path returns the full SpecModule projection for the module
+    at the given path. The path is disambiguated by an optional `?worktree=<name>`
+    query parameter when the same module path exists in multiple worktrees. If the
+    parameter is absent and the path is unambiguous, it resolves normally. If
+    ambiguous and no query parameter is provided, the API returns 409 with an error
+    listing the conflicting worktree names.
+
+    GET /api/modules/*path/changes returns the ordered slice of Changes for the
+    module at the given path, with the same `?worktree=<name>` disambiguation rule.
+
+    GET /api/worktrees returns the current registered worktree list as a JSON array.
+    Each entry includes: `name` (string), `branch` (string), `path` (string),
+    `status` ("active" | "orphaned"). The main repository is always included as the
+    first entry with `name: "main"`.
+
+    POST /api/reviews, GET /api/reviews/<change-id>, and POST /api/reviews/<change-id>/submit
+    are unchanged.
+
+    All endpoints return JSON with Content-Type application/json. Errors return a
+    JSON object with an "error" key and an appropriate HTTP status.
+  acceptance_criteria:
+    - id: AC-007
+      description: GET /api/modules includes worktree and branch fields on every ModuleSummary
+      given: eigen serve has two registered worktrees — main (branch main) and feature-foo (branch feature/foo)
+      when: GET /api/modules is requested
+      then: |
+        Every ModuleSummary in the response has a non-empty `worktree` field and a
+        non-empty `branch` field; modules from the main repo have worktree="main";
+        modules from the registered worktree have worktree="feature-foo" and
+        branch="feature/foo"
+    - id: AC-008
+      description: GET /api/modules lists modules from all registered worktrees
+      given: The main repo has module "spec-cli" and worktree feature-foo has module "spec-cli" with a different change
+      when: GET /api/modules is requested
+      then: |
+        Both occurrences of "spec-cli" appear in the response, distinguished by
+        their worktree field; neither is omitted
+    - id: AC-009
+      description: GET /api/worktrees returns the registered worktree list with status
+      given: Two worktrees are registered — main and feature-foo; feature-foo's path exists on disk
+      when: GET /api/worktrees is requested
+      then: |
+        Response status is 200; body is a JSON array with two entries; the first
+        entry has name="main"; the second has name="feature-foo", branch="feature/foo",
+        status="active"
+    - id: AC-010
+      description: GET /api/worktrees marks orphaned entries
+      given: .eigen/worktrees.json contains an entry whose path no longer exists on disk
+      when: GET /api/worktrees is requested
+      then: The corresponding entry has status="orphaned"
+    - id: AC-011
+      description: GET /api/modules/*path with unambiguous path resolves without query param
+      given: spec-cli exists only in the main repo
+      when: GET /api/modules/spec-cli is requested (no ?worktree param)
+      then: Response status is 200 and the module data is returned normally
+    - id: AC-012
+      description: GET /api/modules/*path with ambiguous path and no query param returns 409
+      given: spec-cli exists in both main and worktree feature-foo
+      when: GET /api/modules/spec-cli is requested without a ?worktree query parameter
+      then: |
+        Response status is 409; body is a JSON object with an "error" key and a
+        "worktrees" key listing the conflicting worktree names
+    - id: AC-013
+      description: GET /api/modules/*path?worktree=<name> resolves the correct copy
+      given: spec-cli exists in both main and worktree feature-foo
+      when: GET /api/modules/spec-cli?worktree=feature-foo is requested
+      then: Response status is 200 and returns the module data from feature-foo

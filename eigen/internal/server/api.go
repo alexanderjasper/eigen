@@ -12,11 +12,12 @@ import (
 
 // ModuleSummary is the JSON shape returned by GET /api/modules.
 type ModuleSummary struct {
-	Path     string `json:"path"`
-	Title    string `json:"title"`
-	Owner    string `json:"owner"`
-	Status   string `json:"status"`
-	Children bool   `json:"children"`
+	Path              string `json:"path"`
+	Title             string `json:"title"`
+	Owner             string `json:"owner"`
+	Status            string `json:"status"`
+	DeprecationReason string `json:"deprecation_reason,omitempty"`
+	Children          bool   `json:"children"`
 }
 
 func modulesHandler(specsRoot string) http.HandlerFunc {
@@ -49,12 +50,16 @@ func modulesHandler(specsRoot string) http.HandlerFunc {
 					break
 				}
 			}
+			if s.Status == "removed" {
+				continue
+			}
 			summaries = append(summaries, ModuleSummary{
-				Path:     ref.Path,
-				Title:    s.Title,
-				Owner:    s.Owner,
-				Status:   s.Status,
-				Children: hasChildren,
+				Path:              ref.Path,
+				Title:             s.Title,
+				Owner:             s.Owner,
+				Status:            s.Status,
+				DeprecationReason: s.DeprecationReason,
+				Children:          hasChildren,
 			})
 		}
 

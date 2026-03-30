@@ -364,6 +364,59 @@ func TestProject(t *testing.T) {
 			t.Errorf("Format = %q, want %q (must not be sourced from change)", got.Format, "eigen/v1")
 		}
 	})
+
+	t.Run("deprecated_status_projected", func(t *testing.T) {
+		// AC-028
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{Status: "deprecated"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "deprecated" {
+			t.Errorf("Status = %q, want %q", got.Status, "deprecated")
+		}
+	})
+
+	t.Run("removed_status_projected", func(t *testing.T) {
+		// AC-029
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{Status: "removed"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "removed" {
+			t.Errorf("Status = %q, want %q", got.Status, "removed")
+		}
+	})
+
+	t.Run("deprecation_reason_preserved", func(t *testing.T) {
+		// AC-030
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Status:            "deprecated",
+				DeprecationReason: "Use module foo instead",
+			}},
+		}
+		got := Project("d/m", changes)
+		if got.DeprecationReason != "Use module foo instead" {
+			t.Errorf("DeprecationReason = %q, want %q", got.DeprecationReason, "Use module foo instead")
+		}
+	})
+
+	t.Run("deprecation_reason_cleared_on_status_change", func(t *testing.T) {
+		// AC-031
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Status:            "deprecated",
+				DeprecationReason: "Use module foo instead",
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Status: "draft",
+			}},
+		}
+		got := Project("d/m", changes)
+		if got.DeprecationReason != "" {
+			t.Errorf("DeprecationReason = %q, want empty after status change from deprecated", got.DeprecationReason)
+		}
+	})
 }
 
 // TestProjectCompiledCommitsNotProjected verifies AC-009: compiled_commits on a Change is not

@@ -6,59 +6,48 @@ owner: eigen
 title: Spec Navigator UI
 status: draft
 description: |
-  The spec navigator UI is a single-page browser application embedded in
-  the eigen binary. It renders a two-pane layout: a collapsible module
-  tree on the left and a detail pane on the right. No build step is
-  required — it is vanilla HTML, CSS, and JavaScript.
+  The spec navigator UI is a single-page browser application embedded in the
+  eigen binary. It renders a two-pane layout: a collapsible module tree on the
+  left and a detail pane on the right.
+
+  When eigen serve is connected to multiple worktrees, the module tree is
+  partitioned into per-worktree sections. Each section is headed by a labelled
+  group header showing the worktree name and its branch (e.g. "main (main)"
+  or "feature-foo (feature/foo)"). The group header is collapsible; its child
+  nodes are the module tree for that worktree. Each group uses the same
+  nested-path tree-building logic as the current flat tree.
+
+  When only the main repository has no registered worktrees, the UI renders the
+  existing flat single-tree layout without group headers (no regression).
 behavior: |
-  On load the UI fetches /api/modules and builds a tree from the flat
-  list by splitting paths on "/". While the fetch is in flight, a spinner
-  is shown in the tree pane. Parent nodes are collapsible and expanded by
-  default. Clicking any node fetches the module detail and changes from
-  the API and renders them in the right pane; a spinner is shown in the
-  detail pane while those fetches are in flight.
+  On load the UI fetches /api/worktrees and /api/modules in parallel. The worktree
+  list determines whether multi-worktree grouping is active (more than one entry
+  returned). If grouping is active, the module list is partitioned by the `worktree`
+  field on each ModuleSummary; each partition is rendered as a collapsible group
+  section in the tree pane. Group headers show the worktree name and branch.
 
-  The search box filters visible tree nodes in real time (client-side)
-  by matching the query against both the module path and title.
+  If only one worktree (main) is returned, the UI falls back to the existing flat
+  tree layout without group headers.
 
-  The detail pane shows: title, status badge (colour-coded by status),
-  owner, description, behavior, acceptance criteria (as a list with
-  given/when/then), dependencies (as clickable links that navigate to
-  that module), and a history section with the change timeline.
+  The search box filters visible nodes across all groups simultaneously. Group
+  headers remain visible as long as at least one child node matches the query.
+  A group header with no matching children is hidden.
 
-  All fetch() calls are wrapped in try/catch. Non-2xx responses are
-  treated as errors. On error, a dismissible error banner/toast appears
-  at the top of the page showing the error message. The toast can be
-  closed by clicking an "x" button on the banner.
+  Clicking a module node in any group loads the detail pane for that module.
+  The detail pane header shows the module's worktree name and branch as a
+  secondary label beneath the module title, so the user always knows which
+  branch's version they are viewing.
 
-  While an approve or reject submission is in flight (after the user
-  confirms and the POST is issued), both the Approve and Reject buttons
-  on that change card are disabled. They are re-enabled when the
-  response is received (success or error).
+  When GET /api/modules returns the same module path from multiple worktrees
+  (e.g. "spec-cli" from main and from feature-foo), both appear as separate
+  entries under their respective group headers. Clicking either loads the detail
+  for that specific worktree copy (using the ?worktree= API parameter internally).
 
-  The tree container element (#tree) has role="tree". Each tree label
-  element (.tree-label) has role="treeitem". Collapsible nodes carry
-  aria-expanded="true" when open and aria-expanded="false" when
-  collapsed. Leaf nodes (no children) do not have aria-expanded.
+  Group sections are collapsible with the same keyboard and mouse mechanics as
+  current parent nodes. Group headers receive role="treeitem" and aria-expanded.
 
-  The tree uses a roving tabindex pattern: exactly one .tree-label has
-  tabindex="0" at any moment (the focused node); all others have
-  tabindex="-1". When the tree first renders the first visible node
-  receives tabindex="0". After a re-render caused by search filtering,
-  the first visible node receives tabindex="0".
-
-  Keyboard navigation is active whenever focus is on a tree label:
-  - ArrowDown moves focus to the next visible node in document order
-    (skipping nodes hidden inside a collapsed subtree).
-  - ArrowUp moves focus to the previous visible node in document order.
-  - ArrowRight on a collapsed node expands it. ArrowRight on an already-
-    expanded node moves focus to its first child.
-  - ArrowLeft on an expanded node collapses it. ArrowLeft on a collapsed
-    node (or leaf) moves focus to its parent node, if one exists.
-  - Enter activates the focused node: loads the detail pane exactly as a
-    mouse click does.
-  All navigation keys call preventDefault() to suppress default browser
-  scroll/focus behaviour.
+  The page title shows "eigen" when serving a single worktree, or "eigen
+  (N branches)" when N > 1 worktrees are registered and active.
 acceptance_criteria:
   - id: AC-001
     description: tree is built from flat module list
@@ -235,7 +224,73 @@ acceptance_criteria:
     given: a tree node has received keyboard focus
     when: the node is focused via the roving tabindex
     then: the node displays a visible focus outline (e.g. CSS :focus or :focus-visible style)
+  - id: AC-036
+    description: tree is grouped by worktree when multiple worktrees are registered
+    given: /api/worktrees returns main and feature-foo; /api/modules returns modules tagged to each
+    when: the page loads
+    then: |
+      The tree pane shows two group sections: one labelled with main's branch,
+      one labelled with feature-foo's branch; each section contains only the
+      modules from that worktree
+  - id: AC-037
+    description: flat layout is used when only the main worktree exists
+    given: /api/worktrees returns only main
+    when: the page loads
+    then: |
+      No group header sections are rendered; the tree shows the flat module tree
+      exactly as before this change (no regression)
+  - id: AC-038
+    description: group header shows worktree name and branch name
+    given: a worktree named feature-foo is on branch feature/foo
+    when: the grouped tree is rendered
+    then: |
+      The group header element for that worktree displays both "feature-foo" and
+      "feature/foo" (or a combined label such as "feature-foo (feature/foo)")
+  - id: AC-039
+    description: group header is collapsible
+    given: a group section is expanded
+    when: the user clicks or presses ArrowLeft on the group header
+    then: the group section collapses, hiding all child module nodes
+  - id: AC-040
+    description: search hides group headers with no matching children
+    given: the tree shows two group sections; only one group has a module matching the query
+    when: the user types a search query
+    then: |
+      Only the matching group section (header + matching child nodes) is visible;
+      the non-matching group header is hidden
+  - id: AC-041
+    description: search keeps a group header visible when at least one child matches
+    given: a group section has three child modules; one matches the search query
+    when: the user types the query
+    then: the group header and the single matching child are visible; the other two children are hidden
+  - id: AC-042
+    description: detail pane shows worktree name and branch as secondary label
+    given: the user clicks a module in the feature-foo group
+    when: the detail pane renders
+    then: |
+      The detail pane shows the module title and, beneath it, a secondary label
+      indicating "feature-foo (feature/foo)" so the user knows which branch's
+      version they are viewing
+  - id: AC-043
+    description: same module path in two worktrees loads the correct copy on click
+    given: spec-cli appears under both main and feature-foo group sections
+    when: the user clicks spec-cli under feature-foo
+    then: |
+      The detail pane shows the spec-cli module data from feature-foo (fetched
+      with ?worktree=feature-foo); the main copy is not shown
+  - id: AC-044
+    description: page title reflects multi-worktree state
+    given: /api/worktrees returns two active worktrees
+    when: the page has loaded
+    then: the browser tab title shows "eigen (2 branches)" or equivalent
+  - id: AC-045
+    description: group headers have role="treeitem" and aria-expanded
+    given: the grouped tree has been rendered
+    when: an accessibility tool inspects a group header element
+    then: |
+      The element has role="treeitem" and aria-expanded="true" when expanded or
+      aria-expanded="false" when collapsed
 dependencies: []
 technology: {}
-last_change: chg-004
-changes_count: 4
+last_change: chg-005
+changes_count: 5
