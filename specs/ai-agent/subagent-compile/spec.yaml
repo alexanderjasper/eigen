@@ -1,87 +1,85 @@
+format: eigen/v1
 id: ai-agent/subagent-compile
 domain: ai-agent
 module: subagent-compile
 owner: alexander
 title: compile-subagent — implements code changes following approved plan
-status: ""
 description: |-
-    compile-agent must not assume any specific language, framework, build system,
-    or codebase structure. It discovers how to build the project (Makefile, package.json,
-    go.mod, etc.) and which patterns to follow by reading existing code. All implementation
-    guidance comes from the spec and plan files, not from baked-in codebase knowledge.
-behavior: ""
+  compile-agent must not assume any specific language, framework, build system,
+  or codebase structure. It discovers how to build the project (Makefile, package.json,
+  go.mod, etc.) and which patterns to follow by reading existing code. All implementation
+  guidance comes from the spec and plan files, not from baked-in codebase knowledge.
 acceptance_criteria:
-    - id: AC-001
-      description: |-
-        compile-subagent reads approved plan and spec, and executes the plan step-by-step.
-        For each step: makes specified code changes, tests if applicable, commits with
-        conventional message.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-002
-      description: |-
-        Makes small atomic commits after each logical step. Uses conventional commit format
-        following the project's pattern (e.g., `feat(<area>): <summary>`, `fix:<summary>`, etc.).
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-003
-      description: |-
-        Verifies that each implementation step produces the intended result. For changes that
-        have tests, runs tests. For changes that affect UI, describes testing approach.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-004
-      description: |-
-        After completing all plan steps, verifies that spec acceptance criteria are satisfied.
-        Reports any acceptance criteria that cannot be tested yet (e.g., require deployment).
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-005
-      description: |-
-        Does not add features, refactor code, or make improvements beyond the plan. Follows
-        "exactly what the plan says" principle. Only makes decisions for implementation details
-        (e.g., variable names, helper functions) not covered by plan.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-006
-      description: |-
-        compile-subagent accepts plan.md file path in its invocation prompt.
-        Reads the file completely before starting implementation.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-007
-      description: |-
-        Each implementation step in the plan is executed as documented. If the plan is ambiguous,
-        compile-subagent reports the ambiguity rather than inferring. The plan is detailed enough
-        to avoid this situation.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-008
-      description: |-
-        compile-agent does not reference any project-specific paths, frameworks, or tools
-        in its agent definition. Build commands and code patterns are discovered by reading
-        the target codebase at runtime.
-      given: ""
-      when: ""
-      then: ""
+  - id: AC-001
+    description: |-
+      compile-subagent reads approved plan and spec, and executes the plan step-by-step.
+      For each step: makes specified code changes, tests if applicable, commits with
+      conventional message.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-002
+    description: |-
+      Makes small atomic commits after each logical step. Uses conventional commit format
+      following the project's pattern (e.g., `feat(<area>): <summary>`, `fix:<summary>`, etc.).
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-003
+    description: |-
+      Verifies that each implementation step produces the intended result. For changes that
+      have tests, runs tests. For changes that affect UI, describes testing approach.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-004
+    description: |-
+      After completing all plan steps, verifies that spec acceptance criteria are satisfied.
+      Reports any acceptance criteria that cannot be tested yet (e.g., require deployment).
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-005
+    description: |-
+      Does not add features, refactor code, or make improvements beyond the plan. Follows
+      "exactly what the plan says" principle. Only makes decisions for implementation details
+      (e.g., variable names, helper functions) not covered by plan.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-006
+    description: |-
+      compile-subagent accepts plan.md file path in its invocation prompt.
+      Reads the file completely before starting implementation.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-007
+    description: |-
+      Each implementation step in the plan is executed as documented. If the plan is ambiguous,
+      compile-subagent reports the ambiguity rather than inferring. The plan is detailed enough
+      to avoid this situation.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-008
+    description: |-
+      compile-agent does not reference any project-specific paths, frameworks, or tools
+      in its agent definition. Build commands and code patterns are discovered by reading
+      the target codebase at runtime.
+    given: ""
+    when: ""
+    then: ""
 dependencies:
-    - approved plan (markdown)
-    - approved spec (spec.yaml)
-    - codebase with ability to edit/write files
-    - git commands for commits
-    - test running capability (optional)
+  - approved plan (markdown)
+  - approved spec (spec.yaml)
+  - codebase with ability to edit/write files
+  - git commands for commits
+  - test running capability (optional)
 technology:
-    CommitPattern: 'feat/fix/refactor/docs/test(<area>): <summary>'
-    Input: plan.md path, spec.yaml path
-    Output: git commits on feature branch
-    TestFramework: project-specific (go test, npm test, pytest, etc.)
-    Tools: Glob, Grep, Read, Edit, Write, Bash, Git
-last_change: ""
+  CommitPattern: 'feat/fix/refactor/docs/test(<area>): <summary>'
+  Input: plan.md path, spec.yaml path
+  Output: git commits on feature branch
+  TestFramework: project-specific (go test, npm test, pytest, etc.)
+  Tools: Glob, Grep, Read, Edit, Write, Bash, Git
 changes_count: 3

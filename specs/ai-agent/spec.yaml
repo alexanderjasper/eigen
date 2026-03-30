@@ -1,79 +1,77 @@
+format: eigen/v1
 id: ai-agent
 domain: ai-agent
 module: ai-agent
 owner: alexander
 title: AI agent framework for Claude Code
-status: ""
 description: |-
-    Using the ai-agent framework, implement a unified `change` skill that orchestrates feature development
-    across three phases: spec (via spec-subagent), plan (via plan-subagent), and compile (via compile-subagent).
-    This skill replaces the current separate eigen-spec, eigen-plan, and eigen-compile skills, providing a
-    seamless workflow where users invoke one skill, approve outputs after each phase, and provide feedback
-    on rejections. The skill handles all agent invocation, approval prompts, feedback loops, and commits.
-behavior: ""
+  Using the ai-agent framework, implement a unified `change` skill that orchestrates feature development
+  across three phases: spec (via spec-subagent), plan (via plan-subagent), and compile (via compile-subagent).
+  This skill replaces the current separate eigen-spec, eigen-plan, and eigen-compile skills, providing a
+  seamless workflow where users invoke one skill, approve outputs after each phase, and provide feedback
+  on rejections. The skill handles all agent invocation, approval prompts, feedback loops, and commits.
 acceptance_criteria:
-    - id: AC-001
-      description: |-
-        Agent tool can invoke subagents with subagent_type parameter (e.g., subagent_type: spec-agent).
-        Each subagent has full codebase access (Glob, Grep, Read, Bash, Edit, Write, etc.).
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-002
-      description: |-
-        Multi-phase workflow: agents produce outputs to files, outputs are displayed to user,
-        user approves via yes/no prompt, progression to next phase depends on approval.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-003
-      description: |-
-        If user rejects output, they can provide feedback/comments. The workflow supports re-running
-        the same subagent with user feedback as context for improvement.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-004
-      description: |-
-        Each agent phase produces one or more small atomic commits. Commits are made by the agent
-        as part of its execution, following the "commit as you go" pattern.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-005
-      description: |-
-        Framework documentation describes how to build skills that use agents, including:
-        how to invoke agents, structure approval gates, handle feedback loops, and manage commits.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-006
-      description: |-
-        The `change` skill completely subsumes the functionality of eigen-spec, eigen-plan, and
-        eigen-compile. A user creating a feature no longer invokes three separate skills.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-007
-      description: |-
-        After `change` skill launches, deprecate eigen-spec, eigen-plan, and eigen-compile skills
-        or mark them as legacy. Determine if they should remain available or be removed entirely.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-008
-      description: |-
-        The spec-subagent used by `change` skill should be able to ask the same clarifying
-        questions that human using eigen-spec would ask (based on current eigen-spec skill definition).
-      given: ""
-      when: ""
-      then: ""
+  - id: AC-001
+    description: |-
+      Agent tool can invoke subagents with subagent_type parameter (e.g., subagent_type: spec-agent).
+      Each subagent has full codebase access (Glob, Grep, Read, Bash, Edit, Write, etc.).
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-002
+    description: |-
+      Multi-phase workflow: agents produce outputs to files, outputs are displayed to user,
+      user approves via yes/no prompt, progression to next phase depends on approval.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-003
+    description: |-
+      If user rejects output, they can provide feedback/comments. The workflow supports re-running
+      the same subagent with user feedback as context for improvement.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-004
+    description: |-
+      Each agent phase produces one or more small atomic commits. Commits are made by the agent
+      as part of its execution, following the "commit as you go" pattern.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-005
+    description: |-
+      Framework documentation describes how to build skills that use agents, including:
+      how to invoke agents, structure approval gates, handle feedback loops, and manage commits.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-006
+    description: |-
+      The `change` skill completely subsumes the functionality of eigen-spec, eigen-plan, and
+      eigen-compile. A user creating a feature no longer invokes three separate skills.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-007
+    description: |-
+      After `change` skill launches, deprecate eigen-spec, eigen-plan, and eigen-compile skills
+      or mark them as legacy. Determine if they should remain available or be removed entirely.
+    given: ""
+    when: ""
+    then: ""
+  - id: AC-008
+    description: |-
+      The spec-subagent used by `change` skill should be able to ask the same clarifying
+      questions that human using eigen-spec would ask (based on current eigen-spec skill definition).
+    given: ""
+    when: ""
+    then: ""
 dependencies:
-    - Analysis of which parts of eigen-spec/plan/compile skill definitions can be reused in subagent prompts
-    - Decision on whether to keep legacy skills available or deprecate them
+  - Analysis of which parts of eigen-spec/plan/compile skill definitions can be reused in subagent prompts
+  - Decision on whether to keep legacy skills available or deprecate them
 technology:
-    Claude-API: Claude Opus 4.6 (or latest)
-    OutputFormats: changes/*.yaml, spec.yaml, markdown
-    SubagentTypes: spec-subagent, plan-subagent, compile-subagent
-last_change: ""
+  Claude-API: Claude Opus 4.6 (or latest)
+  OutputFormats: changes/*.yaml, spec.yaml, markdown
+  SubagentTypes: spec-subagent, plan-subagent, compile-subagent
 changes_count: 2

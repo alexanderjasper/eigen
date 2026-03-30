@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-navigator/ui
 domain: spec-navigator
 module: ui
