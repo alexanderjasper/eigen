@@ -72,10 +72,25 @@ func Start(gitRoot, specsRoot string, port int, open bool) error {
 		addWorktreeToState(state, e)
 	}
 
+	// Auto-discover worktrees in .claude/worktrees/ that weren't registered via
+	// `eigen worktree create` (e.g. Claude-created worktrees).
+	discovered, err := worktree.ScanWorktreesDir(gitRoot, reg)
+	if err != nil {
+		log.Printf("warning: scanning worktrees dir: %v", err)
+	}
+	for _, e := range discovered {
+		addWorktreeToState(state, e)
+	}
+
 	// Watch .eigen/worktrees.json for hot-reload (AC-011).
 	if gitRoot != "" {
 		regPath := worktree.RegistryPath(gitRoot)
 		go watchRegistryFile(gitRoot, regPath, state)
+	}
+
+	// Also watch .claude/worktrees/ for new directories created by Claude.
+	if gitRoot != "" {
+		go watchWorktreesDir(gitRoot, state)
 	}
 
 	mux := http.NewServeMux()
@@ -185,6 +200,87 @@ func watchRegistryFile(gitRoot, regPath string, state *serveState) {
 				return
 			}
 			log.Printf("registry watcher error: %v", err)
+		}
+	}
+}
+
+// watchWorktreesDir watches .claude/worktrees/ for new subdirectories and adds
+// them to state when they appear (e.g. after `eigen worktree create` or Claude
+// creates a new worktree).
+func watchWorktreesDir(gitRoot string, state *serveState) {
+	wtDir := worktree.WorktreesDir(gitRoot)
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Printf("warning: creating worktrees-dir watcher: %v", err)
+		return
+	}
+	defer watcher.Close()
+
+	// Watch the parent .claude/ dir so we notice when worktrees/ is created.
+	claudeDir := filepath.Join(gitRoot, ".claude")
+	_ = watcher.Add(claudeDir)
+	_ = watcher.Add(wtDir)
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Op&fsnotify.Create != 0 {
+				// Re-watch wtDir if it was just created.
+				if event.Name == wtDir {
+					_ = watcher.Add(wtDir)
+					continue
+				}
+				// A new entry appeared inside .claude/worktrees/
+				if filepath.Dir(event.Name) == wtDir {
+					name := filepath.Base(event.Name)
+					state.mu.RLock()
+					_, exists := state.worktrees[name]
+					state.mu.RUnlock()
+					if exists {
+						continue
+					}
+					// Give git a moment to finish setting up the worktree.
+					branch, err := worktree.CurrentBranch(event.Name)
+					if err != nil {
+						continue
+					}
+					e := worktree.Entry{Name: name, Branch: branch, Path: event.Name}
+					state.mu.Lock()
+					addWorktreeToState(state, e)
+					state.mu.Unlock()
+					log.Printf("auto-discovered worktree: %s (%s)", name, branch)
+				}
+			}
+			if event.Op&fsnotify.Remove != 0 || event.Op&fsnotify.Rename != 0 {
+				if filepath.Dir(event.Name) == wtDir {
+					name := filepath.Base(event.Name)
+					state.mu.Lock()
+					if aw, ok := state.worktrees[name]; ok {
+						if aw.CancelWatch != nil {
+							aw.CancelWatch()
+						}
+						delete(state.worktrees, name)
+						newOrder := make([]string, 0, len(state.order))
+						for _, n := range state.order {
+							if n != name {
+								newOrder = append(newOrder, n)
+							}
+						}
+						state.order = newOrder
+						log.Printf("removed worktree from serve: %s", name)
+					}
+					state.mu.Unlock()
+				}
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Printf("worktrees-dir watcher error: %v", err)
 		}
 	}
 }
