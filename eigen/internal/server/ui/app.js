@@ -271,7 +271,17 @@ function renderDetail(spec, changes) {
       const summary = h('div', 'tl-summary'); summary.textContent = ch.summary || ch.type;
       const meta = h('div', 'tl-meta');
       meta.textContent = [ch.timestamp, ch.author].filter(Boolean).join(' · ');
-      body.append(summary, meta);
+      if (ch.compiled_commits && ch.compiled_commits.length > 0) {
+        const hashes = h('div', 'tl-commits');
+        for (const hash of ch.compiled_commits) {
+          const tag = h('code', 'tl-commit-hash');
+          tag.textContent = hash.slice(0, 7);
+          hashes.appendChild(tag);
+        }
+        body.append(summary, meta, hashes);
+      } else {
+        body.append(summary, meta);
+      }
       item.append(seq, body);
       list.appendChild(item);
     }
