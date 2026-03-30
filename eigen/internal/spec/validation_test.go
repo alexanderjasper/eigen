@@ -276,6 +276,55 @@ func TestValidateChanges(t *testing.T) {
 			t.Errorf("expected no-op error for acceptance_criteria[AC-001], got %v", errs)
 		}
 	})
+
+	// AC-054: op-based change that produces identical text is flagged as no-op
+	t.Run("op_noop_flagged", func(t *testing.T) {
+		current := SpecModule{
+			Behavior:     "hello",
+			Dependencies: []string{},
+			Technology:   map[string]string{},
+		}
+		cs := ChangeSet{
+			Behavior: NewTextChangeOps([]TextOp{
+				{Op: "prepend", Text: ""},
+			}),
+		}
+
+		errs := ValidateChanges(current, cs)
+
+		found := false
+		for _, e := range errs {
+			if e.Field == "behavior" && strings.Contains(e.Message, "no-op") {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("expected no-op error for behavior, got %v", errs)
+		}
+	})
+
+	// AC-055: op-based change that modifies the text is not flagged
+	t.Run("op_change_not_flagged", func(t *testing.T) {
+		current := SpecModule{
+			Behavior:     "hello world",
+			Dependencies: []string{},
+			Technology:   map[string]string{},
+		}
+		cs := ChangeSet{
+			Behavior: NewTextChangeOps([]TextOp{
+				{Op: "replace", Old: "hello", New: "goodbye"},
+			}),
+		}
+
+		errs := ValidateChanges(current, cs)
+
+		for _, e := range errs {
+			if e.Field == "behavior" {
+				t.Errorf("unexpected no-op error for behavior: %v", e)
+			}
+		}
+	})
 }
 
 func TestLintChangeFile(t *testing.T) {

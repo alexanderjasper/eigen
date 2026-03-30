@@ -1,14 +1,50 @@
 package spec
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
 
+// applyTextChange applies a TextChange to the current field value.
+// fieldName is used in error messages.
+func applyTextChange(fieldName, current string, tc TextChange) (string, error) {
+	if !tc.IsSet() {
+		return current, nil
+	}
+	if tc.IsFullReplace() {
+		return tc.FullText(), nil
+	}
+	result := current
+	for _, op := range tc.Ops() {
+		switch op.Op {
+		case "replace":
+			i := strings.Index(result, op.Old)
+			if i < 0 {
+				return "", fmt.Errorf("replace: %q not found in %s field", op.Old, fieldName)
+			}
+			result = result[:i] + op.New + result[i+len(op.Old):]
+		case "prepend":
+			result = op.Text + result
+		case "append":
+			result = result + op.Text
+		case "delete":
+			i := strings.Index(result, op.Text)
+			if i < 0 {
+				return "", fmt.Errorf("delete: %q not found in %s field", op.Text, fieldName)
+			}
+			result = result[:i] + result[i+len(op.Text):]
+		default:
+			return "", fmt.Errorf("unknown op %q in %s field", op.Op, fieldName)
+		}
+	}
+	return result, nil
+}
+
 // Project folds a slice of Changes into a SpecModule projection.
 // path is the slash-separated path relative to the specs root (e.g. "spec-cli/cmd-new").
 // Changes are applied in ascending sequence order.
-func Project(path string, changes []*Change) SpecModule {
+func Project(path string, changes []*Change) (SpecModule, error) {
 	sorted := make([]*Change, len(changes))
 	copy(sorted, changes)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -51,11 +87,19 @@ func Project(path string, changes []*Change) SpecModule {
 		if cs.DeprecationReason != "" {
 			s.DeprecationReason = cs.DeprecationReason
 		}
-		if cs.Description != "" {
-			s.Description = cs.Description
+		if cs.Description.IsSet() {
+			result, err := applyTextChange("description", s.Description, cs.Description)
+			if err != nil {
+				return SpecModule{}, fmt.Errorf("change %s: %w", ch.ID, err)
+			}
+			s.Description = result
 		}
-		if cs.Behavior != "" {
-			s.Behavior = cs.Behavior
+		if cs.Behavior.IsSet() {
+			result, err := applyTextChange("behavior", s.Behavior, cs.Behavior)
+			if err != nil {
+				return SpecModule{}, fmt.Errorf("change %s: %w", ch.ID, err)
+			}
+			s.Behavior = result
 		}
 		if cs.Technology != nil {
 			for k, v := range cs.Technology {
@@ -94,7 +138,7 @@ func Project(path string, changes []*Change) SpecModule {
 	}
 	s.AcceptanceCriteria = acs
 
-	return s
+	return s, nil
 }
 
 // pathSegments returns the domain (first segment) and module (last segment) of a slash path.

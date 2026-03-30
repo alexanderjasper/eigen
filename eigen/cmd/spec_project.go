@@ -124,7 +124,10 @@ func reprojectModule(path string) error {
 		}
 		return fmt.Errorf("no-op changes detected in %s:\n%s", path, strings.Join(msgs, "\n"))
 	}
-	s := spec.Project(path, changePtrs)
+	s, err := spec.Project(path, changePtrs)
+	if err != nil {
+		return fmt.Errorf("projecting %s: %w", path, err)
+	}
 	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml for %s: %w", path, err)
 	}
