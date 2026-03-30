@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-navigator
 domain: spec-navigator
 module: spec-navigator
@@ -5,46 +6,46 @@ owner: eigen
 title: Spec Navigator
 status: draft
 description: |
-    The spec navigator is a local HTTP server that serves a browser-based
-    UI for exploring specs. It is started with `eigen serve` and requires
-    no external dependencies — the frontend assets are embedded in the
-    binary via go:embed.
+  The spec navigator is a local HTTP server that serves a browser-based
+  UI for exploring specs. It is started with `eigen serve` and requires
+  no external dependencies — the frontend assets are embedded in the
+  binary via go:embed.
 behavior: |
-    eigen serve starts an HTTP server on a configurable port (default 7171).
-    On start it optionally opens the browser automatically. The server exposes
-    a JSON API for modules and serves embedded static assets for the UI.
-    The specs root is resolved using the same --specs / EIGEN_SPECS / default
-    logic as all other commands.
+  eigen serve starts an HTTP server on a configurable port (default 7171).
+  On start it optionally opens the browser automatically. The server exposes
+  a JSON API for modules and serves embedded static assets for the UI.
+  The specs root is resolved using the same --specs / EIGEN_SPECS / default
+  logic as all other commands.
 acceptance_criteria:
-    - id: AC-001
-      description: serve starts on the configured port
-      given: eigen serve is run with --port 8080
-      when: the server starts
-      then: it listens on port 8080 and prints the URL to stdout
-    - id: AC-002
-      description: serve defaults to port 7171
-      given: eigen serve is run with no --port flag
-      when: the server starts
-      then: it listens on port 7171
-    - id: AC-003
-      description: serve respects --specs and EIGEN_SPECS
-      given: EIGEN_SPECS is set to a custom directory
-      when: eigen serve is run
-      then: the API returns modules from that directory
-    - id: AC-004
-      description: serve --open opens the browser by default
-      given: eigen serve is run without --open flag
-      when: the server starts
-      then: the default browser is opened at the server URL
-    - id: AC-005
-      description: serve --open=false suppresses browser launch
-      given: eigen serve --open=false is run
-      when: the server starts
-      then: no browser is opened
+  - id: AC-001
+    description: serve starts on the configured port
+    given: eigen serve is run with --port 8080
+    when: the server starts
+    then: it listens on port 8080 and prints the URL to stdout
+  - id: AC-002
+    description: serve defaults to port 7171
+    given: eigen serve is run with no --port flag
+    when: the server starts
+    then: it listens on port 7171
+  - id: AC-003
+    description: serve respects --specs and EIGEN_SPECS
+    given: EIGEN_SPECS is set to a custom directory
+    when: eigen serve is run
+    then: the API returns modules from that directory
+  - id: AC-004
+    description: serve --open opens the browser by default
+    given: eigen serve is run without --open flag
+    when: the server starts
+    then: the default browser is opened at the server URL
+  - id: AC-005
+    description: serve --open=false suppresses browser launch
+    given: eigen serve --open=false is run
+    when: the server starts
+    then: no browser is opened
 dependencies:
-    - spec-navigator/api
-    - spec-navigator/ui
-    - spec-navigator/change-review
+  - spec-navigator/api
+  - spec-navigator/ui
+  - spec-navigator/change-review
 technology: {}
 last_change: chg-002
 changes_count: 2

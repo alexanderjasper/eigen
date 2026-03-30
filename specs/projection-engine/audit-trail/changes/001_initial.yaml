@@ -1,0 +1,99 @@
+format: eigen/v1
+id: chg-001
+sequence: 1
+timestamp: "2026-03-30T07:50:43Z"
+author: ""
+type: created
+summary: Introduce compiled_commits field to link spec history to one or more code commits
+reason: |
+    When a change is marked compiled, there is currently no record of which git
+    commits implement it. Adding a compiled_commits array field creates a durable
+    link between the spec change trail and the code change trail, and supports the
+    case where a compile-agent makes multiple commits while implementing a single
+    change. Each commit hash is appended to the array as it is made, so the full
+    set of implementing commits is recorded.
+changes:
+    title: Compiled Change Audit Trail
+    owner: eigen
+    status: draft
+    description: |
+        The audit trail feature links each compiled change file to the git commits
+        that implement it. When a change is marked `compiled`, the CLI records the
+        implementing commit hash(es) in a `compiled_commits` array field on the
+        change file. This field is surfaced in the spec navigator UI as short
+        hashes (7 characters each) alongside the change timeline entry.
+    behavior: |
+        When `eigen spec change-status <module-path> <file> compiled` is invoked:
+
+          - `--commit <hash>` may be passed one or more times (or once per commit).
+            Each supplied hash is appended to the `compiled_commits` array on the
+            change file alongside `status: compiled`. If the field already exists,
+            new hashes are appended; duplicates are ignored.
+          - If `--commit` is omitted and the current working directory is inside
+            a git repository, the CLI auto-detects the HEAD commit hash and
+            appends it to `compiled_commits`.
+          - If `--commit` is omitted and the CWD is not a git repository, no
+            `compiled_commits` field is written (the field is simply absent).
+
+        The compile-agent skill invokes `eigen spec change-status ... compiled`
+        with `--commit` set to the HEAD hash after each commit it makes, so that
+        every commit produced during a compilation run is recorded in the array.
+
+        The spec navigator UI (`eigen serve`) renders each entry in
+        `compiled_commits` as a short hash (first 7 characters) in the change
+        timeline. Multiple hashes are displayed comma-separated or as a list
+        within the same timeline entry.
+
+        The field does not affect projection: `compiled_commits` is metadata on
+        the change file itself and is never folded into spec.yaml.
+    acceptance_criteria:
+        - id: AC-001
+          description: --commit flag appends a hash to compiled_commits on the change file
+          given: A change file with status approved
+          when: eigen spec change-status <path> <file> compiled --commit abc1234 is run
+          then: The change file has status compiled and compiled_commits contains abc1234
+        - id: AC-002
+          description: Multiple --commit invocations build up the compiled_commits array
+          given: A change file with status approved
+          when: eigen spec change-status is called twice with --commit abc1234 and then --commit def5678
+          then: compiled_commits is [abc1234, def5678] (full hashes, no duplicates)
+        - id: AC-003
+          description: Auto-detect HEAD when --commit is omitted inside a git repo
+          given: A change file with status approved, and CWD is inside a git repository
+          when: eigen spec change-status <path> <file> compiled is run without --commit
+          then: The change file has status compiled and compiled_commits contains the full HEAD commit hash
+        - id: AC-004
+          description: No compiled_commits field when --commit is omitted outside a git repo
+          given: A change file with status approved, and CWD is not a git repository
+          when: eigen spec change-status <path> <file> compiled is run without --commit
+          then: The change file has status compiled and no compiled_commits field
+        - id: AC-005
+          description: compiled_commits is not written for non-compiled statuses
+          given: A change file in draft status
+          when: eigen spec change-status <path> <file> approved is run (without --commit)
+          then: The change file has status approved and no compiled_commits field
+        - id: AC-006
+          description: compile-agent appends each commit hash as it commits
+          given: The compile-agent skill is compiling a set of approved changes and makes multiple commits
+          when: It marks each change compiled after each commit
+          then: It invokes eigen spec change-status ... compiled --commit <HEAD-hash> once per commit, resulting in all hashes in compiled_commits
+        - id: AC-007
+          description: UI shows all short hashes in change timeline when compiled_commits is present
+          given: A module with a change whose status is compiled and compiled_commits contains one or more full hashes
+          when: The spec navigator renders the change timeline
+          then: The timeline entry shows the first 7 characters of each hash as monospace tags, comma-separated or as a list
+        - id: AC-008
+          description: UI omits commit hashes when compiled_commits is absent or empty
+          given: A module with a change whose status is compiled but has no compiled_commits field
+          when: The spec navigator renders the change timeline
+          then: No hash tags are shown for that timeline entry
+        - id: AC-009
+          description: compiled_commits is not projected into spec.yaml
+          given: A change file with compiled_commits set
+          when: eigen spec project runs
+          then: spec.yaml does not contain a compiled_commits field
+        - id: AC-010
+          description: SetChangeStatus accepts an optional commit hash and appends to compiled_commits
+          given: A compiled change file
+          when: storage.SetChangeStatus is called with a non-empty commit hash
+          then: The change file on disk has the supplied hash appended to compiled_commits, and existing hashes are preserved

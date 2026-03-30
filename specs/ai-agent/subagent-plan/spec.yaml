@@ -1,113 +1,117 @@
+format: eigen/v1
 id: ai-agent/subagent-plan
 domain: ai-agent
 module: subagent-plan
 owner: alexander
 title: plan-subagent — designs implementation strategy based on approved spec
-status: ""
 description: |-
-    plan-agent is a read-only research and drafting agent. It receives a spec module path,
-    reads spec.yaml and all changes/, explores the codebase using Glob, Grep, and Read to
-    understand affected files and existing patterns, then produces a structured markdown draft
-    plan as its text output. It does NOT enter plan mode, does NOT call ExitPlanMode, does NOT
-    write any files, and does NOT commit. The orchestrating skill (eigen-change) is responsible
-    for receiving the draft, presenting it to the user for review via plan mode, writing plan.md,
-    and committing the plan file.
-behavior: ""
+  plan-agent is a read-only research and drafting agent. It receives a spec module path,
+  reads spec.yaml and all changes/, explores the codebase using Glob, Grep, and Read to
+  understand affected files and existing patterns, then produces a structured markdown draft
+  plan as its text output. It does NOT enter plan mode, does NOT call ExitPlanMode, does NOT
+  write any files, and does NOT commit. The orchestrating skill (eigen-change) is responsible
+  for receiving the draft, presenting it to the user for review via plan mode, writing plan.md,
+  and committing the plan file.
+behavior: |
+  plan-agent is a strictly read-only research and drafting agent. It receives a spec module
+  path and reads spec.yaml and all changes/. It explores the codebase using Glob, Grep, and
+  Read to understand affected files and existing patterns. It then produces a structured
+  markdown draft plan as its text output and returns to the caller. It does not enter plan
+  mode, write any files, or make any git commits. The orchestrating skill (eigen-change)
+  receives the draft, presents it to the user via plan mode UI, and passes the approved plan
+  inline to compile-agent.
 acceptance_criteria:
-    - id: AC-001
-      description: |-
-        plan-subagent reads approved spec.yaml and changes/, explores codebase to identify affected
-        files, existing patterns, and implementation approach. Uses Glob, Grep, Read to understand
-        current state.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-002
-      description: |-
-        Produces markdown implementation plan with sections: overview, step-by-step plan,
-        architectural decisions, testing strategy. Plan is 50-200 lines, specific, and actionable.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-003
-      description: |-
-        Each step in the plan specifies: file path, what changes are needed, why (references spec),
-        and any dependencies on other steps. Plan enables compile-subagent to implement without
-        asking clarifying questions.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-004
-      description: |-
-        Plan includes a section mapping spec acceptance criteria to implementation steps,
-        showing how each criterion will be tested/verified.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-005
-      description: 'Makes atomic commit with plan file. Uses conventional commit format: `plan(<module>): <summary>`.'
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-006
-      description: |-
-        plan-subagent writes plan.md to .claude/plans/<branch-name>/plan.md.
-        The path is deterministic and can be passed to compile-subagent in the invocation prompt.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-007
-      description: |-
-        Plan file is committed with `plan(<module>): <summary>` commit after creation.
-        The commit message should be concise but capture the essence of the plan.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-008
-      description: |-
-        plan-agent does not reference any project-specific paths, frameworks, or tools
-        in its agent definition. All codebase knowledge comes from exploration at runtime.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-009
-      description: |-
-        plan-agent does not call EnterPlanMode, ExitPlanMode, or any plan mode tool.
-        Given: plan-agent is invoked with a spec path.
-        When: it completes its workflow.
-        Then: no plan mode tools have been called; the agent has only used read-only tools
-        (Glob, Grep, Read, Bash for discovery) and returned text output.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-010
-      description: |-
-        plan-agent does not write any files and does not make any git commits.
-        Given: plan-agent is invoked with a spec path.
-        When: it completes its workflow.
-        Then: the working directory and git history are unchanged; all output is returned
-        as the agent's text response to the caller.
-      given: ""
-      when: ""
-      then: ""
-    - id: AC-011
-      description: |-
-        plan-agent returns a structured markdown draft plan as its output text. The plan
-        contains: overview, step-by-step implementation plan with file paths and spec AC
-        references, architectural decisions, acceptance criteria mapping, and build/verification
-        steps. This output is sufficient for the caller (eigen-change skill) to write plan.md
-        without modification.
-      given: ""
-      when: ""
-      then: ""
-dependencies:
-    - approved spec (spec.yaml + changes/)
-    - codebase access (Glob, Grep, Read, etc.)
-    - understanding of existing patterns and conventions in codebase
+  - id: AC-001
+    description: |
+      plan-subagent reads approved spec.yaml and changes/, explores codebase to identify affected
+      files, existing patterns, and implementation approach. Uses Glob, Grep, Read to understand
+      current state.
+    given: plan-agent is invoked with a spec module path
+    when: The agent starts
+    then: It reads spec.yaml and all changes/, then explores the codebase with Glob, Grep, and Read to identify affected files and patterns
+  - id: AC-002
+    description: |
+      Produces markdown implementation plan with sections: overview, step-by-step plan,
+      architectural decisions, testing strategy. Plan is 50-200 lines, specific, and actionable.
+    given: The agent has completed its codebase research
+    when: It produces its output
+    then: The output is a structured markdown plan with overview, step-by-step plan, architectural decisions, and testing strategy; approximately 50-200 lines
+  - id: AC-003
+    description: |
+      Each step in the plan specifies: file path, what changes are needed, why (references spec),
+      and any dependencies on other steps. Plan enables compile-subagent to implement without
+      asking clarifying questions.
+    given: A step in the plan references a code change
+    when: The step is read by compile-agent
+    then: The step specifies the file path, what changes are needed, why (referencing the spec AC), and any dependencies on other steps
+  - id: AC-004
+    description: |
+      Plan includes a section mapping spec acceptance criteria to implementation steps,
+      showing how each criterion will be tested/verified.
+    given: The plan is complete
+    when: A reviewer checks it against the spec
+    then: There is a section mapping each spec acceptance criterion to the implementation steps that satisfy it
+  - id: AC-005
+    description: Makes atomic commit with plan file. Uses conventional commit format.
+    given: plan-agent previously committed a plan file (superseded behavior)
+    when: The current spec is reviewed
+    then: This AC is superseded — committing is done by eigen-change after plan approval, not by plan-agent
+  - id: AC-006
+    description: |
+      plan-subagent writes plan.md to .claude/plans/<branch-name>/plan.md.
+      The path is deterministic and can be passed to compile-subagent in the invocation prompt.
+    given: plan-agent previously wrote plan.md (superseded behavior)
+    when: The current spec is reviewed
+    then: This AC is superseded — plan-agent no longer writes files; all output is returned as agent text response
+  - id: AC-007
+    description: |
+      Plan file is committed with `plan(<module>): <summary>` commit after creation.
+      The commit message should be concise but capture the essence of the plan.
+    given: plan-agent previously wrote and committed a plan file (superseded behavior)
+    when: The current spec is reviewed
+    then: This AC is superseded — eigen-change handles committing; plan-agent only returns text
+  - id: AC-008
+    description: |
+      plan-agent does not reference any project-specific paths, frameworks, or tools
+      in its agent definition. All codebase knowledge comes from exploration at runtime.
+    given: The plan-agent definition file is read
+    when: A reviewer checks it for project-specific references
+    then: No project-specific paths, frameworks, or tools appear in the definition; all codebase knowledge comes from runtime exploration
+  - id: AC-009
+    description: |
+      plan-agent does not call EnterPlanMode, ExitPlanMode, or any plan mode tool.
+      Given: plan-agent is invoked with a spec path.
+      When: it completes its workflow.
+      Then: no plan mode tools have been called; the agent has only used read-only tools
+      (Glob, Grep, Read, Bash for discovery) and returned text output.
+    given: plan-agent is invoked with a spec path
+    when: It completes its workflow
+    then: No plan mode tools have been called; the agent has only used read-only tools and returned text output
+  - id: AC-010
+    description: |
+      plan-agent does not write any files and does not make any git commits.
+      Given: plan-agent is invoked with a spec path.
+      When: it completes its workflow.
+      Then: the working directory and git history are unchanged; all output is returned
+      as the agent's text response to the caller.
+    given: plan-agent is invoked with a spec path
+    when: It completes its workflow
+    then: The working directory and git history are unchanged; all output is returned as the agent's text response
+  - id: AC-011
+    description: |
+      plan-agent returns a structured markdown draft plan as its output text. The plan
+      contains: overview, step-by-step implementation plan with file paths and spec AC
+      references, architectural decisions, acceptance criteria mapping, and build/verification
+      steps. This output is sufficient for the caller (eigen-change skill) to write plan.md
+      without modification.
+    given: plan-agent completes its research
+    when: It returns to the caller (eigen-change)
+    then: The return value is a structured markdown draft plan sufficient for eigen-change to pass inline to compile-agent without modification
+dependencies: []
 technology:
-    CommitPattern: N/A — committing is done by eigen-change skill, not by plan-agent
-    Input: spec.yaml path, changes/ directory, current git branch name
-    Output: structured markdown draft plan as agent text response (not written to disk)
-    Tools: Glob, Grep, Read, Bash (read-only codebase exploration only)
-last_change: ""
-changes_count: 4
+  CommitPattern: N/A — committing is done by eigen-change skill, not by plan-agent
+  Input: spec.yaml path, changes/ directory, current git branch name
+  Output: structured markdown draft plan as agent text response (not written to disk)
+  Tools: Glob, Grep, Read, Bash (read-only codebase exploration only)
+last_change: chg-005
+changes_count: 5

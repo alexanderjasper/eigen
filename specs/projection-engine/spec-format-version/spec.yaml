@@ -1,3 +1,4 @@
+format: eigen/v1
 id: projection-engine/spec-format-version
 domain: projection-engine
 module: spec-format-version

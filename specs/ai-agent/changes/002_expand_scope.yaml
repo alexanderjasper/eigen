@@ -1,5 +1,5 @@
 type: updated
-summary: Planned first implementation — unified `change` skill using ai-agent framework
+summary: "Planned first implementation — unified `change` skill using ai-agent framework"
 reason: |-
   The ai-agent framework enables consolidating the current eigen-spec/eigen-plan/eigen-compile skill model
   into a single `change` skill. This demonstrates the framework's value, eliminates separate skill invocations,
