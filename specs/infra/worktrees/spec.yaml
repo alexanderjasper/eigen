@@ -28,13 +28,17 @@ description: |
   to detect orphans (entries whose path no longer exists).
 
   `eigen serve` runs a single HTTP server in the main repository. On startup it
-  reads `.eigen/worktrees.json`, opens a file-system watcher on the specs
-  directory of the main repo and on each registered worktree's specs directory,
-  and aggregates all modules/changes into a single combined module list exposed
-  by the API. Every ModuleSummary and module detail carries a `worktree` field
-  identifying which context it belongs to (main or the worktree name), plus the
-  branch name. The UI groups the module tree by worktree/branch so the user can
-  browse all in-flight work from one tab.
+  reads `.eigen/worktrees.json` and opens file-system watchers on the specs
+  directory of the main repo and on each registered worktree's specs directory.
+  It also keeps a continuous watch on `.eigen/worktrees.json` itself: when a new
+  worktree is added (e.g. via `eigen worktree create`) the server dynamically
+  opens a watcher for the new specs directory and begins serving its modules;
+  when a worktree is removed the watcher is closed and its modules are evicted —
+  all without requiring a server restart. All modules/changes are aggregated into
+  a single combined module list exposed by the API. Every ModuleSummary and
+  module detail carries a `worktree` field identifying which context it belongs
+  to (main or the worktree name), plus the branch name. The UI groups the module
+  tree by worktree/branch so the user can browse all in-flight work from one tab.
 behavior: |
   `eigen worktree create <branch-name>` creates a new git worktree at
   `.claude/worktrees/<name>/` (where `<name>` is derived from `<branch-name>`
@@ -62,10 +66,30 @@ behavior: |
   changes to specs in the main repo's specs directory and in every registered
   worktree's specs directory simultaneously using a single fs-watcher. The
   combined module list returned by GET /api/modules includes modules from all
-  contexts, each tagged with their source worktree name and branch. When
-  `.eigen/worktrees.json` is modified (e.g. a new worktree is added while serve
-  is running), serve reloads the registry and begins watching the new worktree's
-  specs directory without restarting.
+  contexts, each tagged with their source worktree name and branch.
+
+  `eigen serve` also watches `.eigen/worktrees.json` itself using fsnotify (or
+  an equivalent file-system notification library). Whenever a write event is
+  detected on that file, the server re-reads it, diffs the entry set against the
+  currently active registry, and:
+
+  - For each **new** entry: opens a new specs-directory watcher for that worktree,
+    loads its modules into the in-memory registry, and makes them immediately
+    available via GET /api/modules and GET /api/worktrees.
+  - For each **removed** entry: closes the specs-directory watcher for that
+    worktree, evicts its modules from the in-memory registry, and removes it
+    from GET /api/worktrees and module listings.
+  - Entries that are unchanged are left completely undisturbed (no reload, no
+    watcher churn).
+
+  GET /api/worktrees returns the live registry state (the in-memory list that was
+  last hydrated from `.eigen/worktrees.json`). It always reflects the current set
+  of active worktrees without requiring a server restart.
+
+  The UI polls GET /api/worktrees (or listens on an existing SSE/websocket channel
+  if one is in the design) and re-renders the worktree list and module tree whenever
+  the set of worktrees changes. The polling interval must be short enough that
+  changes are visible to the user within a few seconds.
 
   `eigen scaffold` hook fix is covered by spec-cli/cmd-scaffold change 008.
 acceptance_criteria:
@@ -149,38 +173,57 @@ acceptance_criteria:
       restart required); the change is reflected in the next GET /api/modules
       response
   - id: AC-011
+    description: eigen serve uses fsnotify to watch .eigen/worktrees.json for changes
+    given: eigen serve is running
+    when: .eigen/worktrees.json is written by any process (e.g. eigen worktree create)
+    then: |
+      eigen serve receives a file-change event from fsnotify (or equivalent) on
+      .eigen/worktrees.json within one watch cycle and re-reads the file; no
+      polling loop or server restart is required to detect the change
+  - id: AC-012
     description: eigen serve picks up a newly added worktree without restarting
     given: eigen serve is running and .eigen/worktrees.json has one entry
     when: eigen worktree create <branch> is run in another terminal (updating .eigen/worktrees.json)
     then: |
-      eigen serve detects the registry change, begins watching the new worktree's
-      specs directory, and includes the new worktree's modules in subsequent
-      GET /api/modules responses without a server restart
-  - id: AC-012
-    description: eigen serve does not require --port to run alongside another serve instance
-    given: No separate eigen serve instances are running; a single instance serves all worktrees
-    when: eigen serve is run once from the main repo
-    then: |
-      All worktrees' specs are visible in one UI on one port; there is no need
-      to run multiple serve processes or pass --port flags
+      eigen serve detects the registry change, opens a new specs-directory watcher
+      for the new worktree, and includes the new worktree's modules in subsequent
+      GET /api/modules and GET /api/worktrees responses without a server restart
   - id: AC-013
-    description: eigen worktree create is idempotent-safe — fails clearly if branch or directory already exists
-    given: A worktree or branch with the same name already exists
-    when: eigen worktree create <branch> is run
+    description: eigen serve removes a worktree from the live registry when its entry is deleted
+    given: eigen serve is running with two registered worktrees (main + feature-bar)
+    when: eigen worktree remove feature-bar is run in another terminal (removing its entry from .eigen/worktrees.json)
     then: |
-      Command exits non-zero and prints a clear error indicating whether the
-      branch or the worktree directory already exists; nothing is created and
-      .eigen/worktrees.json is not modified
+      eigen serve detects the registry change, closes the specs-directory watcher
+      for feature-bar, evicts its modules from the in-memory registry, and
+      subsequent GET /api/modules and GET /api/worktrees responses no longer
+      include feature-bar or any of its modules; no server restart is required
   - id: AC-014
-    description: eigen worktree create works from a worktree CWD as well as the repo root
-    given: CWD is an existing worktree at .claude/worktrees/<x>/
-    when: eigen worktree create <branch> is run
+    description: unchanged worktree watchers are not disturbed during a registry reload
+    given: eigen serve is running with three worktrees; one new worktree is added
+    when: .eigen/worktrees.json is updated to add the new entry
     then: |
-      The new worktree is created correctly at .claude/worktrees/<name>/ relative
-      to the git repository root (not relative to the current worktree's directory)
+      Only the watcher for the new worktree is opened; the watchers for the two
+      existing worktrees continue running undisturbed (no close/reopen churn)
+  - id: AC-015
+    description: GET /api/worktrees always reflects live registry state
+    given: eigen serve is running; a worktree is added then a different one is removed while serve is running
+    when: GET /api/worktrees is called after each mutation
+    then: |
+      Each response reflects the registry state at the time of the call: after the
+      add it includes the new entry; after the remove it excludes the removed entry;
+      no stale data is returned
+  - id: AC-016
+    description: UI reflects worktree-set changes reactively without a page reload
+    given: The eigen serve UI is open in a browser showing the initial worktree list
+    when: A worktree is added or removed while the page is open
+    then: |
+      The UI detects the change (via its existing polling loop or SSE/websocket
+      if present) and updates the worktree list and module tree without requiring
+      a full page reload or manual refresh; the update appears within the polling
+      interval (or push latency for SSE/websocket)
 dependencies:
   - spec-navigator/api
   - spec-navigator/ui
 technology: {}
-last_change: chg-001
-changes_count: 1
+last_change: chg-002
+changes_count: 2

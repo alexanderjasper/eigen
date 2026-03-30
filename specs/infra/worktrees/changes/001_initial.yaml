@@ -71,13 +71,17 @@ changes:
     to detect orphans (entries whose path no longer exists).
 
     `eigen serve` runs a single HTTP server in the main repository. On startup it
-    reads `.eigen/worktrees.json`, opens a file-system watcher on the specs
-    directory of the main repo and on each registered worktree's specs directory,
-    and aggregates all modules/changes into a single combined module list exposed
-    by the API. Every ModuleSummary and module detail carries a `worktree` field
-    identifying which context it belongs to (main or the worktree name), plus the
-    branch name. The UI groups the module tree by worktree/branch so the user can
-    browse all in-flight work from one tab.
+    reads `.eigen/worktrees.json` and opens file-system watchers on the specs
+    directory of the main repo and on each registered worktree's specs directory.
+    It also keeps a continuous watch on `.eigen/worktrees.json` itself: when a new
+    worktree is added (e.g. via `eigen worktree create`) the server dynamically
+    opens a watcher for the new specs directory and begins serving its modules;
+    when a worktree is removed the watcher is closed and its modules are evicted —
+    all without requiring a server restart. All modules/changes are aggregated into
+    a single combined module list exposed by the API. Every ModuleSummary and
+    module detail carries a `worktree` field identifying which context it belongs
+    to (main or the worktree name), plus the branch name. The UI groups the module
+    tree by worktree/branch so the user can browse all in-flight work from one tab.
   behavior: |
     `eigen worktree create <branch-name>` creates a new git worktree at
     `.claude/worktrees/<name>/` (where `<name>` is derived from `<branch-name>`
