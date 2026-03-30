@@ -132,7 +132,7 @@ function renderTree(modules) {
   container.setAttribute('role', 'tree');
   const tree = buildTree(modules);
   for (const node of tree.values()) {
-    container.appendChild(createNodeEl(node));
+    container.appendChild(createNodeEl(node, null));
   }
   initRovingTabindex();
   container.addEventListener('keydown', e => {
@@ -191,16 +191,17 @@ function renderTree(modules) {
   });
 }
 
-function createNodeEl(node) {
+function createNodeEl(node, worktreeName) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tree-node';
   wrapper.dataset.path = node.path;
+  if (worktreeName) wrapper.dataset.worktree = worktreeName;
 
   const label = document.createElement('div');
   label.className = 'tree-label';
   label.setAttribute('role', 'treeitem');
   label.setAttribute('tabindex', '-1');
-  if (node.path === activePath) label.classList.add('active');
+  if (node.path === activePath && (worktreeName || null) === activeWorktreeName) label.classList.add('active');
 
   const toggle = document.createElement('span');
   toggle.className = 'toggle';
@@ -224,7 +225,7 @@ function createNodeEl(node) {
     childrenEl = document.createElement('div');
     childrenEl.className = 'tree-children';
     for (const child of node.children.values()) {
-      childrenEl.appendChild(createNodeEl(child));
+      childrenEl.appendChild(createNodeEl(child, worktreeName));
     }
     wrapper.appendChild(childrenEl);
 
@@ -280,7 +281,7 @@ function renderGroupedTree() {
     childrenEl.className = 'tree-group-children tree-children';
     const tree = buildTree(wtModules);
     for (const node of tree.values()) {
-      childrenEl.appendChild(createNodeEl(node));
+      childrenEl.appendChild(createNodeEl(node, wt.name));
     }
     groupSection.appendChild(childrenEl);
 
@@ -309,13 +310,13 @@ function renderGroupedTree() {
 function filterTree(query) {
   if (!query) {
     renderTreeView();
-    if (activePath) highlightActive(activePath);
+    if (activePath) highlightActive(activePath, activeWorktreeName);
     return;
   }
 
   if (allWorktrees.length > 1) {
     filterGroupedTree(query);
-    if (activePath) highlightActive(activePath);
+    if (activePath) highlightActive(activePath, activeWorktreeName);
     return;
   }
 
@@ -335,7 +336,7 @@ function filterTree(query) {
 
   const visible = allModules.filter(m => pathSet.has(m.path));
   renderTree(visible);
-  if (activePath) highlightActive(activePath);
+  if (activePath) highlightActive(activePath, activeWorktreeName);
 }
 
 function filterGroupedTree(query) {
@@ -367,12 +368,16 @@ function filterGroupedTree(query) {
   }
 }
 
-function highlightActive(path) {
+function highlightActive(path, worktreeName) {
   const nodes = document.querySelectorAll('.tree-label');
   for (const n of nodes) {
     const treeNode = n.closest('.tree-node');
     if (!treeNode) continue; // group headers have no .tree-node ancestor
-    n.classList.toggle('active', treeNode.dataset.path === path);
+    const pathMatch = treeNode.dataset.path === path;
+    const wtMatch = worktreeName == null
+      ? !treeNode.dataset.worktree  // flat mode: no worktree set
+      : treeNode.dataset.worktree === worktreeName;
+    n.classList.toggle('active', pathMatch && wtMatch);
   }
 }
 
@@ -381,7 +386,7 @@ function highlightActive(path) {
 async function loadDetail(path, worktreeName) {
   activePath = path;
   activeWorktreeName = worktreeName || null;
-  highlightActive(path);
+  highlightActive(path, activeWorktreeName);
   const rightEl = document.getElementById('right');
   document.getElementById('detail').style.display = 'none';
   document.getElementById('detail-empty').style.display = 'none';
