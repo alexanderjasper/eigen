@@ -14,59 +14,39 @@ description: |
   The eigen-change skill polls the module changes endpoint and watches for status
   transitions instead of polling a session endpoint.
 behavior: |
-  The session-based review API is removed entirely:
-  - POST /api/reviews — removed
-  - GET /api/reviews/pending — removed
-  - GET /api/reviews/<session-id> — removed
-  - POST /api/reviews/<session-id>/submit — removed
-  - The ReviewSession struct, reviewStore map, and generateSessionID function are
-    removed from the server package.
+  The session-based review API is removed entirely (unchanged from chg-002).
 
-  Two new endpoints are added under the existing /api/modules/ prefix:
-
+  Two endpoints remain (unchanged from chg-002):
   POST /api/modules/<module-path>/changes/<filename>/approve
-    Sets the change file's status to "approved" by calling
-    storage.SetChangeStatus(specsRoot, modulePath, filename, "approved").
-    Response: 200 OK with body { "status": "approved" }.
-    Returns 404 if the change file does not exist.
-
   POST /api/modules/<module-path>/changes/<filename>/reject
-    Request body: { "comment": "<string>" }.
-    Leaves the change file's status as "draft" and writes the comment string
-    to the change file's review_comment field via storage.SetChangeComment.
-    Response: 200 OK with body { "status": "draft", "review_comment": "<string>" }.
-    Returns 404 if the change file does not exist.
-    Returns 400 if the comment field is missing or empty.
 
-  A review_comment field is added to the spec.Change struct (yaml tag
-  "review_comment", json tag "review_comment"). It is a string, omitempty.
-  When present it is persisted in the change YAML file and returned by
-  GET /api/modules/<path>/changes alongside all other change fields.
+  review_comment field, SetChangeComment storage function, and eigen spec
+  change-comment CLI command are unchanged from chg-002.
 
-  A new storage function SetChangeComment(specsRoot, modulePath, filename, comment)
-  reads the change file, sets review_comment, and writes it back using
-  marshalCanonical, preserving canonical YAML formatting.
+  UI pending-review polling is replaced as follows:
 
-  A new CLI command is added:
-    eigen spec change-comment <module-path> <filename> <comment>
-  It calls storage.SetChangeComment and prints confirmation. This allows agents
-  to record rejection feedback without manually editing YAML.
+  startReviewPoller() is replaced with a setTimeout-chain implementation.
+  A module-level variable `reviewPollerTimer` holds the current pending
+  setTimeout handle (or null when stopped).
 
-  The UI pending-review panel queries GET /api/modules/<path>/changes and filters
-  client-side for changes with status "draft" (or absent status, which is treated
-  as draft). Each change displays approve and reject buttons. Approve calls
-  POST /api/modules/<path>/changes/<filename>/approve. Reject prompts for a
-  comment and calls POST /api/modules/<path>/changes/<filename>/reject.
+  Polling behaviour:
+  - Fixed poll interval is 3000ms.
+  - No backoff and no consecutive-no-draft counter.
+  - After each poll (whether draft changes are found or not), the next poll
+    is scheduled 3000ms after the current fetch resolves or rejects.
+  - When the review panel becomes visible (showReviewPanel is called), polling
+    is paused: the pending setTimeout is cleared and reviewPollerTimer is set
+    to null. Polling does not restart until the panel is hidden.
+  - When the review panel is hidden (hideReviewPanel is called), polling
+    resumes: the next poll is scheduled 3000ms later.
+  - stopReviewPoller() clears the pending timer and sets reviewPollerTimer to
+    null. It is called on hideReviewPanel and may be called at any time to
+    halt polling.
+  - The poller uses a setTimeout chain: the next poll is scheduled only after
+    the current fetch resolves (or rejects), so slow server responses cannot
+    cause poll requests to stack.
 
-  Agent polling: eigen-change polls GET /api/modules/<path>/changes and watches
-  for status transitions from "draft" to "approved" on the change files it
-  wrote, instead of polling /api/reviews/<session-id>. When all changes for the
-  module are approved, the agent proceeds to the compile phase. When any change
-  has a review_comment, the agent uses that comment as feedback and invokes the
-  spec-agent to write a new change file, then restarts the spec phase.
-
-  All endpoints return JSON with Content-Type application/json. Errors return a
-  JSON object with an "error" key and an appropriate HTTP status code.
+  All other UI behaviour is unchanged from chg-002.
 acceptance_criteria:
   - id: AC-012
     description: approve endpoint sets change file status to approved
@@ -123,20 +103,52 @@ acceptance_criteria:
     given: the session-based review code exists in eigen/internal/server/reviews.go
     when: this change is implemented
     then: reviews.go is deleted and all review route registrations are removed from server.go
+  - id: AC-023
+    description: poller uses setTimeout chain not setInterval
+    given: the review poller is running
+    when: inspecting the implementation
+    then: no setInterval call exists in startReviewPoller; the next poll is scheduled with setTimeout only after the current fetch resolves or rejects
+  - id: AC-024
+    description: fixed poll interval is 3000ms
+    given: the review poller is running
+    when: any poll callback completes (regardless of whether draft changes were found)
+    then: the next poll is scheduled 3000ms later; there is no varying interval and no consecutive-no-draft counter
+  - id: AC-025
+    description: polling pauses when the review panel becomes visible
+    given: the review poller is running with a pending setTimeout
+    when: showReviewPanel is called (draft changes found)
+    then: the pending setTimeout is cleared and no new poll is scheduled until the panel is hidden
+  - id: AC-026
+    description: polling resumes when the review panel is hidden
+    given: polling was paused because the review panel was visible
+    when: hideReviewPanel is called
+    then: the next poll is scheduled 3000ms later and polling continues at the fixed interval
+  - id: AC-027
+    description: stopReviewPoller clears the pending timer
+    given: a setTimeout is pending for the next poll
+    when: stopReviewPoller() is called
+    then: the timer is cleared, reviewPollerTimer is null, and no further polls are scheduled
+  - id: AC-028
+    description: slow server response does not cause poll stacking
+    given: the server takes longer than 3000ms to respond to a fetch
+    when: the timeout would have fired a second time under setInterval
+    then: no second fetch is issued until the first fetch resolves and schedules the next poll
 dependencies:
   - spec-navigator/api
   - spec-navigator/ui
   - ai-agent/skill-change
 technology:
+  BackoffThreshold: removed
   DecisionValues: approved, rejected
   Endpoints: POST /api/modules/<path>/changes/<filename>/approve, POST /api/modules/<path>/changes/<filename>/reject
   NewCLICommand: eigen spec change-comment <module-path> <filename> <comment>
   NewField: 'spec.Change.ReviewComment (yaml: review_comment)'
   NewStorageFunc: SetChangeComment
-  PollingInterval: 3 seconds
+  PollingInterval: 3000ms fixed (no backoff)
+  PollingMechanism: setTimeout chain (not setInterval)
   RemovedEndpoints: POST /api/reviews, GET /api/reviews/pending, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit
   RemovedTypes: ReviewSession, ChangeEntry, reviewStore, generateSessionID
   SessionID: server-generated UUID (crypto/rand)
   SessionStorage: in-memory only (no disk persistence)
-last_change: chg-002
-changes_count: 2
+last_change: chg-004
+changes_count: 4

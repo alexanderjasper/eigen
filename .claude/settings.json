@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(eigen spec:*)",
+      "Bash(go build:*)",
+      "Bash(go run:*)",
+      "Bash(go test:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

@@ -42,17 +42,17 @@ changes:
     - id: AC-003
       description: Build job verifies the binary compiles
       given: The CI workflow is triggered
-      when: The build job runs `go build ./...` inside eigen/
+      when: "The build job runs `go build ./...` inside eigen/"
       then: The job exits 0 when the code compiles and non-zero when it does not
     - id: AC-004
       description: Test job runs the full unit test suite
       given: The CI workflow is triggered
-      when: The test job runs `go test ./...` inside eigen/
+      when: "The test job runs `go test ./...` inside eigen/"
       then: The job exits 0 when all tests pass and non-zero when any test fails
     - id: AC-005
       description: Validate job runs eigen spec validate against specs/
       given: The CI workflow is triggered
-      when: The validate job builds the eigen binary and runs `eigen spec validate`
+      when: "The validate job builds the eigen binary and runs `eigen spec validate`"
       then: The job exits 0 when all specs are valid and non-zero when any spec is invalid
     - id: AC-006
       description: A compilation failure causes the workflow to fail
