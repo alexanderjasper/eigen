@@ -9,7 +9,9 @@ reason: |
   Without automated CI, compilation errors and broken tests can land on main
   undetected. A mandatory pipeline enforces that the binary builds, tests pass,
   and all specs remain valid on every push and pull request.
-status: approved
+status: compiled
+compiled_commits:
+  - 647318af2bcb941257b7cd976d1bac69f592b279
 changes:
   title: GitHub Actions CI
   owner: alexander
