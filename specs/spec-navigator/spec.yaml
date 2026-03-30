@@ -4,7 +4,7 @@ domain: spec-navigator
 module: spec-navigator
 owner: eigen
 title: Spec Navigator
-status: draft
+status: compiled
 description: |
   The spec navigator is a local HTTP server that serves a browser-based
   UI for exploring specs. It is started with `eigen serve` and requires

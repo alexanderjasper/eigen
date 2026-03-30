@@ -11,7 +11,7 @@ reason: |
   currently skips them because there is nothing to implement, leaving them stuck in
   approved status forever. This blocks the projection engine from promoting the module
   to compiled (which requires ALL changes to be compiled). Fixes GitHub issue #13.
-status: draft
+status: approved
 changes:
   dependencies: []
   behavior: |
