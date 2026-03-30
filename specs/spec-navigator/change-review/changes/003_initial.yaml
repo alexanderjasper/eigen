@@ -13,7 +13,9 @@ reason: |
   should back off to reduce noise, reset quickly when work appears, and stop entirely
   while the user is actively reviewing (panel open) so there are no concurrent
   mutations while the user is deciding.
-status: approved
+status: compiled
+compiled_commits:
+  - b46b084f6226c2721119fd27024e8b80ff1dc65b
 changes:
   behavior: |
     The session-based review API is removed entirely (unchanged from chg-002).
