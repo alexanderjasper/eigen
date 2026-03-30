@@ -1,12 +1,13 @@
 id: chg-002
 sequence: 2
-timestamp: 2026-03-21T06:34:05Z
+timestamp: "2026-03-21T06:34:05Z"
 author: alexander
 type: updated
 summary: Update to display change timeline and terminology
 reason: |
   Update the spec navigator UI to use "change" terminology and fetch the
   renamed /changes API endpoint to populate the history section properly.
+status: compiled
 changes:
   behavior: |
     On load the UI fetches /api/modules and builds a tree from the flat

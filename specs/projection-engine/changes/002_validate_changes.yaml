@@ -1,6 +1,6 @@
 id: chg-002
 sequence: 2
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: updated
 summary: Add ValidateChanges to detect no-op fields in a changeset
@@ -9,6 +9,7 @@ reason: |
   identical to the current spec state. The projection engine already
   owns the projection logic and types, making it the right home for
   ValidateChanges.
+status: compiled
 changes:
   behavior: |
     Events are applied in ascending sequence order. Simple fields (title, owner,

@@ -1,9 +1,9 @@
 id: chg-004
 sequence: 4
-timestamp: 2026-03-21T08:44:31Z
+timestamp: "2026-03-21T08:44:31Z"
 author: alexander
 type: updated
-summary: "Add YAML syntax pre-validation and explicit --all flag to spec project"
+summary: Add YAML syntax pre-validation and explicit --all flag to spec project
 reason: |
   Two usability improvements were identified for `eigen spec project`:
   1. Authors frequently make YAML authoring mistakes (backticks inside unquoted
@@ -15,6 +15,7 @@ reason: |
      discoverable. An explicit `eigen spec project-all` subcommand and
      `eigen spec project --all` flag make the intent unambiguous and improve
      shell-script composability.
+status: compiled
 changes:
   description: |
     The spec project command recomputes and overwrites spec.yaml for a module
@@ -57,8 +58,7 @@ changes:
         the backtick error; no spec.yaml is written
     - id: AC-005
       description: Aborts and reports error for bare colon in unquoted scalar
-      given: A change file whose unquoted string value contains a bare colon that
-        would be parsed as a YAML key separator
+      given: A change file whose unquoted string value contains a bare colon that would be parsed as a YAML key separator
       when: eigen spec project <path> is run
       then: |
         Exits non-zero, prints the file path and line number, and describes

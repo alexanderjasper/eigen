@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,6 +54,7 @@ func ReadChanges(specsRoot, path string) ([]spec.Change, error) {
 		if err := yaml.Unmarshal(data, &ch); err != nil {
 			return nil, fmt.Errorf("parsing change file %s: %w", e.Name(), err)
 		}
+		ch.Filename = e.Name()
 		changes = append(changes, ch)
 	}
 
@@ -65,7 +67,7 @@ func ReadChanges(specsRoot, path string) ([]spec.Change, error) {
 
 // WriteSpec marshals a SpecModule and writes it to spec.yaml.
 func WriteSpec(specsRoot, path string, s spec.SpecModule) error {
-	data, err := yaml.Marshal(s)
+	data, err := marshalCanonical(s)
 	if err != nil {
 		return fmt.Errorf("marshaling spec: %w", err)
 	}
@@ -79,7 +81,7 @@ func WriteSpec(specsRoot, path string, s spec.SpecModule) error {
 func WriteChange(specsRoot, path string, ch spec.Change, slug string) error {
 	dir := ChangesPath(specsRoot, path)
 	filename := fmt.Sprintf("%03d_%s.yaml", ch.Sequence, slug)
-	data, err := yaml.Marshal(ch)
+	data, err := marshalCanonical(ch)
 	if err != nil {
 		return fmt.Errorf("marshaling change: %w", err)
 	}
@@ -130,7 +132,30 @@ func SetChangeStatus(specsRoot, modulePath, filename, status string) error {
 		return fmt.Errorf("parsing change file %s: %w", filename, err)
 	}
 	ch.Status = status
-	out, err := yaml.Marshal(ch)
+	out, err := marshalCanonical(ch)
+	if err != nil {
+		return fmt.Errorf("marshaling change file %s: %w", filename, err)
+	}
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		return fmt.Errorf("writing change file %s: %w", filename, err)
+	}
+	return nil
+}
+
+// SetChangeComment reads a change file by filename, sets its ReviewComment field, and writes it back.
+func SetChangeComment(specsRoot, modulePath, filename, comment string) error {
+	dir := ChangesPath(specsRoot, modulePath)
+	path := filepath.Join(dir, filename)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("reading change file %s: %w", filename, err)
+	}
+	var ch spec.Change
+	if err := yaml.Unmarshal(data, &ch); err != nil {
+		return fmt.Errorf("parsing change file %s: %w", filename, err)
+	}
+	ch.ReviewComment = comment
+	out, err := marshalCanonical(ch)
 	if err != nil {
 		return fmt.Errorf("marshaling change file %s: %w", filename, err)
 	}
@@ -169,6 +194,45 @@ func WalkModules(specsRoot, prefix string) ([]ModuleRef, error) {
 		return refs[i].Path < refs[j].Path
 	})
 	return refs, nil
+}
+
+// marshalCanonical marshals v to YAML with 2-space indentation and omits zero-value scalar fields.
+func marshalCanonical(v interface{}) ([]byte, error) {
+	var node yaml.Node
+	if err := node.Encode(v); err != nil {
+		return nil, err
+	}
+	pruneZeroScalars(&node)
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&node); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+// pruneZeroScalars removes mapping entries whose value is an empty string or "0".
+func pruneZeroScalars(node *yaml.Node) {
+	if node.Kind == yaml.DocumentNode {
+		for _, child := range node.Content {
+			pruneZeroScalars(child)
+		}
+		return
+	}
+	if node.Kind != yaml.MappingNode {
+		return
+	}
+	var kept []*yaml.Node
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		key, val := node.Content[i], node.Content[i+1]
+		if val.Kind == yaml.ScalarNode && (val.Value == "" || val.Value == "0") {
+			continue
+		}
+		pruneZeroScalars(val)
+		kept = append(kept, key, val)
+	}
+	node.Content = kept
 }
 
 func walkDir(specsRoot, dir, prefix string, refs *[]ModuleRef) error {

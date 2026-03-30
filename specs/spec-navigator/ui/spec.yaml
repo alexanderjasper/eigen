@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-navigator/ui
 domain: spec-navigator
 module: ui
@@ -5,60 +6,236 @@ owner: eigen
 title: Spec Navigator UI
 status: draft
 description: |
-    The spec navigator UI is a single-page browser application embedded in
-    the eigen binary. It renders a two-pane layout: a collapsible module
-    tree on the left and a detail pane on the right. No build step is
-    required — it is vanilla HTML, CSS, and JavaScript.
+  The spec navigator UI is a single-page browser application embedded in
+  the eigen binary. It renders a two-pane layout: a collapsible module
+  tree on the left and a detail pane on the right. No build step is
+  required — it is vanilla HTML, CSS, and JavaScript.
 behavior: |
-    On load the UI fetches /api/modules and builds a tree from the flat
-    list by splitting paths on "/". Parent nodes are collapsible and
-    expanded by default. Clicking any node fetches the module detail and
-    changes from the API and renders them in the right pane.
+  On load the UI fetches /api/modules and builds a tree from the flat
+  list by splitting paths on "/". While the fetch is in flight, a spinner
+  is shown in the tree pane. Parent nodes are collapsible and expanded by
+  default. Clicking any node fetches the module detail and changes from
+  the API and renders them in the right pane; a spinner is shown in the
+  detail pane while those fetches are in flight.
 
-    The search box filters visible tree nodes in real time (client-side)
-    by matching the query against both the module path and title.
+  The search box filters visible tree nodes in real time (client-side)
+  by matching the query against both the module path and title.
 
-    The detail pane shows: title, status badge (colour-coded by status),
-    owner, description, behavior, acceptance criteria (as a list with
-    given/when/then), dependencies (as clickable links that navigate to
-    that module), and a history section with the change timeline.
+  The detail pane shows: title, status badge (colour-coded by status),
+  owner, description, behavior, acceptance criteria (as a list with
+  given/when/then), dependencies (as clickable links that navigate to
+  that module), and a history section with the change timeline.
+
+  All fetch() calls are wrapped in try/catch. Non-2xx responses are
+  treated as errors. On error, a dismissible error banner/toast appears
+  at the top of the page showing the error message. The toast can be
+  closed by clicking an "x" button on the banner.
+
+  While an approve or reject submission is in flight (after the user
+  confirms and the POST is issued), both the Approve and Reject buttons
+  on that change card are disabled. They are re-enabled when the
+  response is received (success or error).
+
+  The tree container element (#tree) has role="tree". Each tree label
+  element (.tree-label) has role="treeitem". Collapsible nodes carry
+  aria-expanded="true" when open and aria-expanded="false" when
+  collapsed. Leaf nodes (no children) do not have aria-expanded.
+
+  The tree uses a roving tabindex pattern: exactly one .tree-label has
+  tabindex="0" at any moment (the focused node); all others have
+  tabindex="-1". When the tree first renders the first visible node
+  receives tabindex="0". After a re-render caused by search filtering,
+  the first visible node receives tabindex="0".
+
+  Keyboard navigation is active whenever focus is on a tree label:
+  - ArrowDown moves focus to the next visible node in document order
+    (skipping nodes hidden inside a collapsed subtree).
+  - ArrowUp moves focus to the previous visible node in document order.
+  - ArrowRight on a collapsed node expands it. ArrowRight on an already-
+    expanded node moves focus to its first child.
+  - ArrowLeft on an expanded node collapses it. ArrowLeft on a collapsed
+    node (or leaf) moves focus to its parent node, if one exists.
+  - Enter activates the focused node: loads the detail pane exactly as a
+    mouse click does.
+  All navigation keys call preventDefault() to suppress default browser
+  scroll/focus behaviour.
 acceptance_criteria:
-    - id: AC-001
-      description: tree is built from flat module list
-      given: /api/modules returns modules at a, a/b, and c
-      when: the page loads
-      then: the tree shows a as a parent with b as a child, and c as a sibling
-    - id: AC-002
-      description: parent nodes are collapsible
-      given: module a has children
-      when: the user clicks the a node toggle
-      then: the children are hidden; clicking again expands them
-    - id: AC-003
-      description: clicking a node loads its detail
-      given: the user clicks spec-cli/cmd-new in the tree
-      when: the click handler fires
-      then: the right pane shows the title, status, owner, and AC for cmd-new
-    - id: AC-004
-      description: search filters tree by path and title
-      given: modules projection-engine and spec-cli exist
-      when: the user types "proj" in the search box
-      then: only projection-engine is visible in the tree
-    - id: AC-005
-      description: status badge is colour-coded
-      given: a module with status draft is displayed
-      when: the detail pane renders
-      then: the status badge uses the draft colour (yellow)
-    - id: AC-006
-      description: dependency links navigate to that module
-      given: the detail pane shows a dependency on spec-cli/cmd-new
-      when: the user clicks the dependency link
-      then: the right pane updates to show cmd-new detail and the tree highlights it
-    - id: AC-007
-      description: history section shows change timeline
-      given: a module has two changes
-      when: the detail pane renders
-      then: the history section lists both changes with sequence, timestamp, author, and summary
+  - id: AC-001
+    description: tree is built from flat module list
+    given: /api/modules returns modules at a, a/b, and c
+    when: the page loads
+    then: the tree shows a as a parent with b as a child, and c as a sibling
+  - id: AC-002
+    description: parent nodes are collapsible
+    given: module a has children
+    when: the user clicks the a node toggle
+    then: the children are hidden; clicking again expands them
+  - id: AC-003
+    description: clicking a node loads its detail
+    given: the user clicks spec-cli/cmd-new in the tree
+    when: the click handler fires
+    then: the right pane shows the title, status, owner, and AC for cmd-new
+  - id: AC-004
+    description: search filters tree by path and title
+    given: modules projection-engine and spec-cli exist
+    when: the user types "proj" in the search box
+    then: only projection-engine is visible in the tree
+  - id: AC-005
+    description: status badge is colour-coded
+    given: a module with status draft is displayed
+    when: the detail pane renders
+    then: the status badge uses the draft colour (yellow)
+  - id: AC-006
+    description: dependency links navigate to that module
+    given: the detail pane shows a dependency on spec-cli/cmd-new
+    when: the user clicks the dependency link
+    then: the right pane updates to show cmd-new detail and the tree highlights it
+  - id: AC-007
+    description: history section shows change timeline
+    given: a module has two changes
+    when: the detail pane renders
+    then: the history section lists both changes with sequence, timestamp, author, and summary
+  - id: AC-008
+    description: tree pane shows spinner while /api/modules loads
+    given: the page has just loaded and /api/modules has not yet responded
+    when: the init fetch is in flight
+    then: a spinner element is visible in the tree pane and the tree is empty
+  - id: AC-009
+    description: tree pane hides spinner after modules load
+    given: the tree pane is showing a spinner
+    when: /api/modules responds successfully
+    then: the spinner is removed and the tree is rendered
+  - id: AC-010
+    description: detail pane shows spinner while module detail loads
+    given: the user clicks a module in the tree
+    when: the detail fetches are in flight
+    then: a spinner is visible in the detail pane
+  - id: AC-011
+    description: detail pane hides spinner after detail loads
+    given: the detail pane is showing a spinner
+    when: both /api/modules/:path and /api/modules/:path/changes respond
+    then: the spinner is removed and the detail content is rendered
+  - id: AC-012
+    description: non-2xx response on /api/modules shows error toast
+    given: /api/modules returns a 500 response
+    when: the init fetch completes
+    then: a dismissible error toast appears with a message describing the failure
+  - id: AC-013
+    description: network error on /api/modules shows error toast
+    given: the network is unavailable when /api/modules is fetched
+    when: the fetch throws
+    then: a dismissible error toast appears with the error message
+  - id: AC-014
+    description: non-2xx response on detail fetch shows error toast
+    given: /api/modules/:path returns a 404
+    when: the user clicks a module node
+    then: a dismissible error toast appears and the detail pane is not updated
+  - id: AC-015
+    description: error toast is dismissible
+    given: an error toast is visible
+    when: the user clicks the close (x) button on the toast
+    then: the toast is removed from the DOM
+  - id: AC-016
+    description: approve button is disabled while submission is in flight
+    given: a change card is showing with Approve and Reject buttons
+    when: the user clicks Approve and the POST has not yet responded
+    then: both the Approve and Reject buttons on that card are disabled
+  - id: AC-017
+    description: buttons re-enable after approve submission completes
+    given: the Approve POST for a change card is in flight
+    when: the server responds (success or error)
+    then: the Approve and Reject buttons on that card are re-enabled
+  - id: AC-018
+    description: reject button is disabled while submission is in flight
+    given: the user provides a comment and clicks Reject
+    when: the POST has not yet responded
+    then: both the Approve and Reject buttons on that card are disabled
+  - id: AC-019
+    description: tree container has role="tree"
+    given: the tree has been rendered
+    when: a screen reader or accessibility tool inspects the
+    then: the element exposes role="tree"
+  - id: AC-020
+    description: each tree label has role="treeitem"
+    given: the tree has been rendered with several nodes
+    when: an accessibility tool inspects any .tree-label element
+    then: each .tree-label exposes role="treeitem"
+  - id: AC-021
+    description: collapsible node exposes aria-expanded="true" when open
+    given: a parent node is in its default expanded state
+    when: an accessibility tool reads the node's .tree-label
+    then: aria-expanded is "true"
+  - id: AC-022
+    description: collapsible node exposes aria-expanded="false" when collapsed
+    given: a parent node has been collapsed by clicking its toggle
+    when: an accessibility tool reads the node's .tree-label
+    then: aria-expanded is "false"
+  - id: AC-023
+    description: leaf nodes do not have aria-expanded
+    given: a module node has no children
+    when: an accessibility tool inspects its .tree-label
+    then: the aria-expanded attribute is absent
+  - id: AC-024
+    description: roving tabindex — first node gets tabindex="0" on render
+    given: the tree is freshly rendered
+    when: the DOM is inspected
+    then: the first visible .tree-label has tabindex="0" and all others have tabindex="-1"
+  - id: AC-025
+    description: roving tabindex — first node gets tabindex="0" after search re-render
+    given: the user has typed a query that changes the visible nodes
+    when: the tree re-renders
+    then: the first visible .tree-label in the filtered tree has tabindex="0" and all others have tabindex="-1"
+  - id: AC-026
+    description: ArrowDown moves focus to next visible node
+    given: focus is on the first visible tree node
+    when: the user presses ArrowDown
+    then: focus moves to the second visible tree node
+  - id: AC-027
+    description: ArrowDown skips children of collapsed nodes
+    given: a parent node is collapsed and focus is on that parent
+    when: the user presses ArrowDown
+    then: focus moves to the next sibling or ancestor node, not into the hidden children
+  - id: AC-028
+    description: ArrowUp moves focus to previous visible node
+    given: focus is on the second visible tree node
+    when: the user presses ArrowUp
+    then: focus moves to the first visible tree node
+  - id: AC-029
+    description: ArrowRight expands a collapsed node
+    given: focus is on a collapsed parent node
+    when: the user presses ArrowRight
+    then: the node expands (children become visible) and aria-expanded becomes "true"
+  - id: AC-030
+    description: ArrowRight on expanded node moves focus to first child
+    given: focus is on an already-expanded parent node
+    when: the user presses ArrowRight
+    then: focus moves to the first child node
+  - id: AC-031
+    description: ArrowLeft collapses an expanded node
+    given: focus is on an expanded parent node
+    when: the user presses ArrowLeft
+    then: the node collapses (children are hidden) and aria-expanded becomes "false"
+  - id: AC-032
+    description: ArrowLeft on a collapsed node moves focus to parent
+    given: focus is on a collapsed node that has a parent node
+    when: the user presses ArrowLeft
+    then: focus moves to the parent node
+  - id: AC-033
+    description: Enter activates the focused node
+    given: focus is on a node that has a module associated with it
+    when: the user presses Enter
+    then: the detail pane loads that module's detail, identical to a mouse click
+  - id: AC-034
+    description: navigation keys suppress default browser behaviour
+    given: focus is on a tree node
+    when: the user presses ArrowUp, ArrowDown, ArrowLeft, ArrowRight, or Enter
+    then: the default browser action (scroll, etc.) is prevented
+  - id: AC-035
+    description: focused node is visually indicated
+    given: a tree node has received keyboard focus
+    when: the node is focused via the roving tabindex
+    then: the node displays a visible focus outline (e.g. CSS :focus or :focus-visible style)
 dependencies: []
 technology: {}
-last_change: chg-002
-changes_count: 2
+last_change: chg-004
+changes_count: 4

@@ -1,0 +1,35 @@
+id: chg-007
+sequence: 7
+timestamp: "2026-03-30T07:44:26Z"
+type: updated
+summary: emphasize hook installation as on-by-default in eigen scaffold; scope note excludes eigen spec new
+reason: |
+  User feedback: "The hook should also be installed when scaffolding a project with eigen."
+
+  Investigation shows that eigen scaffold is the project-level scaffolding command
+  (writes skills, agents, specs/) and is the correct and intended place for hook
+  installation. This is already specified (AC-008 through AC-014), but there is no
+  AC that explicitly asserts hook installation is the default behavior (opt-out, not
+  opt-in) and is considered part of the primary success path for eigen scaffold.
+
+  eigen spec new is a spec-module scaffolding command — it creates a module directory
+  with 001_initial.yaml and spec.yaml. It operates at the spec level, not the project
+  level, and should not install or modify git hooks. The user's feedback does not
+  apply to eigen spec new.
+
+  Additionally, the current scaffold.go implementation lacks the --no-hooks flag and
+  hook installation logic entirely. AC-015 makes the on-by-default nature of hook
+  installation an explicit, independently testable criterion so that the implementation
+  gap is unambiguous.
+status: approved
+changes:
+  acceptance_criteria:
+    - id: AC-015
+      description: Hook installation is on by default and is part of the primary eigen scaffold success path
+      given: A target directory with a .git/ directory and no existing pre-commit hook
+      when: eigen scaffold is run with no flags
+      then: |
+        .git/hooks/pre-commit is created and the scaffold command exits zero;
+        the user does not need to pass any flag to opt in to hook installation —
+        hook installation is the default behavior and skipping it requires the
+        explicit --no-hooks flag

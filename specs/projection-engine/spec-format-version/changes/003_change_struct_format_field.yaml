@@ -1,0 +1,36 @@
+id: chg-003
+sequence: 3
+timestamp: "2026-03-30T07:25:44Z"
+type: updated
+summary: Require Format field on Change struct and explicit assignment in spec_new.go and spec_change.go
+reason: |
+  yaml.Marshal only writes a field to the output if the struct being marshaled
+  carries that field. The Change struct in types.go did not have a Format field,
+  so even though spec_new.go and spec_change.go build a Change value before
+  marshaling it to a change file, the format key was never written to those
+  files. AC-006 only required SpecModule to expose Format; this change adds a
+  parallel requirement for Change and makes explicit that both CLI commands must
+  set Change.Format = "eigen/v1" before calling yaml.Marshal.
+status: compiled
+changes:
+  acceptance_criteria:
+    - id: AC-006
+      description: SpecModule and Change structs both expose a Format field
+      given: The implementation is complete
+      when: eigen/internal/spec/types.go is inspected
+      then: |
+        SpecModule has a Format string field tagged yaml:"format,omitempty"
+        appearing before the id field in struct definition order.
+        Change also has a Format string field tagged yaml:"format,omitempty"
+        appearing as the first field in the Change struct definition.
+    - id: AC-010
+      description: spec_new.go and spec_change.go set Change.Format before marshaling
+      given: The implementation is complete
+      when: eigen/internal/spec/spec_new.go and eigen/internal/spec/spec_change.go are inspected
+      then: |
+        In spec_new.go, the Change value constructed before yaml.Marshal is
+        called has its Format field set to "eigen/v1".
+        In spec_change.go, the Change value constructed before yaml.Marshal is
+        called has its Format field set to "eigen/v1".
+        Without this explicit assignment, yaml.Marshal will not write the
+        format key to the generated change file even if the struct carries the field.

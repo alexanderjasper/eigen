@@ -1,3 +1,4 @@
+type: updated
 summary: Fix Phase 2 — plan mode must run in main conversation, not inside plan-agent subagent
 reason: |-
   ExitPlanMode (and EnterPlanMode) only work in the main conversation thread. A subagent
@@ -6,7 +7,7 @@ reason: |-
   the user never sees the plan mode UI and approval is never collected. The correct design
   splits Phase 2: plan-agent is a read-only research subagent that returns a draft plan as
   text, and eigen-change (main conversation) owns the plan mode lifecycle.
-type: updated
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-003
@@ -24,15 +25,24 @@ changes:
         (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
             Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
             step (1).
+      given: ""
+      when: ""
+      then: ""
     - id: AC-011
       description: |-
         plan-agent subagent is strictly read-only during Phase 2: it uses only Glob, Grep,
         Read, and Bash (read-only commands) to research the codebase. It does not call
         EnterPlanMode, ExitPlanMode, Write, Edit, or any git commands. Its sole output is
         a draft plan as text returned to eigen-change.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-012
       description: |-
         EnterPlanMode and ExitPlanMode are called exclusively by eigen-change (the main
         conversation skill), never by any subagent. Any agent definition file
         (`.claude/agents/*.md`) must not instruct the agent to call EnterPlanMode or
         ExitPlanMode.
+      given: ""
+      when: ""
+      then: ""

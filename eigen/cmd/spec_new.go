@@ -64,6 +64,7 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 			},
 		},
 	}
+	ch.Format = "eigen/v1"
 
 	data, err := yaml.Marshal(ch)
 	if err != nil {

@@ -1,6 +1,6 @@
 id: chg-005
 sequence: 5
-timestamp: 2026-03-21T06:41:38Z
+timestamp: "2026-03-21T06:41:38Z"
 author: alexander
 type: updated
 summary: Rename module path from cmd-event to cmd-change
@@ -8,3 +8,5 @@ reason: |
   The module directory was named cmd-event when the command was called
   "spec event". Now that the command is "spec change", the module path
   should reflect the new name for consistency.
+status: compiled
+changes: {}

@@ -1,0 +1,96 @@
+id: chg-003
+sequence: 3
+timestamp: "2026-03-30T07:37:14Z"
+author: alexander
+type: updated
+summary: Add error handling and loading states to the spec navigator UI
+reason: |
+  The current UI has no error handling on fetch() calls (other than a single
+  catch on init()) and no loading feedback. Network or server errors are
+  silently swallowed, and users receive no visual indication while data is
+  loading or while approve/reject submissions are in flight. This change adds
+  dismissible error toasts, spinner indicators in both panes, and in-flight
+  button disabling to make the UI resilient and transparent.
+status: compiled
+changes:
+  behavior: |
+    On load the UI fetches /api/modules and builds a tree from the flat
+    list by splitting paths on "/". While the fetch is in flight, a spinner
+    is shown in the tree pane. Parent nodes are collapsible and expanded by
+    default. Clicking any node fetches the module detail and changes from
+    the API and renders them in the right pane; a spinner is shown in the
+    detail pane while those fetches are in flight.
+
+    The search box filters visible tree nodes in real time (client-side)
+    by matching the query against both the module path and title.
+
+    The detail pane shows: title, status badge (colour-coded by status),
+    owner, description, behavior, acceptance criteria (as a list with
+    given/when/then), dependencies (as clickable links that navigate to
+    that module), and a history section with the change timeline.
+
+    All fetch() calls are wrapped in try/catch. Non-2xx responses are
+    treated as errors. On error, a dismissible error banner/toast appears
+    at the top of the page showing the error message. The toast can be
+    closed by clicking an "x" button on the banner.
+
+    While an approve or reject submission is in flight (after the user
+    confirms and the POST is issued), both the Approve and Reject buttons
+    on that change card are disabled. They are re-enabled when the
+    response is received (success or error).
+  acceptance_criteria:
+    - id: AC-008
+      description: tree pane shows spinner while /api/modules loads
+      given: the page has just loaded and /api/modules has not yet responded
+      when: the init fetch is in flight
+      then: a spinner element is visible in the tree pane and the tree is empty
+    - id: AC-009
+      description: tree pane hides spinner after modules load
+      given: the tree pane is showing a spinner
+      when: /api/modules responds successfully
+      then: the spinner is removed and the tree is rendered
+    - id: AC-010
+      description: detail pane shows spinner while module detail loads
+      given: the user clicks a module in the tree
+      when: the detail fetches are in flight
+      then: a spinner is visible in the detail pane
+    - id: AC-011
+      description: detail pane hides spinner after detail loads
+      given: the detail pane is showing a spinner
+      when: both /api/modules/:path and /api/modules/:path/changes respond
+      then: the spinner is removed and the detail content is rendered
+    - id: AC-012
+      description: non-2xx response on /api/modules shows error toast
+      given: /api/modules returns a 500 response
+      when: the init fetch completes
+      then: a dismissible error toast appears with a message describing the failure
+    - id: AC-013
+      description: network error on /api/modules shows error toast
+      given: the network is unavailable when /api/modules is fetched
+      when: the fetch throws
+      then: a dismissible error toast appears with the error message
+    - id: AC-014
+      description: non-2xx response on detail fetch shows error toast
+      given: /api/modules/:path returns a 404
+      when: the user clicks a module node
+      then: a dismissible error toast appears and the detail pane is not updated
+    - id: AC-015
+      description: error toast is dismissible
+      given: an error toast is visible
+      when: the user clicks the close (x) button on the toast
+      then: the toast is removed from the DOM
+    - id: AC-016
+      description: approve button is disabled while submission is in flight
+      given: a change card is showing with Approve and Reject buttons
+      when: the user clicks Approve and the POST has not yet responded
+      then: both the Approve and Reject buttons on that card are disabled
+    - id: AC-017
+      description: buttons re-enable after approve submission completes
+      given: the Approve POST for a change card is in flight
+      when: the server responds (success or error)
+      then: the Approve and Reject buttons on that card are re-enabled
+    - id: AC-018
+      description: reject button is disabled while submission is in flight
+      given: the user provides a comment and clicks Reject
+      when: the POST has not yet responded
+      then: both the Approve and Reject buttons on that card are disabled

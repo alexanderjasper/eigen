@@ -5,12 +5,12 @@ author: alexander
 type: updated
 summary: Add spec-navigator/change-review as a dependency
 reason: |
-    The change-review sub-module was added to handle the review handoff flow.
-    The parent spec-navigator module should declare this dependency so the
-    module tree is complete and navigable.
-status: approved
+  The change-review sub-module was added to handle the review handoff flow.
+  The parent spec-navigator module should declare this dependency so the
+  module tree is complete and navigable.
+status: compiled
 changes:
-    dependencies:
-        - spec-navigator/api
-        - spec-navigator/ui
-        - spec-navigator/change-review
+  dependencies:
+    - spec-navigator/api
+    - spec-navigator/ui
+    - spec-navigator/change-review

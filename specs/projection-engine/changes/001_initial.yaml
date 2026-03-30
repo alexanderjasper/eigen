@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for the projection engine
@@ -8,6 +8,7 @@ reason: |
   Eigen applies its own methodology from day one. The projection engine is the
   core artifact that makes specs real: it folds change events into a readable,
   diffable spec.yaml projection.
+status: compiled
 changes:
   title: Projection Engine
   owner: eigen

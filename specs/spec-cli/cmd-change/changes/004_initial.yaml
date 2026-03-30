@@ -1,6 +1,6 @@
 id: chg-004
 sequence: 4
-timestamp: 2026-03-21T06:33:11Z
+timestamp: "2026-03-21T06:33:11Z"
 author: alexander
 type: updated
 summary: Rename "spec event" command to "spec change"
@@ -8,6 +8,7 @@ reason: |
   As part of the "event" → "change" terminology refactoring, this command
   is renamed from "spec event" to "spec change" to align with updated
   projection engine terminology and make the user-facing API consistent.
+status: compiled
 changes:
   title: spec change
   description: |

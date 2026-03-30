@@ -5,111 +5,137 @@ owner: eigen
 title: Change Review
 status: draft
 description: |
-    spec-navigator/change-review defines the HTTP API and server-side session
-    management for the change-file review handoff. When eigen-change finishes
-    writing spec changes, it POSTs them to the navigator, which creates a
-    review session and exposes it in the browser UI. The skill then polls
-    until the reviewer submits their decision (approved or rejected with
-    optional per-change comments), at which point the skill reads the result
-    and continues the workflow.
+  spec-navigator/change-review defines the HTTP API for approving or rejecting
+  individual change files via the spec-navigator. There are no review sessions —
+  the change files themselves carry their status (draft, approved, compiled) and
+  an optional review_comment field. The UI reads draft changes from the existing
+  module changes endpoint and writes decisions back via approve/reject endpoints.
+  The eigen-change skill polls the module changes endpoint and watches for status
+  transitions instead of polling a session endpoint.
 behavior: |
-    POST /api/reviews creates a new review session from a batch of changes.
-    Request body: { "module_path": string, "changes": [ { "change_id": string, "file_path": string, "change_yaml": string } ] }.
-    Response: 201 Created with body { "session_id": "<uuid>" }.
-    The session_id is a server-generated UUID. Each POST creates a new
-    independent session (no duplicate detection).
+  The session-based review API is removed entirely:
+  - POST /api/reviews — removed
+  - GET /api/reviews/pending — removed
+  - GET /api/reviews/<session-id> — removed
+  - POST /api/reviews/<session-id>/submit — removed
+  - The ReviewSession struct, reviewStore map, and generateSessionID function are
+    removed from the server package.
 
-    GET /api/reviews/pending returns { "session_id": "<uuid>" } for the first
-    pending session, or 204 No Content when no pending sessions exist. The UI
-    polls this endpoint to discover new sessions without knowing session IDs
-    in advance.
+  Two new endpoints are added under the existing /api/modules/ prefix:
 
-    GET /api/reviews/<session-id> returns the current session state.
-    Response fields: session_id, module_path, changes (array), status
-    ("pending" | "submitted"), decision ("" | "approved" | "rejected"),
-    change_comments (map keyed by change_id). Returns 404 if no session
-    exists for the given ID.
+  POST /api/modules/<module-path>/changes/<filename>/approve
+    Sets the change file's status to "approved" by calling
+    storage.SetChangeStatus(specsRoot, modulePath, filename, "approved").
+    Response: 200 OK with body { "status": "approved" }.
+    Returns 404 if the change file does not exist.
 
-    POST /api/reviews/<session-id>/submit records the reviewer's decision.
-    Request body: { "decision": "approved" | "rejected", "change_comments": { "<change_id>": "<comment>" } }.
-    Transitions session status to "submitted". Returns 200 on success,
-    404 if no session exists.
+  POST /api/modules/<module-path>/changes/<filename>/reject
+    Request body: { "comment": "<string>" }.
+    Leaves the change file's status as "draft" and writes the comment string
+    to the change file's review_comment field via storage.SetChangeComment.
+    Response: 200 OK with body { "status": "draft", "review_comment": "<string>" }.
+    Returns 404 if the change file does not exist.
+    Returns 400 if the comment field is missing or empty.
 
-    eigen-change polls GET /api/reviews/<session-id> every 3 seconds. When
-    status becomes "submitted" it reads the decision:
-      - "approved": proceed to compile phase.
-      - "rejected": use change_comments as feedback, invoke spec-agent to
-        write a new change file, then restart the spec phase.
+  A review_comment field is added to the spec.Change struct (yaml tag
+  "review_comment", json tag "review_comment"). It is a string, omitempty.
+  When present it is persisted in the change YAML file and returned by
+  GET /api/modules/<path>/changes alongside all other change fields.
 
-    Review sessions are held only in memory and are not persisted to disk.
+  A new storage function SetChangeComment(specsRoot, modulePath, filename, comment)
+  reads the change file, sets review_comment, and writes it back using
+  marshalCanonical, preserving canonical YAML formatting.
 
-    All endpoints return JSON with Content-Type application/json. Errors
-    return a JSON object with an "error" key and an appropriate HTTP status.
+  A new CLI command is added:
+    eigen spec change-comment <module-path> <filename> <comment>
+  It calls storage.SetChangeComment and prints confirmation. This allows agents
+  to record rejection feedback without manually editing YAML.
+
+  The UI pending-review panel queries GET /api/modules/<path>/changes and filters
+  client-side for changes with status "draft" (or absent status, which is treated
+  as draft). Each change displays approve and reject buttons. Approve calls
+  POST /api/modules/<path>/changes/<filename>/approve. Reject prompts for a
+  comment and calls POST /api/modules/<path>/changes/<filename>/reject.
+
+  Agent polling: eigen-change polls GET /api/modules/<path>/changes and watches
+  for status transitions from "draft" to "approved" on the change files it
+  wrote, instead of polling /api/reviews/<session-id>. When all changes for the
+  module are approved, the agent proceeds to the compile phase. When any change
+  has a review_comment, the agent uses that comment as feedback and invokes the
+  spec-agent to write a new change file, then restarts the spec phase.
+
+  All endpoints return JSON with Content-Type application/json. Errors return a
+  JSON object with an "error" key and an appropriate HTTP status code.
 acceptance_criteria:
-    - id: AC-001
-      description: POST /api/reviews creates a pending review session with a server-generated ID
-      given: a valid request body with module_path and a changes array containing one or more entries
-      when: POST /api/reviews is received
-      then: response status is 201; body contains a "session_id" field with a UUID value; the session is stored with status "pending"
-    - id: AC-002
-      description: GET /api/reviews/pending returns the first pending session
-      given: one or more review sessions exist with status "pending"
-      when: GET /api/reviews/pending is requested
-      then: response status is 200; body contains the session_id of a pending session
-    - id: AC-003
-      description: GET /api/reviews/pending returns 204 when no sessions are pending
-      given: no review sessions exist, or all sessions have status "submitted"
-      when: GET /api/reviews/pending is requested
-      then: response status is 204 with no body
-    - id: AC-004
-      description: GET /api/reviews/<session-id> returns the full session state
-      given: a review session exists with a known session_id
-      when: GET /api/reviews/<session-id> is requested
-      then: response status is 200; body contains session_id, module_path, changes array, status, decision, and change_comments fields
-    - id: AC-005
-      description: a newly created session has pending status and empty decision
-      given: a review session was just created via POST /api/reviews
-      when: GET /api/reviews/<session-id> is requested
-      then: status is "pending", decision is "", and change_comments is empty
-    - id: AC-006
-      description: submitting an approval transitions the session to submitted
-      given: a pending review session exists
-      when: POST /api/reviews/<session-id>/submit is sent with decision "approved"
-      then: response status is 200; subsequent GET returns status "submitted" and decision "approved"
-    - id: AC-007
-      description: submitting a rejection records decision and per-change comments
-      given: a pending review session exists with changes containing change_id "chg-001"
-      when: POST /api/reviews/<session-id>/submit is sent with decision "rejected" and change_comments mapping "chg-001" to a comment string
-      then: subsequent GET returns status "submitted", decision "rejected", and the provided change_comments map
-    - id: AC-008
-      description: GET for a non-existent session returns 404
-      given: no session exists with the given ID
-      when: GET /api/reviews/<session-id> is requested
-      then: response status is 404; body is a JSON object with an "error" key
-    - id: AC-009
-      description: submitting to a non-existent session returns 404
-      given: no session exists with the given ID
-      when: POST /api/reviews/<session-id>/submit is sent
-      then: response status is 404; body is a JSON object with an "error" key
-    - id: AC-010
-      description: approved decision causes eigen-change to proceed to compile
-      given: eigen-change is polling a session and receives status "submitted" with decision "approved"
-      when: the poll result is read
-      then: eigen-change proceeds to the compile phase without additional user interaction
-    - id: AC-011
-      description: rejected decision causes eigen-change to run the spec feedback loop
-      given: eigen-change is polling a session and receives status "submitted" with decision "rejected" and non-empty change_comments
-      when: the poll result is read
-      then: eigen-change uses the comments as feedback, invokes spec-agent to write a new change file, then restarts the spec phase
+  - id: AC-012
+    description: approve endpoint sets change file status to approved
+    given: a module "test-mod" exists with a draft change file "002_feature.yaml"
+    when: POST /api/modules/test-mod/changes/002_feature.yaml/approve is sent
+    then: response status is 200; body contains status approved; the change file on disk has status approved
+  - id: AC-013
+    description: approve endpoint returns 404 for non-existent change file
+    given: no change file named "999_missing.yaml" exists for module "test-mod"
+    when: POST /api/modules/test-mod/changes/999_missing.yaml/approve is sent
+    then: response status is 404; body contains an "error" key
+  - id: AC-014
+    description: reject endpoint writes review_comment and keeps status as draft
+    given: a module "test-mod" exists with a draft change file "002_feature.yaml"
+    when: POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with body containing comment 'needs more detail on edge cases'
+    then: response status is 200; body contains status draft and review_comment with the given comment; the change file on disk has review_comment set and status remains draft
+  - id: AC-015
+    description: reject endpoint returns 400 when comment is missing or empty
+    given: a module "test-mod" exists with a draft change file "002_feature.yaml"
+    when: POST /api/modules/test-mod/changes/002_feature.yaml/reject is sent with an empty or missing comment field
+    then: response status is 400; body contains an "error" key
+  - id: AC-016
+    description: reject endpoint returns 404 for non-existent change file
+    given: no change file named "999_missing.yaml" exists for module "test-mod"
+    when: POST /api/modules/test-mod/changes/999_missing.yaml/reject is sent with body containing a comment
+    then: response status is 404; body contains an "error" key
+  - id: AC-017
+    description: review_comment field is present in Change struct and persisted to YAML
+    given: a change file exists with no review_comment
+    when: storage.SetChangeComment is called with a non-empty comment string
+    then: the change file on disk contains a review_comment field with the given value; reading the file back via storage.ReadChanges returns the comment in the ReviewComment field
+  - id: AC-018
+    description: review_comment is returned by the changes API endpoint
+    given: a change file has a review_comment set
+    when: GET /api/modules/test-mod/changes is requested
+    then: the response JSON array includes the change with its review_comment field populated
+  - id: AC-019
+    description: CLI change-comment command writes review_comment to a change file
+    given: a module test-mod exists with a change file 002_feature.yaml
+    when: eigen spec change-comment test-mod 002_feature.yaml 'needs edge case handling' is run
+    then: the command exits 0; the change file on disk contains review_comment 'needs edge case handling'
+  - id: AC-020
+    description: UI filters draft changes for pending review display
+    given: a module has changes with statuses draft, approved, and compiled
+    when: the UI pending-review panel loads
+    then: only changes with status draft (or absent status) are shown in the review list
+  - id: AC-021
+    description: agent polls module changes endpoint for status transitions
+    given: eigen-change has written draft change files for a module
+    when: the agent polls GET /api/modules/test-mod/changes
+    then: the agent detects when all draft changes transition to approved and proceeds to compile; if any change has a review_comment, the agent uses it as feedback for the spec-agent
+  - id: AC-022
+    description: reviews.go file is removed or gutted
+    given: the session-based review code exists in eigen/internal/server/reviews.go
+    when: this change is implemented
+    then: reviews.go is deleted and all review route registrations are removed from server.go
 dependencies:
-    - spec-navigator/api
-    - spec-navigator/ui
-    - ai-agent/skill-change
+  - spec-navigator/api
+  - spec-navigator/ui
+  - ai-agent/skill-change
 technology:
-    DecisionValues: approved, rejected
-    Endpoints: POST /api/reviews, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit, GET /api/reviews/pending
-    PollingInterval: 3 seconds
-    SessionID: server-generated UUID (crypto/rand)
-    SessionStorage: in-memory only (no disk persistence)
-last_change: chg-001
-changes_count: 1
+  DecisionValues: approved, rejected
+  Endpoints: POST /api/modules/<path>/changes/<filename>/approve, POST /api/modules/<path>/changes/<filename>/reject
+  NewCLICommand: eigen spec change-comment <module-path> <filename> <comment>
+  NewField: 'spec.Change.ReviewComment (yaml: review_comment)'
+  NewStorageFunc: SetChangeComment
+  PollingInterval: 3 seconds
+  RemovedEndpoints: POST /api/reviews, GET /api/reviews/pending, GET /api/reviews/<session-id>, POST /api/reviews/<session-id>/submit
+  RemovedTypes: ReviewSession, ChangeEntry, reviewStore, generateSessionID
+  SessionID: server-generated UUID (crypto/rand)
+  SessionStorage: in-memory only (no disk persistence)
+last_change: chg-002
+changes_count: 2

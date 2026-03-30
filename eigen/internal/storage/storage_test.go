@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -416,6 +417,85 @@ func TestSetChangeStatus(t *testing.T) {
 	})
 }
 
+func TestSetChangeComment(t *testing.T) {
+	t.Run("sets_comment_preserves_fields", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{
+			ID:       "chg-001",
+			Sequence: 1,
+			Author:   "alice",
+			Summary:  "initial",
+			Status:   "draft",
+		}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeComment(root, "mymod", "001_initial.yaml", "needs more detail"); err != nil {
+			t.Fatalf("SetChangeComment error: %v", err)
+		}
+
+		// Read back
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].ReviewComment != "needs more detail" {
+			t.Errorf("ReviewComment = %q, want 'needs more detail'", changes[0].ReviewComment)
+		}
+		if changes[0].Author != "alice" {
+			t.Errorf("Author = %q, want alice", changes[0].Author)
+		}
+		if changes[0].Status != "draft" {
+			t.Errorf("Status = %q, want draft", changes[0].Status)
+		}
+	})
+
+	t.Run("error_nonexistent", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "mymod")
+
+		err := SetChangeComment(root, "mymod", "999_nope.yaml", "comment")
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+	})
+
+	t.Run("roundtrip_via_ReadChanges", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{
+			ID:       "chg-001",
+			Sequence: 1,
+			Summary:  "feature",
+			Status:   "draft",
+		}
+		writeChangeFile(t, changesDir, ch, "feature")
+
+		if err := SetChangeComment(root, "mymod", "001_feature.yaml", "edge case handling"); err != nil {
+			t.Fatalf("SetChangeComment error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].ReviewComment != "edge case handling" {
+			t.Errorf("ReviewComment = %q, want 'edge case handling'", changes[0].ReviewComment)
+		}
+		if changes[0].Filename != "001_feature.yaml" {
+			t.Errorf("Filename = %q, want '001_feature.yaml'", changes[0].Filename)
+		}
+	})
+}
+
 func TestFilterChangesByStatus(t *testing.T) {
 	t.Run("filters_matching", func(t *testing.T) {
 		changes := []spec.Change{
@@ -523,4 +603,175 @@ func TestWalkModules(t *testing.T) {
 			t.Fatal("expected error, got nil")
 		}
 	})
+}
+
+// TestWriteChangeIndentation verifies AC-025: WriteChange uses 2-space indentation.
+func TestWriteChangeIndentation(t *testing.T) {
+	root := t.TempDir()
+	setupModule(t, root, "mymod")
+
+	ch := spec.Change{
+		ID:        "chg-001",
+		Sequence:  1,
+		Timestamp: "2026-01-01T00:00:00Z",
+		Author:    "bob",
+		Type:      "created",
+		Summary:   "initial",
+		Status:    "draft",
+		Changes: spec.ChangeSet{
+			Title:       "T",
+			Description: "D",
+		},
+	}
+
+	if err := WriteChange(root, "mymod", ch, "initial"); err != nil {
+		t.Fatalf("WriteChange error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(ChangesPath(root, "mymod"), "001_initial.yaml"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "\n    ") {
+		t.Errorf("output file contains 4-space indentation; want 2-space:\n%s", content)
+	}
+}
+
+// TestWriteChangeOmitsZeroValues verifies AC-026: WriteChange omits zero-value header fields.
+func TestWriteChangeOmitsZeroValues(t *testing.T) {
+	root := t.TempDir()
+	setupModule(t, root, "mymod")
+
+	// ID, Sequence, Timestamp, Author are all zero values
+	ch := spec.Change{
+		Type:    "created",
+		Summary: "something",
+		Status:  "draft",
+	}
+
+	if err := WriteChange(root, "mymod", ch, "something"); err != nil {
+		t.Fatalf("WriteChange error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(ChangesPath(root, "mymod"), "000_something.yaml"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+	content := string(data)
+	for _, key := range []string{"id:", "sequence:", "timestamp:", "author:"} {
+		if strings.Contains(content, key) {
+			t.Errorf("output file contains zero-value key %q; want it omitted:\n%s", key, content)
+		}
+	}
+}
+
+// TestSetChangeStatusPreservesIndentation verifies AC-027: SetChangeStatus preserves 2-space indentation.
+func TestSetChangeStatusPreservesIndentation(t *testing.T) {
+	root := t.TempDir()
+	changesDir := setupModule(t, root, "mymod")
+
+	// Write a file with 2-space indented content directly
+	content := `id: chg-001
+sequence: 1
+timestamp: "2026-01-01T00:00:00Z"
+author: alice
+type: created
+summary: initial
+status: draft
+changes:
+  title: My Title
+`
+	filename := "001_initial.yaml"
+	if err := os.WriteFile(filepath.Join(changesDir, filename), []byte(content), 0644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+
+	if err := SetChangeStatus(root, "mymod", filename, "approved"); err != nil {
+		t.Fatalf("SetChangeStatus error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(changesDir, filename))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+	result := string(data)
+
+	if strings.Contains(result, "\n    ") {
+		t.Errorf("rewritten file contains 4-space indentation; want 2-space:\n%s", result)
+	}
+	if !strings.Contains(result, "id: chg-001") {
+		t.Errorf("rewritten file missing original id:\n%s", result)
+	}
+	if !strings.Contains(result, "author: alice") {
+		t.Errorf("rewritten file missing original author:\n%s", result)
+	}
+	if !strings.Contains(result, "timestamp:") {
+		t.Errorf("rewritten file missing original timestamp:\n%s", result)
+	}
+}
+
+// TestSetChangeStatusNoZeroKeys verifies AC-028: SetChangeStatus does not introduce zero-value keys absent from the original.
+func TestSetChangeStatusNoZeroKeys(t *testing.T) {
+	root := t.TempDir()
+	changesDir := setupModule(t, root, "mymod")
+
+	// File with no "author:" key
+	content := `sequence: 1
+type: created
+summary: initial
+status: draft
+changes:
+  title: T
+`
+	filename := "001_initial.yaml"
+	if err := os.WriteFile(filepath.Join(changesDir, filename), []byte(content), 0644); err != nil {
+		t.Fatalf("writing fixture: %v", err)
+	}
+
+	if err := SetChangeStatus(root, "mymod", filename, "approved"); err != nil {
+		t.Fatalf("SetChangeStatus error: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(changesDir, filename))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+	result := string(data)
+
+	if strings.Contains(result, "author:") {
+		t.Errorf("rewritten file unexpectedly contains 'author:' key:\n%s", result)
+	}
+}
+
+// TestWriteSpecIndentation verifies AC-029: WriteSpec uses 2-space indentation.
+func TestWriteSpecIndentation(t *testing.T) {
+	root := t.TempDir()
+	setupModule(t, root, "mymod")
+
+	// Note: no AcceptanceCriteria to avoid depth-2 content producing legitimate 4-space lines
+	s := spec.SpecModule{
+		ID:          "d/m",
+		Domain:      "d",
+		Module:      "m",
+		Owner:       "alice",
+		Title:       "My Spec",
+		Status:      "draft",
+		Description: "desc",
+		Behavior:    "beh",
+		Dependencies: []string{"dep-a"},
+	}
+
+	if err := WriteSpec(root, "mymod", s); err != nil {
+		t.Fatalf("WriteSpec error: %v", err)
+	}
+
+	data, err := os.ReadFile(SpecPath(root, "mymod"))
+	if err != nil {
+		t.Fatalf("reading file: %v", err)
+	}
+	content := string(data)
+	if strings.Contains(content, "\n    ") {
+		t.Errorf("output file contains 4-space indentation; want 2-space:\n%s", content)
+	}
 }

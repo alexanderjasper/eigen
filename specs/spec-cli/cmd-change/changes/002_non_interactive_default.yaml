@@ -1,6 +1,6 @@
 id: chg-002
 sequence: 2
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: updated
 summary: Make non-interactive the default; add --edit flag for terminal use
@@ -8,6 +8,7 @@ reason: |
   The primary user of eigen is an AI coding agent (Claude Code) that edits
   files directly. Opening $EDITOR unconditionally blocks automated workflows.
   Non-interactive should be the default; humans who want an editor can opt in.
+status: compiled
 changes:
   description: |
     The spec event command records a new change event against an existing
