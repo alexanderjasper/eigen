@@ -125,7 +125,8 @@ func writeChangeViaEditor(path string, seq int, template string) error {
 }
 
 func buildChangeTemplate(seq int) string {
-	return fmt.Sprintf(`id: chg-%03d
+	return fmt.Sprintf(`format: eigen/v1
+id: chg-%03d
 sequence: %d
 timestamp: %s
 author: ""
