@@ -13,6 +13,7 @@ reason: |
   module deprecated (with a reason explaining what replaces it), surface
   a warning to consumers of that module, and ultimately mark it removed
   so it disappears from default views while remaining in git history.
+status: approved
 changes:
   behavior: |
     Changes are applied in ascending sequence order. Simple fields (title, owner,
@@ -47,12 +48,12 @@ changes:
     The ChangeSet struct gains a matching DeprecationReason field.
   acceptance_criteria:
     - id: AC-028
-      description: "Module status: deprecated is a valid value"
+      description: 'Module status: deprecated is a valid value'
       given: A change sets status to deprecated
       when: Project() is called
       then: The resulting SpecModule has Status "deprecated"
     - id: AC-029
-      description: "Module status: removed is a valid value"
+      description: 'Module status: removed is a valid value'
       given: A change sets status to removed
       when: Project() is called
       then: The resulting SpecModule has Status "removed"
@@ -67,17 +68,17 @@ changes:
       when: Project() is called
       then: The resulting SpecModule has DeprecationReason empty
     - id: AC-032
-      description: "Validation: depending on a deprecated module emits a warning"
+      description: 'Validation: depending on a deprecated module emits a warning'
       given: Module A depends on module B, and module B's spec.yaml has status deprecated
       when: Validate() is called for module A with a specsRoot that contains B's spec.yaml
       then: A ValidationWarning is returned for the dependency naming module B as deprecated
     - id: AC-033
-      description: "Validation: depending on a non-deprecated module emits no warning"
+      description: 'Validation: depending on a non-deprecated module emits no warning'
       given: Module A depends on module B, and module B's spec.yaml has status draft
       when: Validate() is called for module A
       then: No ValidationWarning is returned for that dependency
     - id: AC-034
-      description: "Validation: removed module does not emit a deprecation warning"
+      description: 'Validation: removed module does not emit a deprecation warning'
       given: Module A depends on module B, and module B's spec.yaml has status removed
       when: Validate() is called for module A
       then: No ValidationWarning is returned about deprecation for that dependency (the existing broken-dependency error check covers removed modules separately)
