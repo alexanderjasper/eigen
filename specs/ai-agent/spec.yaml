@@ -10,74 +10,68 @@ description: |-
   This skill replaces the current separate eigen-spec, eigen-plan, and eigen-compile skills, providing a
   seamless workflow where users invoke one skill, approve outputs after each phase, and provide feedback
   on rejections. The skill handles all agent invocation, approval prompts, feedback loops, and commits.
-behavior: |
-  The ai-agent framework enables multi-phase feature development through specialized
-  subagents. A parent skill (eigen-change) orchestrates spec-agent, plan-agent, and
-  compile-agent in sequence. The parent handles approval gates, feedback loops, and
-  commits; each subagent handles its specific phase. Subagents are defined as
-  .claude/agents/*.md files and invoked via the Agent tool's subagent_type parameter.
-  Each subagent has full codebase access (Glob, Grep, Read, Bash, Edit, Write, etc.).
 acceptance_criteria:
   - id: AC-001
-    description: |
+    description: |-
       Agent tool can invoke subagents with subagent_type parameter (e.g., subagent_type: spec-agent).
       Each subagent has full codebase access (Glob, Grep, Read, Bash, Edit, Write, etc.).
-    given: A Claude Code skill that needs to delegate work to a specialized subagent
-    when: The Agent tool is called with subagent_type set to a named agent (e.g. spec-agent)
-    then: The named agent launches with full codebase access tools available
+    given: ""
+    when: ""
+    then: ""
   - id: AC-002
-    description: |
+    description: |-
       Multi-phase workflow: agents produce outputs to files, outputs are displayed to user,
       user approves via yes/no prompt, progression to next phase depends on approval.
-    given: A user invokes the /change skill with a feature description
-    when: Each phase (spec, plan, compile) completes its work
-    then: The orchestrating skill presents the output and prompts for approval before proceeding
+    given: ""
+    when: ""
+    then: ""
   - id: AC-003
-    description: |
+    description: |-
       If user rejects output, they can provide feedback/comments. The workflow supports re-running
       the same subagent with user feedback as context for improvement.
-    given: A user rejects the output of a phase with optional feedback text
-    when: The rejection is recorded by the orchestrating skill
-    then: The skill re-runs the failed phase with the feedback incorporated via spec-agent
+    given: ""
+    when: ""
+    then: ""
   - id: AC-004
-    description: |
+    description: |-
       Each agent phase produces one or more small atomic commits. Commits are made by the agent
       as part of its execution, following the "commit as you go" pattern.
-    given: A phase completes and makes changes to the repository
-    when: The agent produces code or spec changes
-    then: Each logical unit of change is committed atomically with a conventional commit message
+    given: ""
+    when: ""
+    then: ""
   - id: AC-005
-    description: |
+    description: |-
       Framework documentation describes how to build skills that use agents, including:
       how to invoke agents, structure approval gates, handle feedback loops, and manage commits.
-    given: A developer reads the .claude/agents/ and .claude/skills/ definitions
-    when: They want to understand how to build a multi-phase agent skill
-    then: The definitions are self-documenting and sufficient to understand invocation, approval gates, feedback loops, and commits
+    given: ""
+    when: ""
+    then: ""
   - id: AC-006
-    description: |
+    description: |-
       The `change` skill completely subsumes the functionality of eigen-spec, eigen-plan, and
       eigen-compile. A user creating a feature no longer invokes three separate skills.
-    given: The /change skill is implemented and deployed
-    when: A user wants to create a new feature using the full spec+plan+compile workflow
-    then: A single /change invocation handles all phases; no separate skill invocations are needed
+    given: ""
+    when: ""
+    then: ""
   - id: AC-007
-    description: |
+    description: |-
       After `change` skill launches, deprecate eigen-spec, eigen-plan, and eigen-compile skills
       or mark them as legacy. Determine if they should remain available or be removed entirely.
-    given: The /change skill is available
-    when: The legacy eigen-spec, eigen-plan, and eigen-compile skills are evaluated
-    then: They are deprecated or marked as legacy, with /change and its companions as the replacement
+    given: ""
+    when: ""
+    then: ""
   - id: AC-008
-    description: |
+    description: |-
       The spec-subagent used by `change` skill should be able to ask the same clarifying
       questions that human using eigen-spec would ask (based on current eigen-spec skill definition).
-    given: The spec-agent definition is deployed
-    when: The spec-agent is invoked with a feature description
-    then: The agent asks up to 5 clarifying questions covering scope and edge cases before writing the spec
-dependencies: []
+    given: ""
+    when: ""
+    then: ""
+dependencies:
+  - Analysis of which parts of eigen-spec/plan/compile skill definitions can be reused in subagent prompts
+  - Decision on whether to keep legacy skills available or deprecate them
 technology:
   Claude-API: Claude Opus 4.6 (or latest)
   OutputFormats: changes/*.yaml, spec.yaml, markdown
   SubagentTypes: spec-subagent, plan-subagent, compile-subagent
-last_change: chg-003
-changes_count: 3
+changes_count: 2

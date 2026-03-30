@@ -9,81 +9,77 @@ description: |-
   or codebase structure. It discovers how to build the project (Makefile, package.json,
   go.mod, etc.) and which patterns to follow by reading existing code. All implementation
   guidance comes from the spec and plan files, not from baked-in codebase knowledge.
-behavior: |
-  compile-agent receives a spec path and an approved plan as inline content. It reads both
-  completely before writing any code. It discovers the build system and code patterns by
-  reading the target codebase at runtime — no project-specific knowledge is baked into the
-  agent definition. For each plan step it makes the specified changes, verifies the result
-  (running tests if applicable), and commits atomically. After completing all steps it
-  verifies spec acceptance criteria are satisfied and reports any that cannot be tested yet.
-  It marks each compiled change via eigen spec change-status once the build passes.
 acceptance_criteria:
   - id: AC-001
-    description: |
+    description: |-
       compile-subagent reads approved plan and spec, and executes the plan step-by-step.
       For each step: makes specified code changes, tests if applicable, commits with
       conventional message.
-    given: compile-agent has received SPEC_PATH and the approved plan as inline text
-    when: Execution begins
-    then: The agent reads both the spec and the plan completely before making any code changes
+    given: ""
+    when: ""
+    then: ""
   - id: AC-002
-    description: |
+    description: |-
       Makes small atomic commits after each logical step. Uses conventional commit format
       following the project's pattern (e.g., `feat(<area>): <summary>`, `fix:<summary>`, etc.).
-    given: A logical implementation step has been completed
-    when: The agent commits the change
-    then: The commit is atomic and uses conventional commit format matching the project's existing pattern
+    given: ""
+    when: ""
+    then: ""
   - id: AC-003
-    description: |
+    description: |-
       Verifies that each implementation step produces the intended result. For changes that
       have tests, runs tests. For changes that affect UI, describes testing approach.
-    given: An implementation step has been applied
-    when: The agent verifies the result
-    then: Tests are run if available; for UI changes the testing approach is described
+    given: ""
+    when: ""
+    then: ""
   - id: AC-004
-    description: |
+    description: |-
       After completing all plan steps, verifies that spec acceptance criteria are satisfied.
       Reports any acceptance criteria that cannot be tested yet (e.g., require deployment).
-    given: All plan steps have been executed
-    when: The agent reviews the spec acceptance criteria
-    then: It reports which criteria are satisfied and flags any that cannot be verified yet (e.g. require deployment)
+    given: ""
+    when: ""
+    then: ""
   - id: AC-005
-    description: |
+    description: |-
       Does not add features, refactor code, or make improvements beyond the plan. Follows
       "exactly what the plan says" principle. Only makes decisions for implementation details
       (e.g., variable names, helper functions) not covered by plan.
-    given: The approved plan specifies a set of changes
-    when: compile-agent implements those changes
-    then: No features, refactors, or improvements are added beyond what the plan specifies
+    given: ""
+    when: ""
+    then: ""
   - id: AC-006
-    description: |
+    description: |-
       compile-subagent accepts plan.md file path in its invocation prompt.
       Reads the file completely before starting implementation.
-    given: compile-agent is invoked with a plan
-    when: The agent starts
-    then: It receives the plan as inline content (or file path) and reads it completely before implementation
+    given: ""
+    when: ""
+    then: ""
   - id: AC-007
-    description: |
+    description: |-
       Each implementation step in the plan is executed as documented. If the plan is ambiguous,
       compile-subagent reports the ambiguity rather than inferring. The plan is detailed enough
       to avoid this situation.
-    given: The plan contains an ambiguous step
-    when: compile-agent encounters it
-    then: The agent reports the ambiguity and stops rather than inferring an unspecified implementation
+    given: ""
+    when: ""
+    then: ""
   - id: AC-008
-    description: |
+    description: |-
       compile-agent does not reference any project-specific paths, frameworks, or tools
       in its agent definition. Build commands and code patterns are discovered by reading
       the target codebase at runtime.
-    given: The compile-agent definition file is read
-    when: A reviewer checks it for project-specific references
-    then: No project-specific paths, frameworks, or build commands appear in the definition; all are discovered at runtime
-dependencies: []
+    given: ""
+    when: ""
+    then: ""
+dependencies:
+  - approved plan (markdown)
+  - approved spec (spec.yaml)
+  - codebase with ability to edit/write files
+  - git commands for commits
+  - test running capability (optional)
 technology:
   CommitPattern: 'feat/fix/refactor/docs/test(<area>): <summary>'
   Input: plan.md path, spec.yaml path
   Output: git commits on feature branch
   TestFramework: project-specific (go test, npm test, pytest, etc.)
   Tools: Glob, Grep, Read, Edit, Write, Bash, Git
-last_change: chg-004
-changes_count: 4
+changes_count: 3

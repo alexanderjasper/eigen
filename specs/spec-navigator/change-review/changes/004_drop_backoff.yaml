@@ -1,0 +1,82 @@
+format: eigen/v1
+id: chg-004
+sequence: 4
+timestamp: 2026-03-30T00:00:00Z
+author: alexander
+type: updated
+summary: Drop backoff complexity — fixed interval poller only
+reason: |
+  The tool runs locally so poll cost is negligible. Backoff adds implementation
+  complexity (consecutive-no-draft counter, two intervals, reset logic) with no
+  meaningful benefit. Keep the meaningful improvements from chg-003 — setTimeout
+  chain, pause/resume on panel visibility, explicit stopReviewPoller cleanup — and
+  use a simple fixed 3000ms interval matching the original behavior.
+changes:
+  behavior: |
+    The session-based review API is removed entirely (unchanged from chg-002).
+
+    Two endpoints remain (unchanged from chg-002):
+    POST /api/modules/<module-path>/changes/<filename>/approve
+    POST /api/modules/<module-path>/changes/<filename>/reject
+
+    review_comment field, SetChangeComment storage function, and eigen spec
+    change-comment CLI command are unchanged from chg-002.
+
+    UI pending-review polling is replaced as follows:
+
+    startReviewPoller() is replaced with a setTimeout-chain implementation.
+    A module-level variable `reviewPollerTimer` holds the current pending
+    setTimeout handle (or null when stopped).
+
+    Polling behaviour:
+    - Fixed poll interval is 3000ms.
+    - No backoff and no consecutive-no-draft counter.
+    - After each poll (whether draft changes are found or not), the next poll
+      is scheduled 3000ms after the current fetch resolves or rejects.
+    - When the review panel becomes visible (showReviewPanel is called), polling
+      is paused: the pending setTimeout is cleared and reviewPollerTimer is set
+      to null. Polling does not restart until the panel is hidden.
+    - When the review panel is hidden (hideReviewPanel is called), polling
+      resumes: the next poll is scheduled 3000ms later.
+    - stopReviewPoller() clears the pending timer and sets reviewPollerTimer to
+      null. It is called on hideReviewPanel and may be called at any time to
+      halt polling.
+    - The poller uses a setTimeout chain: the next poll is scheduled only after
+      the current fetch resolves (or rejects), so slow server responses cannot
+      cause poll requests to stack.
+
+    All other UI behaviour is unchanged from chg-002.
+  technology:
+    PollingInterval: 3000ms fixed (no backoff)
+    PollingMechanism: setTimeout chain (not setInterval)
+    BackoffThreshold: removed
+  acceptance_criteria:
+    - id: AC-024
+      description: fixed poll interval is 3000ms
+      given: the review poller is running
+      when: any poll callback completes (regardless of whether draft changes were found)
+      then: the next poll is scheduled 3000ms later; there is no varying interval and no consecutive-no-draft counter
+    - id: AC-025
+      description: polling pauses when the review panel becomes visible
+      given: the review poller is running with a pending setTimeout
+      when: showReviewPanel is called (draft changes found)
+      then: the pending setTimeout is cleared and no new poll is scheduled until the panel is hidden
+    - id: AC-026
+      description: polling resumes when the review panel is hidden
+      given: polling was paused because the review panel was visible
+      when: hideReviewPanel is called
+      then: the next poll is scheduled 3000ms later and polling continues at the fixed interval
+    - id: AC-027
+      description: stopReviewPoller clears the pending timer
+      given: a setTimeout is pending for the next poll
+      when: stopReviewPoller() is called
+      then: the timer is cleared, reviewPollerTimer is null, and no further polls are scheduled
+    - id: AC-028
+      description: slow server response does not cause poll stacking
+      given: the server takes longer than 3000ms to respond to a fetch
+      when: the timeout would have fired a second time under setInterval
+      then: no second fetch is issued until the first fetch resolves and schedules the next poll
+    - id: AC-029
+      removed: true
+    - id: AC-030
+      removed: true
