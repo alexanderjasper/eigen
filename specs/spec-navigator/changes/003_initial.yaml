@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-003
 sequence: 3
-timestamp: 2026-03-30T10:46:44Z
+timestamp: "2026-03-30T10:46:44Z"
 author: alexander
 type: updated
 summary: Add spec-navigator/review-ux as a dependency
@@ -9,6 +9,9 @@ reason: |
   The new review-ux sub-module defines enhanced review panel UX (list/detail
   navigation, always-visible comments, resizable panes). The parent module
   needs to declare it as a dependency.
+status: compiled
+compiled_commits:
+  - 9a0c8656d746ae0dfaa85f34c00d18eb9d59bbbb
 changes:
   dependencies:
     - spec-navigator/api
