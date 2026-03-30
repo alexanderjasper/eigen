@@ -417,6 +417,52 @@ func TestProject(t *testing.T) {
 			t.Errorf("DeprecationReason = %q, want empty after status change from deprecated", got.DeprecationReason)
 		}
 	})
+
+	t.Run("all_changes_compiled_promotes_status", func(t *testing.T) {
+		// When every change has top-level Status "compiled", the module status
+		// should be promoted to "compiled" regardless of changes.status values.
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "draft"}},
+			{ID: "chg-002", Sequence: 2, Status: "compiled", Changes: ChangeSet{Title: "updated"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "compiled" {
+			t.Errorf("Status = %q, want %q (all changes compiled)", got.Status, "compiled")
+		}
+	})
+
+	t.Run("mixed_compiled_status_no_promotion", func(t *testing.T) {
+		// If any change is not compiled, module status is not promoted.
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "draft"}},
+			{ID: "chg-002", Sequence: 2, Status: "draft", Changes: ChangeSet{Title: "updated"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "draft" {
+			t.Errorf("Status = %q, want %q (not all changes compiled)", got.Status, "draft")
+		}
+	})
+
+	t.Run("all_compiled_deprecated_not_promoted", func(t *testing.T) {
+		// deprecated and removed statuses take precedence over compiled promotion.
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "deprecated", DeprecationReason: "obsolete"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "deprecated" {
+			t.Errorf("Status = %q, want deprecated (terminal status overrides compiled promotion)", got.Status)
+		}
+	})
+
+	t.Run("all_compiled_removed_not_promoted", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "removed"}},
+		}
+		got := Project("d/m", changes)
+		if got.Status != "removed" {
+			t.Errorf("Status = %q, want removed (terminal status overrides compiled promotion)", got.Status)
+		}
+	})
 }
 
 // TestProjectCompiledCommitsNotProjected verifies AC-009: compiled_commits on a Change is not

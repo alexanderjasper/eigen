@@ -29,7 +29,11 @@ func Project(path string, changes []*Change) SpecModule {
 	acMap := map[string]AcceptanceCriterion{}
 	acOrder := []string{}
 
+	allCompiled := len(sorted) > 0
 	for _, ch := range sorted {
+		if ch.Status != "compiled" {
+			allCompiled = false
+		}
 		cs := ch.Changes
 
 		if cs.Title != "" {
@@ -71,6 +75,12 @@ func Project(path string, changes []*Change) SpecModule {
 
 		s.LastChange = ch.ID
 		s.ChangesCount++
+	}
+
+	// If every change has been compiled and no change explicitly set a terminal
+	// module status (deprecated/removed), promote the effective status to "compiled".
+	if allCompiled && s.Status != "deprecated" && s.Status != "removed" {
+		s.Status = "compiled"
 	}
 
 	// Build final AC list, excluding removed entries.
