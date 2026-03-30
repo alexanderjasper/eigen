@@ -13,7 +13,10 @@ reason: |
   render the per-worktree grouping header without parsing individual module fields,
   and a registry-watch mechanism must allow the UI to receive live updates when a
   new worktree is added.
-status: approved
+status: compiled
+compiled_commits:
+  - 923dd8a1fd7080ad063d72b2f1d63a745cbc21ac
+  - 02b3868a0f9ee01b3032bef481cd8b5a65e8499f
 changes:
   description: |
     The spec navigator API is a set of JSON endpoints served by eigen serve.

@@ -11,7 +11,9 @@ reason: |
   (and labelled with the branch name) so the user can immediately tell which
   branch a module or in-flight change belongs to. Without this grouping, a flat
   list of modules from multiple branches would be ambiguous and unusable.
-status: approved
+status: compiled
+compiled_commits:
+  - 02b3868a0f9ee01b3032bef481cd8b5a65e8499f
 changes:
   description: |
     The spec navigator UI is a single-page browser application embedded in the

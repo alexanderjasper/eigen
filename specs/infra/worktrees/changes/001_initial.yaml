@@ -44,7 +44,14 @@ reason: |
   `eigen worktree create / remove` — stored in `.eigen/worktrees.json` at the
   repo root — rather than parsing `git worktree list` output, giving eigen stable,
   structured metadata (branch name, display name, path) without shelling out.
-status: approved
+status: compiled
+compiled_commits:
+  - 18fd82d6d4c2ebab333a9a3d1b8ca27985fa5dfa
+  - 84a2ce0690de4dc9d0c8d026cf399d79ff4435c2
+  - 15e686fc37c30b19090c52cf488a1de30c8a1cd0
+  - f99b7d61b8e178c8dd3eab16a13c26d51269e8a4
+  - 0c5bbdcfc479f1786e7a5bac397478948eded112
+  - 02b3868a0f9ee01b3032bef481cd8b5a65e8499f
 changes:
   title: Worktree-Aware Developer Experience
   owner: alexander
