@@ -63,18 +63,8 @@ func Start(gitRoot, specsRoot string, port int, open bool) error {
 		CancelWatch: mainCancel,
 	}
 
-	// Load registered worktrees from registry.
-	reg, err := worktree.ReadRegistry(gitRoot)
-	if err != nil {
-		log.Printf("warning: reading worktree registry: %v", err)
-	}
-	for _, e := range reg.Entries {
-		addWorktreeToState(state, e)
-	}
-
-	// Auto-discover worktrees in .claude/worktrees/ that weren't registered via
-	// `eigen worktree create` (e.g. Claude-created worktrees).
-	discovered, err := worktree.ScanWorktreesDir(gitRoot, reg)
+	// Auto-discover worktrees in .claude/worktrees/.
+	discovered, err := worktree.ScanWorktreesDir(gitRoot)
 	if err != nil {
 		log.Printf("warning: scanning worktrees dir: %v", err)
 	}
@@ -82,13 +72,7 @@ func Start(gitRoot, specsRoot string, port int, open bool) error {
 		addWorktreeToState(state, e)
 	}
 
-	// Watch .eigen/worktrees.json for hot-reload (AC-011).
-	if gitRoot != "" {
-		regPath := worktree.RegistryPath(gitRoot)
-		go watchRegistryFile(gitRoot, regPath, state)
-	}
-
-	// Also watch .claude/worktrees/ for new directories created by Claude.
+	// Watch .claude/worktrees/ for directories created/removed while serve is running.
 	if gitRoot != "" {
 		go watchWorktreesDir(gitRoot, state)
 	}
@@ -157,50 +141,6 @@ func addWorktreeToState(state *serveState, e worktree.Entry) {
 		SpecsRoot:   entrySpecsRoot,
 		Branch:      e.Branch,
 		CancelWatch: cancel,
-	}
-}
-
-// watchRegistryFile starts a goroutine watching the registry file for changes.
-// On a write event it calls reloadRegistry.
-func watchRegistryFile(gitRoot, regPath string, state *serveState) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Printf("warning: creating registry watcher: %v", err)
-		return
-	}
-	defer watcher.Close()
-
-	eigenDir := filepath.Join(gitRoot, ".eigen")
-
-	// Try to watch the .eigen dir directly; fall back to the git root.
-	if err := watcher.Add(eigenDir); err != nil {
-		if err2 := watcher.Add(gitRoot); err2 != nil {
-			log.Printf("warning: watching for registry changes: %v", err2)
-			return
-		}
-	}
-
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			// Re-add .eigen if it was newly created (first worktree create).
-			if event.Op&fsnotify.Create != 0 {
-				_ = watcher.Add(eigenDir)
-			}
-			// Reload on writes to the registry file.
-			if event.Name == regPath &&
-				(event.Op&fsnotify.Write != 0 || event.Op&fsnotify.Create != 0) {
-				reloadRegistry(gitRoot, state)
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Printf("registry watcher error: %v", err)
-		}
 	}
 }
 
@@ -281,70 +221,6 @@ func watchWorktreesDir(gitRoot string, state *serveState) {
 				return
 			}
 			log.Printf("worktrees-dir watcher error: %v", err)
-		}
-	}
-}
-
-// reloadRegistry reads the registry from disk and reconciles it with the current state.
-// New entries get watchers; removed entries have their watchers cancelled.
-// Unchanged entries are left completely undisturbed (AC-014).
-func reloadRegistry(gitRoot string, state *serveState) {
-	reg, err := worktree.ReadRegistry(gitRoot)
-	if err != nil {
-		log.Printf("warning: reloading registry: %v", err)
-		return
-	}
-
-	state.mu.Lock()
-	defer state.mu.Unlock()
-
-	// Build a set of new entries by name.
-	newByName := make(map[string]worktree.Entry, len(reg.Entries))
-	for _, e := range reg.Entries {
-		newByName[e.Name] = e
-	}
-
-	// Cancel watchers for removed entries and delete from map.
-	for _, name := range state.order {
-		if name == "main" {
-			continue
-		}
-		if _, stillExists := newByName[name]; !stillExists {
-			if aw, ok := state.worktrees[name]; ok {
-				if aw.CancelWatch != nil {
-					aw.CancelWatch()
-				}
-				delete(state.worktrees, name)
-			}
-		}
-	}
-
-	// Rebuild order, keeping main first and purging evicted names.
-	newOrder := make([]string, 0, len(state.order))
-	newOrder = append(newOrder, "main")
-	for _, name := range state.order {
-		if name == "main" {
-			continue
-		}
-		if _, ok := state.worktrees[name]; ok {
-			newOrder = append(newOrder, name)
-		}
-	}
-	state.order = newOrder
-
-	// Open watchers for newly added entries.
-	for name, e := range newByName {
-		if _, alreadyExists := state.worktrees[name]; alreadyExists {
-			continue // unchanged — leave alone
-		}
-		entrySpecsRoot := filepath.Join(e.Path, "specs")
-		cancel, _ := watchSpecsDir(entrySpecsRoot)
-		state.order = append(state.order, name)
-		state.worktrees[name] = &activeWorktree{
-			Entry:       e,
-			SpecsRoot:   entrySpecsRoot,
-			Branch:      e.Branch,
-			CancelWatch: cancel,
 		}
 	}
 }
