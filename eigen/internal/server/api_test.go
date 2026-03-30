@@ -15,6 +15,7 @@ import (
 
 	"github.com/alexanderjasper/eigen/internal/spec"
 	"github.com/alexanderjasper/eigen/internal/storage"
+	"github.com/alexanderjasper/eigen/internal/worktree"
 )
 
 // setupModule creates the module directory and its changes/ subdirectory.
@@ -54,20 +55,72 @@ func writeChangeFile(t *testing.T, dir string, ch spec.Change, slug string) {
 	}
 }
 
+// testWorktreeEntry is used to set up extra worktrees in test state.
+type testWorktreeEntry struct {
+	name      string
+	specsRoot string
+	branch    string
+	path      string
+}
+
+// newTestState builds a serveState for testing.
+// The first specsRoot is always "main". Optional extras add additional worktrees.
+func newTestState(mainSpecsRoot string, extras ...testWorktreeEntry) *serveState {
+	state := &serveState{
+		worktrees: make(map[string]*activeWorktree),
+	}
+	state.order = append(state.order, "main")
+	state.worktrees["main"] = &activeWorktree{
+		Entry: worktree.Entry{
+			Name:   "main",
+			Branch: "main",
+			Path:   mainSpecsRoot,
+		},
+		SpecsRoot:   mainSpecsRoot,
+		Branch:      "main",
+		CancelWatch: func() {},
+	}
+	for _, e := range extras {
+		p := e.path
+		if p == "" {
+			p = e.specsRoot
+		}
+		state.order = append(state.order, e.name)
+		state.worktrees[e.name] = &activeWorktree{
+			Entry: worktree.Entry{
+				Name:   e.name,
+				Branch: e.branch,
+				Path:   p,
+			},
+			SpecsRoot:   e.specsRoot,
+			Branch:      e.branch,
+			CancelWatch: func() {},
+		}
+	}
+	return state
+}
+
 // newTestMux builds a ServeMux wired identically to server.go:Start() but
 // without the embed/UI/ListenAndServe. This catches routing bugs.
 func newTestMux(specsRoot string) *http.ServeMux {
+	state := newTestState(specsRoot)
+	return newTestMuxFromState(state)
+}
+
+// newTestMuxFromState builds a ServeMux from a serveState.
+func newTestMuxFromState(state *serveState) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/modules", modulesHandler(specsRoot))
+	mux.HandleFunc("/api/worktrees", worktreesHandler(state))
+	mux.HandleFunc("/api/modules", modulesHandler(state))
 	mux.HandleFunc("/api/modules/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, "/approve") {
-			changeApproveHandler(specsRoot)(w, r)
+			changeApproveHandler(state)(w, r)
 		} else if strings.HasSuffix(r.URL.Path, "/reject") {
-			changeRejectHandler(specsRoot)(w, r)
+			changeRejectHandler(state)(w, r)
 		} else if strings.HasSuffix(r.URL.Path, "/changes") {
-			moduleChangesHandler(specsRoot)(w, r)
+			moduleChangesHandler(state)(w, r)
 		} else {
-			moduleDetailHandler(specsRoot)(w, r)
+			moduleDetailHandler(state)(w, r)
 		}
 	})
 	return mux
@@ -563,5 +616,271 @@ func TestChangesEndpointIncludesReviewComment(t *testing.T) {
 	}
 	if rc != "needs edge cases" {
 		t.Errorf("review_comment = %q, want 'needs edge cases'", rc)
+	}
+}
+
+// ── Worktree-aware tests ───────────────────────────────────────────────────────
+
+func TestModulesHandlerWorktreeFields(t *testing.T) {
+	root := t.TempDir()
+	setupModule(t, root, "alpha")
+	writeSpecFile(t, root, "alpha", spec.SpecModule{
+		ID: "alpha", Title: "Alpha", Owner: "o", Status: "draft",
+	})
+
+	state := newTestState(root)
+	ts := httptest.NewServer(newTestMuxFromState(state))
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/modules")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var summaries []ModuleSummary
+	if err := json.NewDecoder(resp.Body).Decode(&summaries); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(summaries) != 1 {
+		t.Fatalf("expected 1 summary, got %d", len(summaries))
+	}
+	s := summaries[0]
+	if s.Worktree == "" {
+		t.Error("Worktree field is empty")
+	}
+	if s.Branch == "" {
+		t.Error("Branch field is empty")
+	}
+	if s.Worktree != "main" {
+		t.Errorf("Worktree = %q, want main", s.Worktree)
+	}
+}
+
+func TestModulesHandlerMultiWorktree(t *testing.T) {
+	mainRoot := t.TempDir()
+	setupModule(t, mainRoot, "spec-cli")
+	writeSpecFile(t, mainRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "Spec CLI", Owner: "o", Status: "draft",
+	})
+
+	wtRoot := t.TempDir()
+	setupModule(t, wtRoot, "spec-cli")
+	writeSpecFile(t, wtRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "Spec CLI WT", Owner: "o", Status: "draft",
+	})
+	setupModule(t, wtRoot, "infra")
+	writeSpecFile(t, wtRoot, "infra", spec.SpecModule{
+		ID: "infra", Title: "Infra", Owner: "o", Status: "draft",
+	})
+
+	state := newTestState(mainRoot, testWorktreeEntry{
+		name:      "feature-foo",
+		specsRoot: wtRoot,
+		branch:    "feature/foo",
+	})
+
+	ts := httptest.NewServer(newTestMuxFromState(state))
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/modules")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var summaries []ModuleSummary
+	if err := json.NewDecoder(resp.Body).Decode(&summaries); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+
+	// Expect 3: spec-cli from main, spec-cli from feature-foo, infra from feature-foo.
+	if len(summaries) != 3 {
+		t.Fatalf("expected 3 summaries, got %d", len(summaries))
+	}
+
+	// Check that every summary has worktree and branch.
+	for _, s := range summaries {
+		if s.Worktree == "" {
+			t.Errorf("path %q: Worktree is empty", s.Path)
+		}
+		if s.Branch == "" {
+			t.Errorf("path %q: Branch is empty", s.Path)
+		}
+	}
+
+	// Check that feature-foo summaries have the right branch.
+	for _, s := range summaries {
+		if s.Worktree == "feature-foo" && s.Branch != "feature/foo" {
+			t.Errorf("path %q: Branch = %q, want feature/foo", s.Path, s.Branch)
+		}
+	}
+}
+
+func TestWorktreesHandler(t *testing.T) {
+	mainRoot := t.TempDir()
+	wtRoot := t.TempDir()
+
+	state := newTestState(mainRoot, testWorktreeEntry{
+		name:      "feature-foo",
+		specsRoot: wtRoot,
+		branch:    "feature/foo",
+		path:      wtRoot, // exists on disk
+	})
+
+	// Add an orphaned worktree whose path doesn't exist.
+	orphanPath := t.TempDir() + "/nonexistent"
+	state.order = append(state.order, "orphan")
+	state.worktrees["orphan"] = &activeWorktree{
+		Entry: worktree.Entry{
+			Name:   "orphan",
+			Branch: "orphan",
+			Path:   orphanPath,
+		},
+		SpecsRoot:   orphanPath + "/specs",
+		Branch:      "orphan",
+		CancelWatch: func() {},
+	}
+
+	ts := httptest.NewServer(newTestMuxFromState(state))
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/api/worktrees")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var infos []WorktreeInfo
+	if err := json.NewDecoder(resp.Body).Decode(&infos); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(infos) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(infos))
+	}
+	if infos[0].Name != "main" {
+		t.Errorf("infos[0].Name = %q, want main", infos[0].Name)
+	}
+
+	byName := make(map[string]WorktreeInfo)
+	for _, info := range infos {
+		byName[info.Name] = info
+	}
+
+	if byName["feature-foo"].Status != "active" {
+		t.Errorf("feature-foo status = %q, want active", byName["feature-foo"].Status)
+	}
+	if byName["orphan"].Status != "orphaned" {
+		t.Errorf("orphan status = %q, want orphaned", byName["orphan"].Status)
+	}
+}
+
+func TestModuleDetailDisambiguate409(t *testing.T) {
+	mainRoot := t.TempDir()
+	setupModule(t, mainRoot, "spec-cli")
+	writeSpecFile(t, mainRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "Spec CLI", Owner: "o", Status: "draft",
+	})
+
+	wtRoot := t.TempDir()
+	setupModule(t, wtRoot, "spec-cli")
+	writeSpecFile(t, wtRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "Spec CLI WT", Owner: "o", Status: "draft",
+	})
+
+	state := newTestState(mainRoot, testWorktreeEntry{
+		name:      "feature-foo",
+		specsRoot: wtRoot,
+		branch:    "feature/foo",
+	})
+
+	ts := httptest.NewServer(newTestMuxFromState(state))
+	defer ts.Close()
+
+	// Same path in two worktrees, no ?worktree param — should return 409.
+	resp, err := http.Get(ts.URL + "/api/modules/spec-cli")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 409 {
+		t.Fatalf("status = %d, want 409", resp.StatusCode)
+	}
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if _, ok := body["error"]; !ok {
+		t.Error("response missing 'error' key")
+	}
+	if _, ok := body["worktrees"]; !ok {
+		t.Error("response missing 'worktrees' key")
+	}
+}
+
+func TestModuleDetailDisambiguateParam(t *testing.T) {
+	mainRoot := t.TempDir()
+	setupModule(t, mainRoot, "spec-cli")
+	writeSpecFile(t, mainRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "Main Spec CLI", Owner: "o", Status: "draft",
+	})
+
+	wtRoot := t.TempDir()
+	setupModule(t, wtRoot, "spec-cli")
+	writeSpecFile(t, wtRoot, "spec-cli", spec.SpecModule{
+		ID: "spec-cli", Title: "WT Spec CLI", Owner: "o", Status: "draft",
+	})
+
+	state := newTestState(mainRoot, testWorktreeEntry{
+		name:      "feature-foo",
+		specsRoot: wtRoot,
+		branch:    "feature/foo",
+	})
+
+	ts := httptest.NewServer(newTestMuxFromState(state))
+	defer ts.Close()
+
+	// With ?worktree=main — should return 200 for the main copy.
+	resp, err := http.Get(ts.URL + "/api/modules/spec-cli?worktree=main")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+
+	var m spec.SpecModule
+	if err := json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if m.Title != "Main Spec CLI" {
+		t.Errorf("Title = %q, want 'Main Spec CLI'", m.Title)
+	}
+
+	// With ?worktree=feature-foo — should return 200 for the worktree copy.
+	resp2, err := http.Get(ts.URL + "/api/modules/spec-cli?worktree=feature-foo")
+	if err != nil {
+		t.Fatalf("request error: %v", err)
+	}
+	defer resp2.Body.Close()
+
+	if resp2.StatusCode != 200 {
+		t.Fatalf("status = %d, want 200", resp2.StatusCode)
+	}
+
+	var m2 spec.SpecModule
+	if err := json.NewDecoder(resp2.Body).Decode(&m2); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if m2.Title != "WT Spec CLI" {
+		t.Errorf("Title = %q, want 'WT Spec CLI'", m2.Title)
 	}
 }
