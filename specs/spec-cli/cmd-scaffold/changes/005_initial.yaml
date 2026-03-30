@@ -50,7 +50,7 @@ changes:
     - id: AC-012
       description: Hook rejects commit when eigen spec project-all or eigen spec validate fails
       given: A repository whose pre-commit hook was installed by eigen scaffold, and at least one specs/ file is staged
-      when: A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero
+      when: "A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero"
       then: |
         The pre-commit hook prints a clear error message to stderr indicating which
         command failed (project-all or validate) and exits non-zero, causing git to
