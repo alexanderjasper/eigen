@@ -460,7 +460,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-041: replace op substitutes first occurrence
+	// AC-045: replace op substitutes first occurrence
 	t.Run("replace_first_occurrence", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -481,7 +481,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-042: prepend op inserts text before field value
+	// AC-046: prepend op inserts text before field value
 	t.Run("prepend", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -502,7 +502,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-043: append op inserts text after field value
+	// AC-047: append op inserts text after field value
 	t.Run("append", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -523,7 +523,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-044: delete op removes first occurrence
+	// AC-048: delete op removes first occurrence
 	t.Run("delete_first_occurrence", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -544,7 +544,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-045: multiple ops in a single change applied sequentially
+	// AC-049: multiple ops in a single change applied sequentially
 	t.Run("multi_op_sequential", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -566,7 +566,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-046: scalar string value is full replacement (backward compatible)
+	// AC-050: scalar string value is full replacement (backward compatible)
 	t.Run("scalar_full_replace_backward_compat", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -585,7 +585,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-047: replace op with no match returns a projection error
+	// AC-051: replace op with no match returns a projection error
 	t.Run("replace_no_match_error", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -606,7 +606,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-048: delete op with no match returns a projection error
+	// AC-052: delete op with no match returns a projection error
 	t.Run("delete_no_match_error", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
@@ -627,7 +627,7 @@ func TestProject(t *testing.T) {
 		}
 	})
 
-	// AC-049: ops apply against current projected value, not original
+	// AC-053: ops apply against current projected value, not original
 	t.Run("ops_across_changes", func(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{

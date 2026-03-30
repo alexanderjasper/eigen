@@ -277,7 +277,7 @@ func TestValidateChanges(t *testing.T) {
 		}
 	})
 
-	// AC-050: op-based change that produces identical text is flagged as no-op
+	// AC-054: op-based change that produces identical text is flagged as no-op
 	t.Run("op_noop_flagged", func(t *testing.T) {
 		current := SpecModule{
 			Behavior:     "hello",
@@ -304,7 +304,7 @@ func TestValidateChanges(t *testing.T) {
 		}
 	})
 
-	// AC-051: op-based change that modifies the text is not flagged
+	// AC-055: op-based change that modifies the text is not flagged
 	t.Run("op_change_not_flagged", func(t *testing.T) {
 		current := SpecModule{
 			Behavior:     "hello world",
