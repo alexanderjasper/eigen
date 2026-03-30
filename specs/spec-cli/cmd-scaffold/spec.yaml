@@ -154,23 +154,7 @@ acceptance_criteria:
       the user does not need to pass any flag to opt in to hook installation —
       hook installation is the default behavior and skipping it requires the
       explicit --no-hooks flag
-  - id: AC-016
-    description: scaffold resolves git common dir when target has a .git file (worktree)
-    given: The scaffold target directory contains a .git file (not a .git directory) pointing to a worktree git metadata path
-    when: eigen scaffold <path> is run
-    then: |
-      The pre-commit hook is written to the git common directory's hooks/
-      subdirectory (the main repository's .git/hooks/pre-commit), not to a
-      path derived from the worktree .git file; MkdirAll does not fail;
-      eigen scaffold exits zero and includes the hook path in its output
-  - id: AC-017
-    description: scaffold hook resolution falls back to .git directory path when target is not a worktree
-    given: The scaffold target directory contains a .git directory (standard repo, not a worktree)
-    when: eigen scaffold <path> is run
-    then: |
-      Behavior is unchanged from the current implementation: the hook is written
-      to <target>/.git/hooks/pre-commit; no regression in the standard case
 dependencies: []
 technology: {}
-last_change: chg-008
-changes_count: 8
+last_change: chg-007
+changes_count: 7
