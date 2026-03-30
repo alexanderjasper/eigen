@@ -78,7 +78,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 4. GitHub Actions CI
+### ~~4. GitHub Actions CI~~ ✅ Done
 
 **What**: Add a CI workflow that runs on every push and PR. Minimum viable pipeline:
 1. `go build ./...` in `eigen/` — verify the binary compiles
@@ -128,7 +128,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 7. Pre-commit spec validation hook
+### ~~7. Pre-commit spec validation hook~~ ✅ Done
 
 **Module**: `spec-cli/cmd-scaffold`
 **What**: `eigen scaffold` should optionally install a git pre-commit hook that runs `eigen spec validate` before allowing a commit. This prevents invalid specs from entering the repository.
@@ -144,7 +144,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 8. UI error handling and loading states
+### ~~8. UI error handling and loading states~~ ✅ Done
 
 **Module**: `spec-navigator/ui`
 **What**: The web UI silently swallows all fetch errors and has no loading indicators. Add both.
@@ -166,7 +166,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ## P2 — Scale & Team Readiness
 
-### 9. Compiled change audit trail (link spec history to code history)
+### ~~9. Compiled change audit trail (link spec history to code history)~~ ✅ Done
 
 **Module**: `projection-engine`
 **What**: When a change is marked `compiled`, record the git commit hash that implements it. This links spec history to code history — a property the README promises but doesn't implement.
@@ -183,7 +183,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 10. Conflict detection for overlapping pending changes
+### ~~10. Conflict detection for overlapping pending changes~~ ✅ Done
 
 **Module**: New module — `projection-engine/conflict-detection` or extend `projection-engine`
 **What**: When two pending (draft or approved) changes touch the same fields in the same module, flag it as a conflict before projection.
@@ -200,7 +200,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 11. Keyboard navigation and accessibility in the UI
+### ~~11. Keyboard navigation and accessibility in the UI~~ ✅ Done
 
 **Module**: `spec-navigator/ui`
 **What**: The tree view is mouse-only. Add keyboard navigation and basic ARIA attributes.
