@@ -1,3 +1,4 @@
+type: updated
 summary: plan-agent is read-only research + draft agent; plan mode and file write move to orchestrating skill
 reason: |-
   Subagents cannot enter plan mode — ExitPlanMode only works in the main conversation context.
@@ -5,7 +6,7 @@ reason: |-
   and commit. These responsibilities belong to the orchestrating skill (eigen-change). The
   plan-agent must only read the spec, explore the codebase, and return a structured draft plan
   as text output to the caller.
-type: updated
+status: compiled
 changes:
   description: |-
     plan-agent is a read-only research and drafting agent. It receives a spec module path,
@@ -15,6 +16,11 @@ changes:
     write any files, and does NOT commit. The orchestrating skill (eigen-change) is responsible
     for receiving the draft, presenting it to the user for review via plan mode, writing plan.md,
     and committing the plan file.
+  technology:
+    CommitPattern: N/A — committing is done by eigen-change skill, not by plan-agent
+    Input: spec.yaml path, changes/ directory, current git branch name
+    Output: structured markdown draft plan as agent text response (not written to disk)
+    Tools: Glob, Grep, Read, Bash (read-only codebase exploration only)
   acceptance_criteria:
     - id: AC-009
       description: |-
@@ -23,6 +29,9 @@ changes:
         When: it completes its workflow.
         Then: no plan mode tools have been called; the agent has only used read-only tools
         (Glob, Grep, Read, Bash for discovery) and returned text output.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-010
       description: |-
         plan-agent does not write any files and does not make any git commits.
@@ -30,6 +39,9 @@ changes:
         When: it completes its workflow.
         Then: the working directory and git history are unchanged; all output is returned
         as the agent's text response to the caller.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-011
       description: |-
         plan-agent returns a structured markdown draft plan as its output text. The plan
@@ -37,8 +49,6 @@ changes:
         references, architectural decisions, acceptance criteria mapping, and build/verification
         steps. This output is sufficient for the caller (eigen-change skill) to write plan.md
         without modification.
-  technology:
-    Input: spec.yaml path, changes/ directory, current git branch name
-    Output: structured markdown draft plan as agent text response (not written to disk)
-    Tools: Glob, Grep, Read, Bash (read-only codebase exploration only)
-    CommitPattern: N/A — committing is done by eigen-change skill, not by plan-agent
+      given: ""
+      when: ""
+      then: ""

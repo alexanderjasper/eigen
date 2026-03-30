@@ -1,28 +1,29 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-20T21:45:00Z
+timestamp: "2026-03-20T21:45:00Z"
 author: alexander
 type: updated
 summary: Walk up from CWD to find specs/ directory
 reason: |
-    Users run eigen from within a project directory. Requiring EIGEN_SPECS or
-    --specs every time is friction. Walking up from the current working directory
-    to find a specs/ folder is the natural convention (same pattern as git, go,
-    and other project-aware tools).
+  Users run eigen from within a project directory. Requiring EIGEN_SPECS or
+  --specs every time is friction. Walking up from the current working directory
+  to find a specs/ folder is the natural convention (same pattern as git, go,
+  and other project-aware tools).
+status: compiled
 changes:
-    behavior: |
-        The specs root is resolved in order: --specs flag, EIGEN_SPECS environment
-        variable, walking up from the current working directory until a specs/
-        directory is found, ../specs relative to the binary location. All commands
-        share this resolution.
-    acceptance_criteria:
-        - id: AC-003
-          description: Specs root found by walking up from CWD
-          given: Neither --specs nor EIGEN_SPECS is set, and a specs/ directory exists in the current or any ancestor directory
-          when: Any eigen spec command is run
-          then: The nearest specs/ directory walking up from CWD is used as the specs root
-        - id: AC-004
-          description: Specs root falls back to ../specs relative to the binary when no specs/ found in CWD ancestors
-          given: Neither --specs nor EIGEN_SPECS is set, and no specs/ directory is found walking up from CWD
-          when: Any eigen spec command is run
-          then: ../specs relative to the binary path is used as the specs root
+  behavior: |
+    The specs root is resolved in order: --specs flag, EIGEN_SPECS environment
+    variable, walking up from the current working directory until a specs/
+    directory is found, ../specs relative to the binary location. All commands
+    share this resolution.
+  acceptance_criteria:
+    - id: AC-003
+      description: Specs root found by walking up from CWD
+      given: Neither --specs nor EIGEN_SPECS is set, and a specs/ directory exists in the current or any ancestor directory
+      when: Any eigen spec command is run
+      then: The nearest specs/ directory walking up from CWD is used as the specs root
+    - id: AC-004
+      description: Specs root falls back to ../specs relative to the binary when no specs/ found in CWD ancestors
+      given: Neither --specs nor EIGEN_SPECS is set, and no specs/ directory is found walking up from CWD
+      when: Any eigen spec command is run
+      then: ../specs relative to the binary path is used as the specs root

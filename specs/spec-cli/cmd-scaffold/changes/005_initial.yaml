@@ -1,0 +1,57 @@
+id: chg-005
+sequence: 5
+timestamp: "2026-03-30T07:38:56Z"
+type: updated
+summary: pre-commit hook runs project-all then validate to keep spec.yaml canonical
+reason: |
+  There is no dedicated `eigen spec format` command. Normalization is achieved by
+  running `eigen spec project` (or `project-all`) to reproject spec.yaml from the
+  change files, making it canonical. The hook must run `eigen spec project-all`
+  first so that spec.yaml files are always in canonical form, and then run
+  `eigen spec validate` to catch any errors — both steps must pass before a commit
+  is accepted.
+status: approved
+changes:
+  behavior: |
+    Accepts an optional path argument (defaults to the current working directory),
+    an optional --force flag, and an optional --no-hooks flag. Creates
+    .claude/skills/eigen-change-spec/SKILL.md, .claude/skills/eigen-change-compile/SKILL.md,
+    and .claude/skills/eigen-change/SKILL.md with the canonical skill content embedded
+    in the binary. Creates .claude/agents/spec-agent.md, .claude/agents/plan-agent.md,
+    and .claude/agents/compile-agent.md with the canonical agent definitions embedded
+    in the binary. Creates the specs/ directory if it does not already exist. Without
+    --force, fails with a non-zero exit code if any skill or agent file already exists,
+    listing each conflicting path, and writes nothing. With --force, removes any
+    existing skill and agent files before writing, then proceeds normally. Prints a
+    success message listing all created files and a next-step hint to run eigen spec new.
+
+    Unless --no-hooks is passed, also installs a git pre-commit hook under
+    .git/hooks/pre-commit. If .git/hooks/pre-commit already exists, the eigen hook
+    block is appended to the file rather than overwriting it. The hook script checks
+    whether any files under specs/ are staged; if none are staged it exits 0 immediately.
+    If spec files are staged it runs `eigen spec project-all` to normalize all spec.yaml
+    files to canonical form, then runs `eigen spec validate`; if either command fails it
+    prints a clear error message and exits non-zero, rejecting the commit. With --no-hooks,
+    the hook installation step is skipped entirely; existing hook files are left unchanged.
+  acceptance_criteria:
+    - id: AC-008
+      description: Installs a pre-commit hook that reprojects and validates specs when spec files are staged
+      given: A target directory whose .git/hooks/pre-commit does not exist
+      when: eigen scaffold is run without --no-hooks
+      then: |
+        .git/hooks/pre-commit is created (mode 0755) containing a script that:
+        (1) uses `git diff --cached --name-only` to list staged files,
+        (2) exits 0 immediately if no file path starts with specs/,
+        (3) runs `eigen spec project-all` to normalize all spec.yaml files to canonical
+            form,
+        (4) runs `eigen spec validate` after project-all succeeds,
+        (5) on non-zero exit from either command, prints an error message to stderr and
+            exits non-zero so the commit is rejected
+    - id: AC-012
+      description: Hook rejects commit when eigen spec project-all or eigen spec validate fails
+      given: A repository whose pre-commit hook was installed by eigen scaffold, and at least one specs/ file is staged
+      when: "A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero"
+      then: |
+        The pre-commit hook prints a clear error message to stderr indicating which
+        command failed (project-all or validate) and exits non-zero, causing git to
+        reject the commit

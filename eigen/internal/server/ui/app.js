@@ -3,17 +3,50 @@
 let allModules = [];
 let activePath = null;
 
+function injectToast() {
+  const toast = document.createElement('div');
+  toast.id = 'toast';
+  const closeBtn = document.createElement('button');
+  closeBtn.id = 'toast-close'; closeBtn.textContent = '×';
+  closeBtn.setAttribute('aria-label', 'Close error');
+  closeBtn.addEventListener('click', dismissToast);
+  const msg = document.createElement('span'); msg.id = 'toast-msg';
+  toast.appendChild(closeBtn); toast.appendChild(msg);
+  document.body.appendChild(toast);
+}
+
+function showToast(message) {
+  document.getElementById('toast-msg').textContent = message;
+  document.getElementById('toast').classList.add('visible');
+}
+
+function dismissToast() {
+  const t = document.getElementById('toast');
+  if (t) t.classList.remove('visible');
+}
+
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 async function init() {
-  const res = await fetch('/api/modules');
-  allModules = await res.json();
-  renderTree(allModules);
-
+  injectToast();
+  const treeEl = document.getElementById('tree');
+  const treeSpinner = document.createElement('div');
+  treeSpinner.className = 'spinner';
+  treeEl.appendChild(treeSpinner);
+  try {
+    const res = await fetch('/api/modules');
+    if (!res.ok) throw new Error('/api/modules returned ' + res.status + ' ' + res.statusText);
+    allModules = await res.json();
+    treeSpinner.remove();
+    renderTree(allModules);
+  } catch (err) {
+    treeSpinner.remove();
+    showToast(err.message);
+    return;
+  }
   document.getElementById('search').addEventListener('input', e => {
     filterTree(e.target.value.trim().toLowerCase());
   });
-
   injectReviewPanel();
   startReviewPoller();
 }
@@ -47,13 +80,93 @@ function buildTree(modules) {
   return root;
 }
 
+function getVisibleLabels() {
+  return Array.from(document.querySelectorAll('.tree-label')).filter(el =>
+    !el.closest('.tree-children.hidden')
+  );
+}
+
+function getParentLabel(label) {
+  const parentChildren = label.closest('.tree-node').parentElement;
+  if (!parentChildren || !parentChildren.classList.contains('tree-children')) return null;
+  return parentChildren.closest('.tree-node').querySelector(':scope > .tree-label');
+}
+
+function moveFocus(label) {
+  if (!label) return;
+  for (const l of document.querySelectorAll('.tree-label')) l.setAttribute('tabindex', '-1');
+  label.setAttribute('tabindex', '0');
+  label.focus();
+}
+
+function initRovingTabindex() {
+  const labels = getVisibleLabels();
+  labels.forEach((l, i) => l.setAttribute('tabindex', i === 0 ? '0' : '-1'));
+}
+
 function renderTree(modules) {
   const container = document.getElementById('tree');
   container.innerHTML = '';
+  container.setAttribute('role', 'tree');
   const tree = buildTree(modules);
   for (const node of tree.values()) {
     container.appendChild(createNodeEl(node));
   }
+  initRovingTabindex();
+  container.addEventListener('keydown', e => {
+    if (!e.target.classList.contains('tree-label')) return;
+    const label = e.target;
+    const visible = getVisibleLabels();
+    const idx = visible.indexOf(label);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        moveFocus(visible[idx + 1] ?? null);
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        moveFocus(visible[idx - 1] ?? null);
+        break;
+      }
+      case 'ArrowRight': {
+        e.preventDefault();
+        const expanded = label.getAttribute('aria-expanded');
+        if (expanded === 'false') {
+          // expand
+          label.closest('.tree-node').querySelector(':scope > .tree-children')?.classList.remove('hidden');
+          label.closest('.tree-node').querySelector(':scope > .toggle')?.classList.add('open');
+          label.setAttribute('aria-expanded', 'true');
+        } else if (expanded === 'true') {
+          // move to first child
+          const newVisible = getVisibleLabels();
+          moveFocus(newVisible[newVisible.indexOf(label) + 1] ?? null);
+        }
+        // null (leaf) — no-op
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const expanded = label.getAttribute('aria-expanded');
+        if (expanded === 'true') {
+          // collapse
+          label.closest('.tree-node').querySelector(':scope > .tree-children')?.classList.add('hidden');
+          label.closest('.tree-node').querySelector(':scope > .toggle')?.classList.remove('open');
+          label.setAttribute('aria-expanded', 'false');
+        } else {
+          // move to parent
+          moveFocus(getParentLabel(label));
+        }
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        label.click();
+        break;
+      }
+    }
+  });
 }
 
 function createNodeEl(node) {
@@ -63,6 +176,8 @@ function createNodeEl(node) {
 
   const label = document.createElement('div');
   label.className = 'tree-label';
+  label.setAttribute('role', 'treeitem');
+  label.setAttribute('tabindex', '-1');
   if (node.path === activePath) label.classList.add('active');
 
   const toggle = document.createElement('span');
@@ -82,6 +197,7 @@ function createNodeEl(node) {
   if (hasChildren) {
     toggle.textContent = '▶';
     toggle.classList.add('open');
+    label.setAttribute('aria-expanded', 'true');
 
     childrenEl = document.createElement('div');
     childrenEl.className = 'tree-children';
@@ -94,6 +210,7 @@ function createNodeEl(node) {
       e.stopPropagation();
       const open = toggle.classList.toggle('open');
       childrenEl.classList.toggle('hidden', !open);
+      label.setAttribute('aria-expanded', String(open));
     });
   }
 
@@ -144,17 +261,27 @@ function highlightActive(path) {
 async function loadDetail(path) {
   activePath = path;
   highlightActive(path);
-
-  const [specRes, changesRes] = await Promise.all([
-    fetch('/api/modules/' + path),
-    fetch('/api/modules/' + path + '/changes'),
-  ]);
-
-  if (!specRes.ok) return;
-  const spec = await specRes.json();
-  const changes = changesRes.ok ? await changesRes.json() : [];
-
-  renderDetail(spec, changes);
+  const rightEl = document.getElementById('right');
+  document.getElementById('detail').style.display = 'none';
+  document.getElementById('detail-empty').style.display = 'none';
+  const detailSpinner = document.createElement('div');
+  detailSpinner.className = 'spinner';
+  rightEl.appendChild(detailSpinner);
+  try {
+    const [specRes, changesRes] = await Promise.all([
+      fetch('/api/modules/' + path),
+      fetch('/api/modules/' + path + '/changes'),
+    ]);
+    if (!specRes.ok) throw new Error('/api/modules/' + path + ' returned ' + specRes.status);
+    const spec = await specRes.json();
+    const changes = changesRes.ok ? await changesRes.json() : [];
+    detailSpinner.remove();
+    renderDetail(spec, changes);
+  } catch (err) {
+    detailSpinner.remove();
+    showToast(err.message);
+    document.getElementById('detail-empty').style.display = '';
+  }
 }
 
 function renderDetail(spec, changes) {
@@ -277,133 +404,104 @@ function esc(str) {
 // ── Review Panel ──────────────────────────────────────────────────────────────
 
 let reviewPollerTimer = null;
-let activeReviewSessionId = null;
 
 function injectReviewPanel() {
   const panel = document.createElement('div');
   panel.id = 'review-panel';
   panel.style.display = 'none';
   panel.innerHTML =
-    '<h2>Spec Review</h2>' +
-    '<div id="review-changes"></div>' +
-    '<div class="review-actions">' +
-      '<button class="btn-approve">Approve</button>' +
-      '<button class="btn-reject">Reject</button>' +
-    '</div>';
-
-  panel.querySelector('.btn-approve').addEventListener('click', () => {
-    submitReview('approved');
-  });
-  panel.querySelector('.btn-reject').addEventListener('click', () => {
-    submitReview('rejected');
-  });
+    '<h2>Pending Review</h2>' +
+    '<div id="review-changes"></div>';
 
   document.body.appendChild(panel);
 }
 
 function startReviewPoller() {
   reviewPollerTimer = setInterval(async () => {
+    if (!activePath) return;
     try {
-      const res = await fetch('/api/reviews/pending');
-      if (res.status === 204 || !res.ok) {
+      const res = await fetch('/api/modules/' + activePath + '/changes');
+      if (!res.ok) {
         hideReviewPanel();
         return;
       }
-      const data = await res.json();
-      showReviewPanel(data.session_id);
+      const changes = await res.json();
+      const draft = changes.filter(c => !c.status || c.status === 'draft');
+      if (draft.length === 0) {
+        hideReviewPanel();
+        return;
+      }
+      showReviewPanel(draft);
     } catch (_) {
       hideReviewPanel();
     }
   }, 3000);
 }
 
-async function showReviewPanel(sessionId) {
-  try {
-    const res = await fetch('/api/reviews/' + sessionId);
-    if (!res.ok) {
-      hideReviewPanel();
-      return;
-    }
-    const session = await res.json();
-    if (session.status === 'submitted') {
-      hideReviewPanel();
-      return;
-    }
+function showReviewPanel(draftChanges) {
+  const changesEl = document.getElementById('review-changes');
+  changesEl.innerHTML = '';
 
-    // Already rendering this session — don't rebuild (would reset scroll).
-    if (activeReviewSessionId === sessionId &&
-        document.getElementById('review-panel').style.display !== 'none') {
-      return;
-    }
+  for (const change of draftChanges) {
+    const card = document.createElement('div');
+    card.className = 'review-change-card';
 
-    activeReviewSessionId = sessionId;
+    const heading = document.createElement('div');
+    heading.className = 'review-change-heading';
+    heading.textContent = (change.id || '') + ' — ' + (change.filename || '') + ' — ' + (change.summary || '');
 
-    const changesEl = document.getElementById('review-changes');
-    changesEl.innerHTML = '';
-
-    for (const change of (session.changes || [])) {
-      const card = document.createElement('div');
-      card.className = 'review-change-card';
-
-      const heading = document.createElement('div');
-      heading.className = 'review-change-heading';
-      heading.textContent = change.change_id + ' — ' + change.file_path;
-
-      const yamlPre = document.createElement('pre');
-      yamlPre.className = 'review-yaml';
-      yamlPre.textContent = change.change_yaml || '';
-
-      const commentLabel = document.createElement('label');
-      commentLabel.textContent = 'Comment (optional)';
-
-      const textarea = document.createElement('textarea');
-      textarea.className = 'review-comments';
-      textarea.dataset.changeId = change.change_id;
-      textarea.rows = 3;
-
-      card.append(heading, yamlPre, commentLabel, textarea);
-      changesEl.appendChild(card);
+    if (change.review_comment) {
+      const commentNote = document.createElement('div');
+      commentNote.className = 'review-comment-note';
+      commentNote.textContent = 'Previous feedback: ' + change.review_comment;
+      card.appendChild(commentNote);
     }
 
-    document.getElementById('review-panel').style.display = 'block';
-  } catch (_) {
-    hideReviewPanel();
+    const actions = document.createElement('div');
+    actions.className = 'review-actions';
+
+    const approveBtn = document.createElement('button');
+    approveBtn.className = 'btn-approve';
+    approveBtn.textContent = 'Approve';
+    approveBtn.addEventListener('click', async () => {
+      approveBtn.disabled = true; rejectBtn.disabled = true;
+      try {
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve', { method: 'POST' });
+        if (!res.ok) throw new Error('Approve failed: ' + res.status);
+      } catch (err) { showToast(err.message); }
+      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
+    });
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'btn-reject';
+    rejectBtn.textContent = 'Reject';
+    rejectBtn.addEventListener('click', async () => {
+      const comment = prompt('Rejection comment:');
+      if (!comment) return;
+      approveBtn.disabled = true; rejectBtn.disabled = true;
+      try {
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comment }),
+        });
+        if (!res.ok) throw new Error('Reject failed: ' + res.status);
+      } catch (err) { showToast(err.message); }
+      finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
+    });
+
+    actions.append(approveBtn, rejectBtn);
+    card.append(heading, actions);
+    changesEl.appendChild(card);
   }
+
+  document.getElementById('review-panel').style.display = 'block';
 }
 
 function hideReviewPanel() {
   const panel = document.getElementById('review-panel');
   if (panel) panel.style.display = 'none';
-  activeReviewSessionId = null;
-}
-
-async function submitReview(decision) {
-  if (!activeReviewSessionId) return;
-
-  const changeComments = {};
-  const textareas = document.querySelectorAll('.review-comments');
-  for (const ta of textareas) {
-    if (ta.value.trim()) {
-      changeComments[ta.dataset.changeId] = ta.value.trim();
-    }
-  }
-
-  try {
-    const res = await fetch('/api/reviews/' + activeReviewSessionId + '/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ decision, change_comments: changeComments }),
-    });
-    if (res.ok) {
-      hideReviewPanel();
-    }
-  } catch (_) {
-    // ignore, poller will retry
-  }
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 
-init().catch(err => {
-  document.getElementById('detail-empty').textContent = 'Failed to load: ' + err.message;
-});
+init();

@@ -1,0 +1,115 @@
+id: projection-engine/spec-format-version
+domain: projection-engine
+module: spec-format-version
+owner: eigen
+title: Spec Format Version
+status: draft
+description: |
+  Adds a format field (e.g. format: eigen/v1) to SpecModule and to every
+  change file template written by the CLI. The field is metadata-only: it
+  is written as the first field in spec.yaml and in every change file
+  produced by eigen spec new or eigen spec change. It is not projected from
+  changes and the CLI does not enforce or reject any particular version
+  value yet.
+behavior: |
+  eigen spec new writes format: eigen/v1 as the first field in the
+  scaffolded 001_initial.yaml change file.
+
+  eigen spec change writes format: eigen/v1 as the first field in every
+  subsequent change file it generates (e.g. 002_*.yaml, 003_*.yaml, etc.).
+
+  eigen spec project writes format: eigen/v1 as the first field in the
+  output spec.yaml, regardless of whether any change file sets it.
+
+  eigen spec validate emits a warning (not an error) when format is absent
+  from spec.yaml, preserving backward compatibility with existing specs.
+
+  The projection engine ignores the format field when folding changes — it
+  is never sourced from ChangeSet values.
+
+  The CLI does not reject or block on any particular format version value.
+acceptance_criteria:
+  - id: AC-001
+    description: eigen spec new scaffolds format field in change template
+    given: A new module path that does not yet exist
+    when: eigen spec new <path> is run
+    then: |
+      The generated specs/<path>/changes/001_initial.yaml has
+      format: eigen/v1 as the first field in the file
+  - id: AC-002
+    description: eigen spec project writes format field first in spec.yaml
+    given: A module whose change files do not set a format field
+    when: eigen spec project <path> is run
+    then: |
+      The written spec.yaml has format: eigen/v1 as the first field,
+      before id, title, and all other fields
+  - id: AC-003
+    description: Projection ignores format field from change files
+    given: A change file that sets format to an arbitrary string
+    when: eigen spec project <path> is run
+    then: |
+      The format field in spec.yaml is always eigen/v1 regardless of
+      what any change file contains for that field
+  - id: AC-004
+    description: eigen spec validate warns on missing format field
+    given: A spec.yaml whose format field is absent
+    when: eigen spec validate <path> is run
+    then: |
+      A warning is printed identifying the missing format field;
+      the command still exits 0 and does not report a validation error
+  - id: AC-005
+    description: eigen spec validate passes silently when format is present
+    given: 'A spec.yaml with format: eigen/v1'
+    when: eigen spec validate <path> is run
+    then: No warning or error is emitted for the format field
+  - id: AC-006
+    description: SpecModule and Change structs both expose a Format field
+    given: The implementation is complete
+    when: eigen/internal/spec/types.go is inspected
+    then: |
+      SpecModule has a Format string field tagged yaml:"format,omitempty"
+      appearing before the id field in struct definition order.
+      Change also has a Format string field tagged yaml:"format,omitempty"
+      appearing as the first field in the Change struct definition.
+  - id: AC-007
+    description: Tests cover format field behavior
+    given: The implementation is complete
+    when: go test ./eigen/internal/spec/... is run
+    then: |
+      Tests verify that Project() always returns Format == "eigen/v1",
+      that Validate() returns a warning (not error) when Format is empty,
+      and all tests pass
+  - id: AC-008
+    description: eigen spec change writes format field in generated change file
+    given: An existing module with at least one change file
+    when: eigen spec change <path> is run
+    then: |
+      The newly generated change file (e.g. 002_*.yaml) has
+      format: eigen/v1 as the first field in the file
+  - id: AC-009
+    description: All CLI-generated change files carry format field
+    given: A session where both eigen spec new and eigen spec change are run
+    when: The resulting change files are inspected
+    then: |
+      Every change file written by the CLI has format: eigen/v1 as the
+      first field, regardless of which command produced it
+  - id: AC-010
+    description: 'spec_new.go and spec_change.go use correct per-command strategies to write format: eigen/v1'
+    given: The implementation is complete
+    when: eigen/internal/spec/spec_new.go and eigen/internal/spec/spec_change.go are inspected
+    then: |
+      spec_new.go uses yaml.Marshal on a spec.Change struct. The Change
+      value constructed before yaml.Marshal is called has Format set to
+      "eigen/v1". Without this assignment yaml.Marshal will not emit the
+      format key even if the struct carries the field.
+
+      spec_change.go uses buildChangeTemplate(), which returns a raw string.
+      The format line is written by prepending "format: eigen/v1\n" as the
+      first line of the string inside buildChangeTemplate() — not by setting
+      a struct field. When the --edit flag is used the user-edited YAML is
+      written as raw bytes without re-marshaling, so the format line is
+      preserved from the template string unchanged.
+dependencies: []
+technology: {}
+last_change: chg-004
+changes_count: 4

@@ -1,9 +1,10 @@
+type: updated
 summary: spec-subagent writes feedback as new change files in feedback loops
 reason: |-
   When spec-subagent is re-invoked to incorporate user feedback (from rejection at plan/compile phases),
   it should write this as a new change file rather than overwriting the initial spec. This keeps
   the spec's change history intact and shows how requirements evolved through feedback.
-type: updated
+status: compiled
 changes:
   description: |-
     Clarify that spec-subagent always generates the next sequential change file
@@ -18,7 +19,13 @@ changes:
         (2) writes changes/NNN_feedback.yaml with the feedback incorporated,
         (3) runs `eigen spec project` to reproject spec.yaml,
         (4) commits with `spec(<module>): incorporate feedback on <aspect>`
+      given: ""
+      when: ""
+      then: ""
     - id: AC-007
       description: |-
         The change file captures the feedback reason and which spec fields were modified.
         This creates an audit trail of how the spec evolved through feedback loops.
+      given: ""
+      when: ""
+      then: ""

@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-cli/cmd-scaffold
 domain: spec-cli
 module: cmd-scaffold
@@ -5,73 +6,155 @@ owner: eigen
 title: scaffold
 status: draft
 description: |
-    The scaffold command initializes a project directory with the eigen Claude
-    skills and agent definitions. It writes SKILL.md files for eigen-change-spec,
-    eigen-change-compile, and eigen-change under .claude/skills/, writes agent
-    definition files for spec-agent, plan-agent, and compile-agent under
-    .claude/agents/, and creates the specs/ directory. It is the intended
-    starting point for any new project that will use eigen, and can be re-run
-    with --force to update an existing project after an eigen upgrade.
+  The scaffold command initializes a project directory with the eigen Claude
+  skills and agent definitions. It writes SKILL.md files for eigen-change-spec,
+  eigen-change-compile, and eigen-change under .claude/skills/, writes agent
+  definition files for spec-agent, plan-agent, and compile-agent under
+  .claude/agents/, and creates the specs/ directory. It is the intended
+  starting point for any new project that will use eigen, and can be re-run
+  with --force to update an existing project after an eigen upgrade.
 behavior: |
-    Accepts an optional path argument (defaults to the current working directory)
-    and an optional --force flag. Creates .claude/skills/eigen-change-spec/SKILL.md,
-    .claude/skills/eigen-change-compile/SKILL.md, and
-    .claude/skills/eigen-change/SKILL.md with the canonical skill content embedded
-    in the binary. Creates .claude/agents/spec-agent.md, .claude/agents/plan-agent.md,
-    and .claude/agents/compile-agent.md with the canonical agent definitions embedded
-    in the binary. Creates the specs/ directory if it does not already exist. Without
-    --force, fails with a non-zero exit code if any skill or agent file already exists,
-    listing each conflicting path, and writes nothing. With --force, removes any
-    existing skill and agent files before writing, then proceeds normally. Prints a
-    success message listing all created files and a next-step hint to run eigen spec new.
+  Accepts an optional path argument (defaults to the current working directory),
+  an optional --force flag, and an optional --no-hooks flag. Creates
+  .claude/skills/eigen-change-spec/SKILL.md, .claude/skills/eigen-change-compile/SKILL.md,
+  and .claude/skills/eigen-change/SKILL.md with the canonical skill content embedded
+  in the binary. Creates .claude/agents/spec-agent.md, .claude/agents/plan-agent.md,
+  and .claude/agents/compile-agent.md with the canonical agent definitions embedded
+  in the binary. Creates the specs/ directory if it does not already exist. Without
+  --force, fails with a non-zero exit code if any skill or agent file already exists,
+  listing each conflicting path, and writes nothing. With --force, removes any
+  existing skill and agent files before writing, then proceeds normally. Prints a
+  success message listing all created files and a next-step hint to run eigen spec new.
+
+  Unless --no-hooks is passed, also installs a git pre-commit hook under
+  .git/hooks/pre-commit. If .git/hooks/pre-commit already exists, the eigen hook
+  block is appended to the file rather than overwriting it. The hook script checks
+  whether any files under specs/ are staged; if none are staged it exits 0 immediately.
+  If spec files are staged it runs `eigen spec project-all` to normalize all spec.yaml
+  files to canonical form, then runs `eigen spec validate`; if either command fails it
+  prints a clear error message and exits non-zero, rejecting the commit. With --no-hooks,
+  the hook installation step is skipped entirely; existing hook files are left unchanged.
+
+  Change files written or updated by the CLI (via eigen spec change, eigen spec new,
+  change-status, or change-comment) are always stored in canonical YAML form through
+  the shared storage layer. There is no separate normalization step for change files
+  in the hook today. A future `eigen spec format` command may add explicit
+  re-canonicalization of change files (e.g. to normalize hand-edits); when that
+  command exists, the hook block can be extended to run it as an additional step
+  before project-all without changing the overall hook structure.
 acceptance_criteria:
-    - id: AC-001
-      description: Creates all three skill files and three agent files in the target directory
-      given: A target directory containing no existing eigen skill or agent files
-      when: eigen scaffold <path> is run
-      then: |
-        Creates .claude/skills/eigen-change-spec/SKILL.md,
-        .claude/skills/eigen-change-compile/SKILL.md, and
-        .claude/skills/eigen-change/SKILL.md, and .claude/agents/spec-agent.md,
-        .claude/agents/plan-agent.md, and .claude/agents/compile-agent.md under <path>
-    - id: AC-002
-      description: Creates the specs directory if absent
-      given: A target directory with no specs/ subdirectory
-      when: eigen scaffold is run
-      then: specs/ is created under the target directory
-    - id: AC-003
-      description: Defaults to current working directory
-      given: No path argument is provided
-      when: eigen scaffold is run
-      then: All files are written relative to the current working directory
-    - id: AC-004
-      description: Fails without --force if any skill or agent file already exists
-      given: At least one eigen skill or agent file already exists in the target directory
-      when: eigen scaffold is run without --force
-      then: |
-        Exits with a non-zero code and prints each conflicting path to stderr
-        (including eigen-change-spec, eigen-change-compile, eigen-change, and agent
-        paths); no files are written or removed
-    - id: AC-005
-      description: Prints created files and next-step hint on success
-      given: Scaffold completes successfully
-      when: eigen scaffold is run
-      then: Prints the paths of each created file and suggests running eigen spec new
-    - id: AC-006
-      description: --force removes existing skill and agent files before re-scaffolding
-      given: One or more eigen skill or agent files already exist in the target directory
-      when: eigen scaffold --force is run
-      then: |
-        Removes each pre-existing skill and agent file (eigen-change-spec,
-        eigen-change-compile, eigen-change, and all three agents), then writes all
-        files with the current embedded content; exits zero and prints the recreated
-        file paths
-    - id: AC-007
-      description: --force does not affect the specs/ directory
-      given: A specs/ directory already exists containing spec files
-      when: eigen scaffold --force is run
-      then: The specs/ directory and its contents are left unchanged
+  - id: AC-001
+    description: Creates all three skill files and three agent files in the target directory
+    given: A target directory containing no existing eigen skill or agent files
+    when: eigen scaffold <path> is run
+    then: |
+      Creates .claude/skills/eigen-change-spec/SKILL.md,
+      .claude/skills/eigen-change-compile/SKILL.md, and
+      .claude/skills/eigen-change/SKILL.md, and .claude/agents/spec-agent.md,
+      .claude/agents/plan-agent.md, and .claude/agents/compile-agent.md under <path>
+  - id: AC-002
+    description: Creates the specs directory if absent
+    given: A target directory with no specs/ subdirectory
+    when: eigen scaffold is run
+    then: specs/ is created under the target directory
+  - id: AC-003
+    description: Defaults to current working directory
+    given: No path argument is provided
+    when: eigen scaffold is run
+    then: All files are written relative to the current working directory
+  - id: AC-004
+    description: Fails without --force if any skill or agent file already exists
+    given: At least one eigen skill or agent file already exists in the target directory
+    when: eigen scaffold is run without --force
+    then: |
+      Exits with a non-zero code and prints each conflicting path to stderr
+      (including eigen-change-spec, eigen-change-compile, eigen-change, and agent
+      paths); no files are written or removed
+  - id: AC-005
+    description: Prints created files and next-step hint on success
+    given: Scaffold completes successfully
+    when: eigen scaffold is run
+    then: Prints the paths of each created file and suggests running eigen spec new
+  - id: AC-006
+    description: --force removes existing skill and agent files before re-scaffolding
+    given: One or more eigen skill or agent files already exist in the target directory
+    when: eigen scaffold --force is run
+    then: |
+      Removes each pre-existing skill and agent file (eigen-change-spec,
+      eigen-change-compile, eigen-change, and all three agents), then writes all
+      files with the current embedded content; exits zero and prints the recreated
+      file paths
+  - id: AC-007
+    description: --force does not affect the specs/ directory
+    given: A specs/ directory already exists containing spec files
+    when: eigen scaffold --force is run
+    then: The specs/ directory and its contents are left unchanged
+  - id: AC-008
+    description: Installs a pre-commit hook that reprojects and validates specs when spec files are staged
+    given: A target directory whose .git/hooks/pre-commit does not exist
+    when: eigen scaffold is run without --no-hooks
+    then: |
+      .git/hooks/pre-commit is created (mode 0755) containing a script that:
+      (1) uses `git diff --cached --name-only` to list staged files,
+      (2) exits 0 immediately if no file path starts with specs/,
+      (3) runs `eigen spec project-all` to normalize all spec.yaml files to canonical
+          form (change files written by the CLI are already canonical and do not
+          need a separate normalization step),
+      (4) runs `eigen spec validate` after project-all succeeds,
+      (5) on non-zero exit from either command, prints an error message to stderr and
+          exits non-zero so the commit is rejected
+  - id: AC-009
+    description: Appends hook block to existing pre-commit file rather than overwriting
+    given: .git/hooks/pre-commit already exists with custom content
+    when: eigen scaffold is run without --no-hooks
+    then: |
+      The original content of .git/hooks/pre-commit is preserved intact and the
+      eigen spec validate block is appended after it; the file remains executable
+  - id: AC-010
+    description: --no-hooks skips hook installation
+    given: A target directory with or without an existing .git/hooks/pre-commit
+    when: eigen scaffold --no-hooks is run
+    then: |
+      No changes are made to .git/hooks/; any existing pre-commit file is
+      left untouched; skill and agent files are created normally
+  - id: AC-011
+    description: Hook exits 0 without running validation when no spec files are staged
+    given: A repository whose pre-commit hook was installed by eigen scaffold
+    when: A git commit is made that stages only non-spec files (nothing under specs/)
+    then: The pre-commit hook exits 0 without invoking eigen spec validate
+  - id: AC-012
+    description: Hook rejects commit when eigen spec project-all or eigen spec validate fails
+    given: A repository whose pre-commit hook was installed by eigen scaffold, and at least one specs/ file is staged
+    when: A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero
+    then: |
+      The pre-commit hook prints a clear error message to stderr indicating which
+      command failed (project-all or validate) and exits non-zero, causing git to
+      reject the commit
+  - id: AC-013
+    description: Hook installation is reported in scaffold success output
+    given: Hook installation succeeds (--no-hooks not passed)
+    when: eigen scaffold completes successfully
+    then: The path .git/hooks/pre-commit is included in the list of created/modified files printed to stdout
+  - id: AC-014
+    description: Hook script structure does not preclude future addition of eigen spec format
+    given: The pre-commit hook installed by eigen scaffold
+    when: A future `eigen spec format` command becomes available
+    then: |
+      The hook block is structured so that "eigen spec format" (change file
+      re-canonicalization) can be added as a step before "eigen spec project-all"
+      without requiring changes to how the hook block is identified or appended;
+      specifically the hook block is delimited by recognizable begin/end markers
+      so it can be replaced atomically on re-scaffold
+  - id: AC-015
+    description: Hook installation is on by default and is part of the primary eigen scaffold success path
+    given: A target directory with a .git/ directory and no existing pre-commit hook
+    when: eigen scaffold is run with no flags
+    then: |
+      .git/hooks/pre-commit is created and the scaffold command exits zero;
+      the user does not need to pass any flag to opt in to hook installation —
+      hook installation is the default behavior and skipping it requires the
+      explicit --no-hooks flag
 dependencies: []
 technology: {}
-last_change: chg-003
-changes_count: 3
+last_change: chg-007
+changes_count: 7

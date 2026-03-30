@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for the spec navigator UI
@@ -8,6 +8,7 @@ reason: |
   The browser UI is the primary user-facing surface of eigen serve.
   Speccing the layout, interaction model, and search behaviour before
   writing any JavaScript keeps the frontend grounded in real requirements.
+status: compiled
 changes:
   title: Spec Navigator UI
   owner: eigen

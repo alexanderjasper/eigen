@@ -23,6 +23,7 @@ func Project(path string, changes []*Change) SpecModule {
 		Dependencies: []string{},
 		Technology:   map[string]string{},
 	}
+	s.Format = "eigen/v1"
 
 	// acMap tracks AC by id, preserving insertion order via acOrder.
 	acMap := map[string]AcceptanceCriterion{}

@@ -1,6 +1,6 @@
 id: chg-006
 sequence: 6
-timestamp: 2026-03-21T12:19:40Z
+timestamp: "2026-03-21T12:19:40Z"
 author: alexander
 type: updated
 summary: Remove plan file write and commit; pass plan inline to compile-agent
@@ -9,7 +9,15 @@ reason: |
   built-in plan mode already provides a temporary plan that the user reviews and
   approves in the UI. After approval, eigen-change passes that plan text directly
   to compile-agent as inline content — no file write, no git commit for the plan.
+status: compiled
 changes:
+  technology:
+    AgentTypes: spec-subagent, plan-subagent, compile-subagent
+    Invocation: /change "feature description" [--short-name "name"]
+    OutputFormats: |-
+      Specs: changes/*.yaml + spec.yaml (eigen-spec format)
+      Plans: temporary plan mode UI only (no file written)
+      Code: git commits
   acceptance_criteria:
     - id: AC-003
       description: |-
@@ -26,19 +34,20 @@ changes:
         (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
             Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
             step (1).
+      given: ""
+      when: ""
+      then: ""
     - id: AC-004
       description: |-
         After plan approval, compile-agent is called with the approved plan text passed as
         inline content (not a file path) alongside SPEC_PATH and MODULE_PATH.
         Compile-agent implements code and makes small atomic commits. After completion, user
         can review diff and approve final result.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-007
-      description: REMOVED — plan.md file artifact is no longer produced. The plan exists only
-        as transient content in plan mode and is passed inline to compile-agent.
-  technology:
-    AgentTypes: spec-subagent, plan-subagent, compile-subagent
-    Invocation: /change "feature description" [--short-name "name"]
-    OutputFormats: |-
-      Specs: changes/*.yaml + spec.yaml (eigen-spec format)
-      Plans: temporary plan mode UI only (no file written)
-      Code: git commits
+      description: REMOVED — plan.md file artifact is no longer produced. The plan exists only as transient content in plan mode and is passed inline to compile-agent.
+      given: ""
+      when: ""
+      then: ""

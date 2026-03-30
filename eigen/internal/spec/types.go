@@ -2,6 +2,7 @@ package spec
 
 // SpecModule is the projection — the current state of a module derived from all its changes.
 type SpecModule struct {
+	Format      string            `yaml:"format,omitempty" json:"format,omitempty"`
 	ID          string            `yaml:"id"           json:"id"`
 	Domain      string            `yaml:"domain"       json:"domain"`
 	Module      string            `yaml:"module"       json:"module"`
@@ -30,6 +31,7 @@ type AcceptanceCriterion struct {
 
 // Change represents a single immutable change recorded against a module.
 type Change struct {
+	Format    string    `yaml:"format,omitempty" json:"format,omitempty"`
 	ID        string    `yaml:"id"        json:"id"`
 	Sequence  int       `yaml:"sequence"  json:"sequence"`
 	Timestamp string    `yaml:"timestamp" json:"timestamp"`
@@ -37,8 +39,10 @@ type Change struct {
 	Type      string    `yaml:"type"      json:"type"` // created | updated | deprecated
 	Summary   string    `yaml:"summary"   json:"summary"`
 	Reason    string    `yaml:"reason"    json:"reason"`
-	Status    string    `yaml:"status,omitempty" json:"status,omitempty"`
-	Changes   ChangeSet `yaml:"changes"   json:"changes"`
+	Status        string    `yaml:"status,omitempty" json:"status,omitempty"`
+	ReviewComment string    `yaml:"review_comment,omitempty" json:"review_comment,omitempty"`
+	Filename      string    `yaml:"-" json:"filename,omitempty"`
+	Changes       ChangeSet `yaml:"changes"   json:"changes"`
 }
 
 // ChangeSet holds the fields that may change in a single change.

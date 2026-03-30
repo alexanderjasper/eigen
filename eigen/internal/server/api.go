@@ -2,7 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/alexanderjasper/eigen/internal/storage"
@@ -91,6 +93,87 @@ func modulePath(r *http.Request) string {
 	// Strip trailing /changes
 	p = strings.TrimSuffix(p, "/changes")
 	return p
+}
+
+// parseChangeActionPath extracts modulePath and filename from
+// /api/modules/<module-path>/changes/<filename>/(approve|reject).
+func parseChangeActionPath(urlPath string) (modPath, filename string) {
+	// Strip /api/modules/ prefix
+	p := strings.TrimPrefix(urlPath, "/api/modules/")
+	// Strip trailing /approve or /reject
+	p = strings.TrimSuffix(p, "/approve")
+	p = strings.TrimSuffix(p, "/reject")
+	// Now p = <module-path>/changes/<filename>
+	// Split on /changes/ to get module path and filename
+	idx := strings.LastIndex(p, "/changes/")
+	if idx < 0 {
+		return "", ""
+	}
+	return p[:idx], p[idx+len("/changes/"):]
+}
+
+func changeApproveHandler(specsRoot string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		modPath, filename := parseChangeActionPath(r.URL.Path)
+		if modPath == "" || filename == "" {
+			jsonError(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+
+		if err := storage.SetChangeStatus(specsRoot, modPath, filename, "approved"); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				jsonError(w, "change file not found", http.StatusNotFound)
+				return
+			}
+			jsonError(w, "failed to approve: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, map[string]string{"status": "approved"})
+	}
+}
+
+func changeRejectHandler(specsRoot string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		modPath, filename := parseChangeActionPath(r.URL.Path)
+		if modPath == "" || filename == "" {
+			jsonError(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+
+		var req struct {
+			Comment string `json:"comment"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonError(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(req.Comment) == "" {
+			jsonError(w, "comment is required", http.StatusBadRequest)
+			return
+		}
+
+		if err := storage.SetChangeComment(specsRoot, modPath, filename, req.Comment); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				jsonError(w, "change file not found", http.StatusNotFound)
+				return
+			}
+			jsonError(w, "failed to reject: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, map[string]string{"status": "draft", "review_comment": req.Comment})
+	}
 }
 
 func writeJSON(w http.ResponseWriter, v any) {

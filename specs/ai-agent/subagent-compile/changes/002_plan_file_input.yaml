@@ -1,9 +1,10 @@
+type: updated
 summary: compile-subagent reads plan.md file as primary source of implementation steps
 reason: |-
   Compile-subagent should follow the plan as a stable artifact (plan.md file) rather than
   relying on conversation context. This decouples planning from implementation and enables
   compile-subagent to run independently if needed.
-type: updated
+status: compiled
 changes:
   description: |-
     Clarify that compile-subagent receives path to plan.md file (e.g., .claude/plans/<branch>/plan.md)
@@ -15,8 +16,14 @@ changes:
       description: |-
         compile-subagent accepts plan.md file path in its invocation prompt.
         Reads the file completely before starting implementation.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-007
       description: |-
         Each implementation step in the plan is executed as documented. If the plan is ambiguous,
         compile-subagent reports the ambiguity rather than inferring. The plan is detailed enough
         to avoid this situation.
+      given: ""
+      when: ""
+      then: ""

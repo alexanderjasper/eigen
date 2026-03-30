@@ -1,10 +1,11 @@
+type: updated
 summary: Plan must be persisted as file artifact, not conversation-only
 reason: |-
   Unlike the current eigen-plan which produces a plan only in conversation context, plan-subagent
   must write the plan to a persistent file so compile-subagent can read and follow it.
   This enables compile-subagent to work from stable, documented requirements without
   re-planning or relying on conversation history.
-type: updated
+status: compiled
 changes:
   description: |-
     Clarify that plan-subagent writes the plan.md file to .claude/plans/<branch>/plan.md
@@ -15,7 +16,13 @@ changes:
       description: |-
         plan-subagent writes plan.md to .claude/plans/<branch-name>/plan.md.
         The path is deterministic and can be passed to compile-subagent in the invocation prompt.
+      given: ""
+      when: ""
+      then: ""
     - id: AC-007
       description: |-
         Plan file is committed with `plan(<module>): <summary>` commit after creation.
         The commit message should be concise but capture the essence of the plan.
+      given: ""
+      when: ""
+      then: ""

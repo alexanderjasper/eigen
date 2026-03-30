@@ -1,12 +1,13 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for the spec CLI
 reason: |
   The CLI is the user-facing interface to Eigen. Speccing it before writing
   any Go code ensures the command contracts are explicit and testable.
+status: compiled
 changes:
   title: Spec CLI
   owner: eigen

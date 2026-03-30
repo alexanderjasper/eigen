@@ -1,6 +1,6 @@
 id: chg-001
 sequence: 1
-timestamp: 2026-03-20T20:00:00Z
+timestamp: "2026-03-20T20:00:00Z"
 author: alexander
 type: created
 summary: Initial spec for the spec project command
@@ -8,8 +8,9 @@ reason: |
   With spec event defaulting to non-interactive, the AI edits the event file
   directly after creation. A separate project command is needed to recompute
   spec.yaml from the edited events without creating a new event.
+status: compiled
 changes:
-  title: "spec project"
+  title: spec project
   owner: eigen
   status: draft
   description: |
@@ -38,6 +39,3 @@ changes:
       given: Multiple modules exist under the specs root
       when: eigen spec project is run with no arguments
       then: spec.yaml is rewritten for every module and each path is printed
-dependencies:
-  - spec-cli
-  - projection-engine
