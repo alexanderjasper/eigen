@@ -13,6 +13,7 @@ reason: |
   to compiled (which requires ALL changes to be compiled). Fixes GitHub issue #13.
 status: draft
 changes:
+  dependencies: []
   behavior: |
     compile-agent receives a spec path and an approved plan as inline content. It reads both
     completely before writing any code. It discovers the build system and code patterns by
