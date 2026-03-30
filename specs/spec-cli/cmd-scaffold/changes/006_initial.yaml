@@ -1,10 +1,8 @@
-format: eigen/v1
 id: chg-006
 sequence: 6
-timestamp: 2026-03-30T07:41:35Z
-author: ""
+timestamp: "2026-03-30T07:41:35Z"
 type: updated
-summary: "clarify that hook normalizes only spec.yaml; change files are CLI-canonical but hand-edits can drift"
+summary: clarify that hook normalizes only spec.yaml; change files are CLI-canonical but hand-edits can drift
 reason: |
   The user asked whether the pre-commit hook should also normalize change files,
   not just spec.yaml. Investigation of the storage layer shows that every write
@@ -16,6 +14,7 @@ reason: |
   files. The hook therefore only needs to normalize spec.yaml via `project-all`
   today. A future `eigen spec format` command could extend the hook to also
   re-canonicalize change files; the hook design should not preclude this extension.
+status: approved
 changes:
   behavior: |
     Accepts an optional path argument (defaults to the current working directory),
@@ -64,7 +63,7 @@ changes:
     - id: AC-014
       description: Hook script structure does not preclude future addition of eigen spec format
       given: The pre-commit hook installed by eigen scaffold
-      when: "A future `eigen spec format` command becomes available"
+      when: A future `eigen spec format` command becomes available
       then: |
         The hook block is structured so that "eigen spec format" (change file
         re-canonicalization) can be added as a step before "eigen spec project-all"

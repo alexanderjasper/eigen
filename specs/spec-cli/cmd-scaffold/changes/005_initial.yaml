@@ -1,9 +1,8 @@
 id: chg-005
 sequence: 5
-timestamp: 2026-03-30T07:38:56Z
-author: ""
+timestamp: "2026-03-30T07:38:56Z"
 type: updated
-summary: "pre-commit hook runs project-all then validate to keep spec.yaml canonical"
+summary: pre-commit hook runs project-all then validate to keep spec.yaml canonical
 reason: |
   There is no dedicated `eigen spec format` command. Normalization is achieved by
   running `eigen spec project` (or `project-all`) to reproject spec.yaml from the
@@ -11,6 +10,7 @@ reason: |
   first so that spec.yaml files are always in canonical form, and then run
   `eigen spec validate` to catch any errors — both steps must pass before a commit
   is accepted.
+status: approved
 changes:
   behavior: |
     Accepts an optional path argument (defaults to the current working directory),
@@ -50,7 +50,7 @@ changes:
     - id: AC-012
       description: Hook rejects commit when eigen spec project-all or eigen spec validate fails
       given: A repository whose pre-commit hook was installed by eigen scaffold, and at least one specs/ file is staged
-      when: "A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero"
+      when: A git commit is attempted and either `eigen spec project-all` or `eigen spec validate` exits non-zero
       then: |
         The pre-commit hook prints a clear error message to stderr indicating which
         command failed (project-all or validate) and exits non-zero, causing git to
