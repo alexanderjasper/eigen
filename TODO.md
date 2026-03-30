@@ -92,7 +92,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ## P1 — Integrity & Robustness
 
-### 5. Replace review session abstraction with change file status
+### ~~5. Replace review session abstraction with change file status~~ ✅ Done
 
 **Module**: `spec-navigator/change-review`
 **What**: Review sessions are an unnecessary indirection. The change files already are the persistence layer — they survive restarts, they're on disk, and they have a `status` field. Replace the in-memory `reviewStore` and session API with direct status mutations on change files. The UI reads draft changes from the existing module API and writes decisions back via new status and comment endpoints.
