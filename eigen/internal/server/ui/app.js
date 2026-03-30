@@ -80,13 +80,93 @@ function buildTree(modules) {
   return root;
 }
 
+function getVisibleLabels() {
+  return Array.from(document.querySelectorAll('.tree-label')).filter(el =>
+    !el.closest('.tree-children.hidden')
+  );
+}
+
+function getParentLabel(label) {
+  const parentChildren = label.closest('.tree-node').parentElement;
+  if (!parentChildren || !parentChildren.classList.contains('tree-children')) return null;
+  return parentChildren.closest('.tree-node').querySelector(':scope > .tree-label');
+}
+
+function moveFocus(label) {
+  if (!label) return;
+  for (const l of document.querySelectorAll('.tree-label')) l.setAttribute('tabindex', '-1');
+  label.setAttribute('tabindex', '0');
+  label.focus();
+}
+
+function initRovingTabindex() {
+  const labels = getVisibleLabels();
+  labels.forEach((l, i) => l.setAttribute('tabindex', i === 0 ? '0' : '-1'));
+}
+
 function renderTree(modules) {
   const container = document.getElementById('tree');
   container.innerHTML = '';
+  container.setAttribute('role', 'tree');
   const tree = buildTree(modules);
   for (const node of tree.values()) {
     container.appendChild(createNodeEl(node));
   }
+  initRovingTabindex();
+  container.addEventListener('keydown', e => {
+    if (!e.target.classList.contains('tree-label')) return;
+    const label = e.target;
+    const visible = getVisibleLabels();
+    const idx = visible.indexOf(label);
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        moveFocus(visible[idx + 1] ?? null);
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        moveFocus(visible[idx - 1] ?? null);
+        break;
+      }
+      case 'ArrowRight': {
+        e.preventDefault();
+        const expanded = label.getAttribute('aria-expanded');
+        if (expanded === 'false') {
+          // expand
+          label.closest('.tree-node').querySelector(':scope > .tree-children')?.classList.remove('hidden');
+          label.closest('.tree-node').querySelector(':scope > .toggle')?.classList.add('open');
+          label.setAttribute('aria-expanded', 'true');
+        } else if (expanded === 'true') {
+          // move to first child
+          const newVisible = getVisibleLabels();
+          moveFocus(newVisible[newVisible.indexOf(label) + 1] ?? null);
+        }
+        // null (leaf) — no-op
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        const expanded = label.getAttribute('aria-expanded');
+        if (expanded === 'true') {
+          // collapse
+          label.closest('.tree-node').querySelector(':scope > .tree-children')?.classList.add('hidden');
+          label.closest('.tree-node').querySelector(':scope > .toggle')?.classList.remove('open');
+          label.setAttribute('aria-expanded', 'false');
+        } else {
+          // move to parent
+          moveFocus(getParentLabel(label));
+        }
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        label.click();
+        break;
+      }
+    }
+  });
 }
 
 function createNodeEl(node) {
@@ -96,6 +176,8 @@ function createNodeEl(node) {
 
   const label = document.createElement('div');
   label.className = 'tree-label';
+  label.setAttribute('role', 'treeitem');
+  label.setAttribute('tabindex', '-1');
   if (node.path === activePath) label.classList.add('active');
 
   const toggle = document.createElement('span');
@@ -115,6 +197,7 @@ function createNodeEl(node) {
   if (hasChildren) {
     toggle.textContent = '▶';
     toggle.classList.add('open');
+    label.setAttribute('aria-expanded', 'true');
 
     childrenEl = document.createElement('div');
     childrenEl.className = 'tree-children';
@@ -127,6 +210,7 @@ function createNodeEl(node) {
       e.stopPropagation();
       const open = toggle.classList.toggle('open');
       childrenEl.classList.toggle('hidden', !open);
+      label.setAttribute('aria-expanded', String(open));
     });
   }
 
