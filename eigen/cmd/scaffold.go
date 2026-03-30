@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -28,10 +29,63 @@ var planAgentDef []byte
 var compileAgentDef []byte
 
 var scaffoldForce bool
+var scaffoldNoHooks bool
 
 func init() {
 	rootCmd.AddCommand(scaffoldCmd)
 	scaffoldCmd.Flags().BoolVarP(&scaffoldForce, "force", "f", false, "overwrite existing skill and agent files")
+	scaffoldCmd.Flags().BoolVar(&scaffoldNoHooks, "no-hooks", false, "skip git pre-commit hook installation")
+}
+
+const hookBegin = "# BEGIN eigen scaffold"
+const hookEnd = "# END eigen scaffold"
+
+func installHook(target string) (string, error) {
+	hookPath := filepath.Join(target, ".git", "hooks", "pre-commit")
+	if err := os.MkdirAll(filepath.Dir(hookPath), 0755); err != nil {
+		return "", fmt.Errorf("creating hooks directory: %w", err)
+	}
+
+	hookBlock := hookBegin + `
+STAGED_SPECS=$(git diff --cached --name-only | grep '^specs/')
+if [ -n "$STAGED_SPECS" ]; then
+  if ! eigen spec project-all; then
+    echo "eigen: spec project-all failed; commit rejected" >&2
+    exit 1
+  fi
+  if ! eigen spec validate; then
+    echo "eigen: spec validate failed; commit rejected" >&2
+    exit 1
+  fi
+fi
+` + hookEnd
+
+	existing, err := os.ReadFile(hookPath)
+	if err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("reading pre-commit hook: %w", err)
+	}
+
+	var content string
+	if os.IsNotExist(err) {
+		content = "#!/bin/sh\n" + hookBlock
+	} else {
+		if strings.Contains(string(existing), hookBegin) {
+			// already present, idempotent
+			if err := os.Chmod(hookPath, 0755); err != nil {
+				return "", fmt.Errorf("chmod pre-commit hook: %w", err)
+			}
+			return hookPath, nil
+		}
+		content = string(existing) + "\n" + hookBlock
+	}
+
+	if err := os.WriteFile(hookPath, []byte(content), 0755); err != nil {
+		return "", fmt.Errorf("writing pre-commit hook: %w", err)
+	}
+	if err := os.Chmod(hookPath, 0755); err != nil {
+		return "", fmt.Errorf("chmod pre-commit hook: %w", err)
+	}
+	return hookPath, nil
 }
 
 var scaffoldCmd = &cobra.Command{
@@ -133,12 +187,25 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("creating specs directory: %w", err)
 	}
 
-	// AC-005: print created files and hint
+	// AC-008/AC-015: install pre-commit hook by default
+	var hookPath string
+	if !scaffoldNoHooks {
+		var err error
+		hookPath, err = installHook(target)
+		if err != nil {
+			return fmt.Errorf("installing pre-commit hook: %w", err)
+		}
+	}
+
+	// AC-005/AC-013: print created files and hint
 	fmt.Println("Scaffolded eigen project:")
 	for _, p := range created {
 		fmt.Printf("  %s\n", p)
 	}
 	fmt.Printf("  %s/\n", specsDir)
+	if hookPath != "" {
+		fmt.Printf("  %s\n", hookPath)
+	}
 	fmt.Println("\nNext: eigen spec new <module-name>")
 	return nil
 }

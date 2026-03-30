@@ -1,0 +1,33 @@
+format: eigen/v1
+id: chg-001
+sequence: 1
+timestamp: "2026-03-30T08:12:27Z"
+author: alexander
+type: created
+summary: Initial spec for the infra domain
+reason: |
+  Infrastructure concerns (CI, deployment, tooling) are distinct from product
+  modules. A parent domain groups them so spec list remains navigable and
+  cross-cutting infra changes can be tracked in one place.
+status: compiled
+compiled_commits:
+  - 647318af2bcb941257b7cd976d1bac69f592b279
+changes:
+  title: Infrastructure
+  owner: alexander
+  status: draft
+  description: |
+    The infra domain contains specs for infrastructure concerns that support
+    the eigen project: CI pipelines, release automation, and developer tooling.
+    These specs describe observable behavior of external systems (GitHub Actions,
+    scripts) rather than Go source code.
+  behavior: |
+    Each sub-module under infra describes a specific infrastructure artifact.
+    Acceptance criteria are expressed as observable workflow outcomes rather
+    than code-level contracts.
+  acceptance_criteria:
+    - id: AC-001
+      description: infra domain is a navigable parent in spec list
+      given: Sub-modules exist under infra/
+      when: eigen spec list is run
+      then: All infra/* sub-modules appear in the listing
