@@ -383,7 +383,7 @@ func TestSetChangeStatus(t *testing.T) {
 		}
 		writeChangeFile(t, changesDir, ch, "initial")
 
-		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "approved"); err != nil {
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "approved", nil); err != nil {
 			t.Fatalf("SetChangeStatus error: %v", err)
 		}
 
@@ -410,7 +410,7 @@ func TestSetChangeStatus(t *testing.T) {
 		root := t.TempDir()
 		setupModule(t, root, "mymod")
 
-		err := SetChangeStatus(root, "mymod", "999_nope.yaml", "approved")
+		err := SetChangeStatus(root, "mymod", "999_nope.yaml", "approved", nil)
 		if err == nil {
 			t.Fatal("expected error, got nil")
 		}
@@ -687,7 +687,7 @@ changes:
 		t.Fatalf("writing fixture: %v", err)
 	}
 
-	if err := SetChangeStatus(root, "mymod", filename, "approved"); err != nil {
+	if err := SetChangeStatus(root, "mymod", filename, "approved", nil); err != nil {
 		t.Fatalf("SetChangeStatus error: %v", err)
 	}
 
@@ -729,7 +729,7 @@ changes:
 		t.Fatalf("writing fixture: %v", err)
 	}
 
-	if err := SetChangeStatus(root, "mymod", filename, "approved"); err != nil {
+	if err := SetChangeStatus(root, "mymod", filename, "approved", nil); err != nil {
 		t.Fatalf("SetChangeStatus error: %v", err)
 	}
 
@@ -742,6 +742,173 @@ changes:
 	if strings.Contains(result, "author:") {
 		t.Errorf("rewritten file unexpectedly contains 'author:' key:\n%s", result)
 	}
+}
+
+// TestSetChangeStatusCompiledCommits verifies AC-001, AC-002, AC-004, AC-005, AC-010.
+func TestSetChangeStatusCompiledCommits(t *testing.T) {
+	t.Run("commit_flag_appends_hash_AC001", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{ID: "chg-001", Sequence: 1, Status: "approved"}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", []string{"abc1234"}); err != nil {
+			t.Fatalf("SetChangeStatus error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes) != 1 {
+			t.Fatalf("len = %d, want 1", len(changes))
+		}
+		if changes[0].Status != "compiled" {
+			t.Errorf("Status = %q, want compiled", changes[0].Status)
+		}
+		if len(changes[0].CompiledCommits) != 1 || changes[0].CompiledCommits[0] != "abc1234" {
+			t.Errorf("CompiledCommits = %v, want [abc1234]", changes[0].CompiledCommits)
+		}
+	})
+
+	t.Run("two_calls_accumulate_no_duplicates_AC002", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{ID: "chg-001", Sequence: 1, Status: "approved"}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", []string{"abc1234"}); err != nil {
+			t.Fatalf("first SetChangeStatus error: %v", err)
+		}
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", []string{"def5678"}); err != nil {
+			t.Fatalf("second SetChangeStatus error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes[0].CompiledCommits) != 2 {
+			t.Fatalf("CompiledCommits len = %d, want 2", len(changes[0].CompiledCommits))
+		}
+		if changes[0].CompiledCommits[0] != "abc1234" {
+			t.Errorf("CompiledCommits[0] = %q, want abc1234", changes[0].CompiledCommits[0])
+		}
+		if changes[0].CompiledCommits[1] != "def5678" {
+			t.Errorf("CompiledCommits[1] = %q, want def5678", changes[0].CompiledCommits[1])
+		}
+	})
+
+	t.Run("duplicate_hash_ignored_AC002", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{ID: "chg-001", Sequence: 1, Status: "approved"}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", []string{"abc1234"}); err != nil {
+			t.Fatalf("first SetChangeStatus error: %v", err)
+		}
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", []string{"abc1234"}); err != nil {
+			t.Fatalf("second SetChangeStatus error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes[0].CompiledCommits) != 1 {
+			t.Errorf("CompiledCommits len = %d, want 1 (duplicate should be ignored)", len(changes[0].CompiledCommits))
+		}
+	})
+
+	t.Run("nil_commits_no_field_AC004", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{ID: "chg-001", Sequence: 1, Status: "approved"}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "compiled", nil); err != nil {
+			t.Fatalf("SetChangeStatus error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes[0].CompiledCommits) != 0 {
+			t.Errorf("CompiledCommits = %v, want empty (no commits passed)", changes[0].CompiledCommits)
+		}
+
+		// Also verify the field is absent from the YAML on disk.
+		data, err := os.ReadFile(filepath.Join(ChangesPath(root, "mymod"), "001_initial.yaml"))
+		if err != nil {
+			t.Fatalf("reading file: %v", err)
+		}
+		if strings.Contains(string(data), "compiled_commits") {
+			t.Errorf("file unexpectedly contains compiled_commits key:\n%s", string(data))
+		}
+	})
+
+	t.Run("approved_transition_no_compiled_commits_AC005", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		ch := spec.Change{ID: "chg-001", Sequence: 1, Status: "draft"}
+		writeChangeFile(t, changesDir, ch, "initial")
+
+		if err := SetChangeStatus(root, "mymod", "001_initial.yaml", "approved", nil); err != nil {
+			t.Fatalf("SetChangeStatus error: %v", err)
+		}
+
+		data, err := os.ReadFile(filepath.Join(ChangesPath(root, "mymod"), "001_initial.yaml"))
+		if err != nil {
+			t.Fatalf("reading file: %v", err)
+		}
+		if strings.Contains(string(data), "compiled_commits") {
+			t.Errorf("approved transition unexpectedly contains compiled_commits key:\n%s", string(data))
+		}
+	})
+
+	t.Run("existing_hashes_preserved_AC010", func(t *testing.T) {
+		root := t.TempDir()
+		changesDir := setupModule(t, root, "mymod")
+
+		// Write a file that already has compiled_commits on disk.
+		content := `id: chg-001
+sequence: 1
+status: compiled
+compiled_commits:
+  - aaa0001
+changes:
+  title: T
+`
+		filename := "001_initial.yaml"
+		if err := os.WriteFile(filepath.Join(changesDir, filename), []byte(content), 0644); err != nil {
+			t.Fatalf("writing fixture: %v", err)
+		}
+
+		if err := SetChangeStatus(root, "mymod", filename, "compiled", []string{"bbb0002"}); err != nil {
+			t.Fatalf("SetChangeStatus error: %v", err)
+		}
+
+		changes, err := ReadChanges(root, "mymod")
+		if err != nil {
+			t.Fatalf("ReadChanges error: %v", err)
+		}
+		if len(changes[0].CompiledCommits) != 2 {
+			t.Fatalf("CompiledCommits len = %d, want 2", len(changes[0].CompiledCommits))
+		}
+		if changes[0].CompiledCommits[0] != "aaa0001" {
+			t.Errorf("CompiledCommits[0] = %q, want aaa0001", changes[0].CompiledCommits[0])
+		}
+		if changes[0].CompiledCommits[1] != "bbb0002" {
+			t.Errorf("CompiledCommits[1] = %q, want bbb0002", changes[0].CompiledCommits[1])
+		}
+	})
 }
 
 // TestWriteSpecIndentation verifies AC-029: WriteSpec uses 2-space indentation.

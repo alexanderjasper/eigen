@@ -120,7 +120,9 @@ func ReadSpec(specsRoot, path string) (spec.SpecModule, error) {
 }
 
 // SetChangeStatus reads a change file by filename, sets its Status field, and writes it back.
-func SetChangeStatus(specsRoot, modulePath, filename, status string) error {
+// When status is "compiled" and commits is non-empty, the hashes are appended to compiled_commits
+// (duplicates are ignored).
+func SetChangeStatus(specsRoot, modulePath, filename, status string, commits []string) error {
 	dir := ChangesPath(specsRoot, modulePath)
 	path := filepath.Join(dir, filename)
 	data, err := os.ReadFile(path)
@@ -132,6 +134,18 @@ func SetChangeStatus(specsRoot, modulePath, filename, status string) error {
 		return fmt.Errorf("parsing change file %s: %w", filename, err)
 	}
 	ch.Status = status
+	if status == "compiled" && len(commits) > 0 {
+		seen := make(map[string]bool, len(ch.CompiledCommits))
+		for _, h := range ch.CompiledCommits {
+			seen[h] = true
+		}
+		for _, h := range commits {
+			if !seen[h] {
+				ch.CompiledCommits = append(ch.CompiledCommits, h)
+				seen[h] = true
+			}
+		}
+	}
 	out, err := marshalCanonical(ch)
 	if err != nil {
 		return fmt.Errorf("marshaling change file %s: %w", filename, err)
