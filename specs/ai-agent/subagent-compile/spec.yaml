@@ -4,6 +4,7 @@ domain: ai-agent
 module: subagent-compile
 owner: alexander
 title: compile-subagent — implements code changes following approved plan
+status: compiled
 description: |-
   compile-agent must not assume any specific language, framework, build system,
   or codebase structure. It discovers how to build the project (Makefile, package.json,

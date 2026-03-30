@@ -11,9 +11,10 @@ reason: |
   currently skips them because there is nothing to implement, leaving them stuck in
   approved status forever. This blocks the projection engine from promoting the module
   to compiled (which requires ALL changes to be compiled). Fixes GitHub issue #13.
-status: approved
+status: compiled
+compiled_commits:
+  - acc247b
 changes:
-  dependencies: []
   behavior: |
     compile-agent receives a spec path and an approved plan as inline content. It reads both
     completely before writing any code. It discovers the build system and code patterns by
