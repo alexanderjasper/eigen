@@ -41,6 +41,13 @@ behavior: |
   The SpecModule struct gains a DeprecationReason field (YAML key:
   deprecation_reason) written to spec.yaml when status is deprecated.
   The ChangeSet struct gains a matching DeprecationReason field.
+
+  Compiled status auto-promotion: after all changes have been folded, if
+  every change in the module has a top-level Status of "compiled", the
+  projected module status is automatically set to "compiled" — regardless
+  of any ChangeSet.Status values set earlier in the change history. This
+  promotion does not apply when the module's effective status is "deprecated"
+  or "removed"; those terminal statuses take precedence.
 acceptance_criteria:
   - id: AC-001
     description: Simple fields use last-write-wins across changes
@@ -242,7 +249,27 @@ acceptance_criteria:
     given: The implementation is complete
     when: The test files are checked
     then: eigen/internal/spec/projection_test.go includes table-driven cases for deprecated and removed status projection, and eigen/internal/spec/validation_test.go includes cases for the deprecated-dependency warning
+  - id: AC-041
+    description: Module status is promoted to compiled when all changes are compiled
+    given: A module whose every change has top-level Status "compiled"
+    when: Project() is called
+    then: The resulting SpecModule has Status "compiled", even if an earlier change set ChangeSet.Status to "draft"
+  - id: AC-042
+    description: Mixed compiled/non-compiled changes do not trigger promotion
+    given: A module with two changes where one has Status "compiled" and one has Status "draft"
+    when: Project() is called
+    then: The module status reflects the last explicit ChangeSet.Status value, not "compiled"
+  - id: AC-043
+    description: deprecated status takes precedence over compiled promotion
+    given: A module where all changes have top-level Status "compiled" but the last change sets ChangeSet.Status to "deprecated"
+    when: Project() is called
+    then: The resulting SpecModule has Status "deprecated", not "compiled"
+  - id: AC-044
+    description: removed status takes precedence over compiled promotion
+    given: A module where all changes have top-level Status "compiled" but the last change sets ChangeSet.Status to "removed"
+    when: Project() is called
+    then: The resulting SpecModule has Status "removed", not "compiled"
 dependencies: []
 technology: {}
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6

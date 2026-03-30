@@ -4,7 +4,7 @@ domain: projection-engine
 module: spec-format-version
 owner: eigen
 title: Spec Format Version
-status: draft
+status: compiled
 description: |
   Adds a format field (e.g. format: eigen/v1) to SpecModule and to every
   change file template written by the CLI. The field is metadata-only: it

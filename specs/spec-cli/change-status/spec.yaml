@@ -4,7 +4,7 @@ domain: spec-cli
 module: change-status
 owner: eigen
 title: Change Status
-status: draft
+status: compiled
 description: |
   Each change file (NNN_*.yaml in a module's changes/ directory) carries
   an optional `status` field that records where that change is in its
