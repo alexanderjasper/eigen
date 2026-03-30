@@ -111,7 +111,7 @@ Items derived from a full project evaluation against the README manifest. Groupe
 
 ---
 
-### 6. Spec format version field
+### ~~6. Spec format version field~~ ✅ Done
 
 **Module**: `projection-engine`
 **What**: Add a `format` field to spec.yaml and change files (e.g., `format: eigen/v1`). This enables future format migrations without silent breakage.
