@@ -9,7 +9,10 @@ import (
 
 func TestProject(t *testing.T) {
 	t.Run("empty_changes", func(t *testing.T) {
-		got := Project("d/m", nil)
+		got, err := Project("d/m", nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -67,8 +70,8 @@ func TestProject(t *testing.T) {
 					Title:       "My Title",
 					Owner:       "alice",
 					Status:      "draft",
-					Description: "A description",
-					Behavior:    "Some behavior",
+					Description: NewTextChangeScalar("A description"),
+					Behavior:    NewTextChangeScalar("Some behavior"),
 					Technology:  map[string]string{"lang": "go"},
 					Dependencies: []string{"dep-a"},
 					AcceptanceCriteria: []AcceptanceCriterion{
@@ -78,7 +81,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -124,8 +130,8 @@ func TestProject(t *testing.T) {
 					Title:       "First",
 					Owner:       "alice",
 					Status:      "draft",
-					Description: "desc1",
-					Behavior:    "beh1",
+					Description: NewTextChangeScalar("desc1"),
+					Behavior:    NewTextChangeScalar("beh1"),
 				},
 			},
 			{
@@ -135,13 +141,16 @@ func TestProject(t *testing.T) {
 					Title:       "Second",
 					Owner:       "bob",
 					Status:      "approved",
-					Description: "desc2",
-					Behavior:    "beh2",
+					Description: NewTextChangeScalar("desc2"),
+					Behavior:    NewTextChangeScalar("beh2"),
 				},
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -186,7 +195,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -228,7 +240,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -256,7 +271,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -284,7 +302,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -307,7 +328,10 @@ func TestProject(t *testing.T) {
 			{ID: "chg-003", Sequence: 3, Changes: ChangeSet{Title: "t3"}},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -328,7 +352,10 @@ func TestProject(t *testing.T) {
 			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{Title: "second"}},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q", got.Format, "eigen/v1")
@@ -358,7 +385,10 @@ func TestProject(t *testing.T) {
 			},
 		}
 
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 
 		if got.Format != "eigen/v1" {
 			t.Errorf("Format = %q, want %q (must not be sourced from change)", got.Format, "eigen/v1")
@@ -370,7 +400,10 @@ func TestProject(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{Status: "deprecated"}},
 		}
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if got.Status != "deprecated" {
 			t.Errorf("Status = %q, want %q", got.Status, "deprecated")
 		}
@@ -381,7 +414,10 @@ func TestProject(t *testing.T) {
 		changes := []*Change{
 			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{Status: "removed"}},
 		}
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if got.Status != "removed" {
 			t.Errorf("Status = %q, want %q", got.Status, "removed")
 		}
@@ -395,7 +431,10 @@ func TestProject(t *testing.T) {
 				DeprecationReason: "Use module foo instead",
 			}},
 		}
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if got.DeprecationReason != "Use module foo instead" {
 			t.Errorf("DeprecationReason = %q, want %q", got.DeprecationReason, "Use module foo instead")
 		}
@@ -412,9 +451,205 @@ func TestProject(t *testing.T) {
 				Status: "draft",
 			}},
 		}
-		got := Project("d/m", changes)
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
 		if got.DeprecationReason != "" {
 			t.Errorf("DeprecationReason = %q, want empty after status change from deprecated", got.DeprecationReason)
+		}
+	})
+
+	// AC-041: replace op substitutes first occurrence
+	t.Run("replace_first_occurrence", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("foo bar foo"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeOps([]TextOp{
+					{Op: "replace", Old: "foo", New: "baz"},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Behavior != "baz bar foo" {
+			t.Errorf("Behavior = %q, want %q", got.Behavior, "baz bar foo")
+		}
+	})
+
+	// AC-042: prepend op inserts text before field value
+	t.Run("prepend", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Description: NewTextChangeScalar("existing text"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Description: NewTextChangeOps([]TextOp{
+					{Op: "prepend", Text: "new intro\n\n"},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Description != "new intro\n\nexisting text" {
+			t.Errorf("Description = %q, want %q", got.Description, "new intro\n\nexisting text")
+		}
+	})
+
+	// AC-043: append op inserts text after field value
+	t.Run("append", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Description: NewTextChangeScalar("existing text"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Description: NewTextChangeOps([]TextOp{
+					{Op: "append", Text: "\n\nnew footer"},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Description != "existing text\n\nnew footer" {
+			t.Errorf("Description = %q, want %q", got.Description, "existing text\n\nnew footer")
+		}
+	})
+
+	// AC-044: delete op removes first occurrence
+	t.Run("delete_first_occurrence", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("A B C B"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeOps([]TextOp{
+					{Op: "delete", Text: "B "},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Behavior != "A C B" {
+			t.Errorf("Behavior = %q, want %q", got.Behavior, "A C B")
+		}
+	})
+
+	// AC-045: multiple ops in a single change applied sequentially
+	t.Run("multi_op_sequential", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("A B C"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeOps([]TextOp{
+					{Op: "replace", Old: "A", New: "X"},
+					{Op: "append", Text: " D"},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Behavior != "X B C D" {
+			t.Errorf("Behavior = %q, want %q", got.Behavior, "X B C D")
+		}
+	})
+
+	// AC-046: scalar string value is full replacement (backward compatible)
+	t.Run("scalar_full_replace_backward_compat", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("old text"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("new text"),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Behavior != "new text" {
+			t.Errorf("Behavior = %q, want %q", got.Behavior, "new text")
+		}
+	})
+
+	// AC-047: replace op with no match returns a projection error
+	t.Run("replace_no_match_error", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("hello world"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeOps([]TextOp{
+					{Op: "replace", Old: "xyz", New: "abc"},
+				}),
+			}},
+		}
+		_, err := Project("d/m", changes)
+		if err == nil {
+			t.Fatal("expected error for replace with no match, got nil")
+		}
+		if !strings.Contains(err.Error(), "xyz") {
+			t.Errorf("error %q does not mention target %q", err.Error(), "xyz")
+		}
+	})
+
+	// AC-048: delete op with no match returns a projection error
+	t.Run("delete_no_match_error", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Behavior: NewTextChangeScalar("hello world"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Behavior: NewTextChangeOps([]TextOp{
+					{Op: "delete", Text: "xyz"},
+				}),
+			}},
+		}
+		_, err := Project("d/m", changes)
+		if err == nil {
+			t.Fatal("expected error for delete with no match, got nil")
+		}
+		if !strings.Contains(err.Error(), "xyz") {
+			t.Errorf("error %q does not mention target %q", err.Error(), "xyz")
+		}
+	})
+
+	// AC-049: ops apply against current projected value, not original
+	t.Run("ops_across_changes", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Changes: ChangeSet{
+				Description: NewTextChangeScalar("A B C"),
+			}},
+			{ID: "chg-002", Sequence: 2, Changes: ChangeSet{
+				Description: NewTextChangeOps([]TextOp{
+					{Op: "replace", Old: "B", New: "X"},
+				}),
+			}},
+			{ID: "chg-003", Sequence: 3, Changes: ChangeSet{
+				Description: NewTextChangeOps([]TextOp{
+					{Op: "replace", Old: "X", New: "Y"},
+				}),
+			}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Description != "A Y C" {
+			t.Errorf("Description = %q, want %q", got.Description, "A Y C")
 		}
 	})
 }
@@ -433,7 +668,10 @@ func TestProjectCompiledCommitsNotProjected(t *testing.T) {
 		},
 	}
 
-	got := Project("d/m", changes)
+	got, err := Project("d/m", changes)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 
 	// Marshal the result to YAML and check that compiled_commits is absent.
 	data, err := yaml.Marshal(got)
