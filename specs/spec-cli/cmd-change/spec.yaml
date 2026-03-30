@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-cli/cmd-change
 domain: spec-cli
 module: cmd-change
@@ -5,59 +6,59 @@ owner: eigen
 title: spec change
 status: draft
 description: |
-    The spec change command records a new change against an existing
-    spec module. By default it writes the change template to the changes/
-    directory and exits, printing the path so the caller can edit it.
-    Pass --edit to open $EDITOR instead (human terminal workflow).
+  The spec change command records a new change against an existing
+  spec module. By default it writes the change template to the changes/
+  directory and exits, printing the path so the caller can edit it.
+  Pass --edit to open $EDITOR instead (human terminal workflow).
 behavior: |
-    Accepts a single slash-delimited path argument identifying the target
-    module. Assigns the next sequence number automatically. The change file
-    is named NNN_<slug>.yaml where the slug is derived from the change summary.
+  Accepts a single slash-delimited path argument identifying the target
+  module. Assigns the next sequence number automatically. The change file
+  is named NNN_<slug>.yaml where the slug is derived from the change summary.
 
-    Default (non-interactive): writes the template to changes/, reprojects
-    spec.yaml, and prints the file path. The caller edits the file and runs
-    eigen spec project <path> to reproject after their edits.
+  Default (non-interactive): writes the template to changes/, reprojects
+  spec.yaml, and prints the file path. The caller edits the file and runs
+  eigen spec project <path> to reproject after their edits.
 
-    With --edit: writes a temp file, opens $EDITOR, and on save parses,
-    writes the change, and reprojects — the original human workflow.
+  With --edit: writes a temp file, opens $EDITOR, and on save parses,
+  writes the change, and reprojects — the original human workflow.
 
-    Before writing the change file, eigen spec change validates the changes
-    against the current spec state using ValidateChanges from the projection
-    engine. If any field in the changeset is identical to the current spec
-    state (e.g. an acceptance criterion with the same id and identical
-    given/when/then/description), the command exits non-zero and reports
-    each redundant field without writing anything.
+  Before writing the change file, eigen spec change validates the changes
+  against the current spec state using ValidateChanges from the projection
+  engine. If any field in the changeset is identical to the current spec
+  state (e.g. an acceptance criterion with the same id and identical
+  given/when/then/description), the command exits non-zero and reports
+  each redundant field without writing anything.
 acceptance_criteria:
-    - id: AC-001
-      description: Default run writes template and exits without opening editor
-      given: A valid existing module
-      when: eigen spec change <path> is run without --edit
-      then: Writes NNN_initial.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
-    - id: AC-002
-      description: Assigns the next sequence number automatically
-      given: A module that already has N changes
-      when: eigen spec change completes
-      then: The new change file is named NNN_<slug>.yaml with sequence N+1
-    - id: AC-003
-      description: --edit flag opens $EDITOR
-      given: A valid existing module and EDITOR set
-      when: eigen spec change <path> --edit is run
-      then: Opens a pre-filled template in $EDITOR; on save appends the change file and rewrites spec.yaml
-    - id: AC-004
-      description: Rejects a change whose AC is identical to the current state
-      given: A module with AC-001 already projected
-      when: eigen spec change writes a changeset containing an identical AC-001
-      then: Exits non-zero and reports AC-001 as a no-op change; no file is written
-    - id: AC-005
-      description: Rejects a change whose simple field matches current state
-      given: A module with title "Foo" already projected
-      when: eigen spec change writes a changeset setting title to "Foo"
-      then: Exits non-zero and reports title as a no-op change; no file is written
-    - id: AC-006
-      description: Allows a change that modifies at least one field
-      given: A module with title "Foo" and AC-001 already projected
-      when: eigen spec change writes a changeset that updates AC-001 but leaves title unchanged
-      then: The change is accepted; only the changed AC-001 need be in the changeset
+  - id: AC-001
+    description: Default run writes template and exits without opening editor
+    given: A valid existing module
+    when: eigen spec change <path> is run without --edit
+    then: Writes NNN_initial.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
+  - id: AC-002
+    description: Assigns the next sequence number automatically
+    given: A module that already has N changes
+    when: eigen spec change completes
+    then: The new change file is named NNN_<slug>.yaml with sequence N+1
+  - id: AC-003
+    description: --edit flag opens $EDITOR
+    given: A valid existing module and EDITOR set
+    when: eigen spec change <path> --edit is run
+    then: Opens a pre-filled template in $EDITOR; on save appends the change file and rewrites spec.yaml
+  - id: AC-004
+    description: Rejects a change whose AC is identical to the current state
+    given: A module with AC-001 already projected
+    when: eigen spec change writes a changeset containing an identical AC-001
+    then: Exits non-zero and reports AC-001 as a no-op change; no file is written
+  - id: AC-005
+    description: Rejects a change whose simple field matches current state
+    given: A module with title "Foo" already projected
+    when: eigen spec change writes a changeset setting title to "Foo"
+    then: Exits non-zero and reports title as a no-op change; no file is written
+  - id: AC-006
+    description: Allows a change that modifies at least one field
+    given: A module with title "Foo" and AC-001 already projected
+    when: eigen spec change writes a changeset that updates AC-001 but leaves title unchanged
+    then: The change is accepted; only the changed AC-001 need be in the changeset
 dependencies: []
 technology: {}
 last_change: chg-005

@@ -1,3 +1,4 @@
+format: eigen/v1
 id: spec-cli/cmd-project
 domain: spec-cli
 module: cmd-project
@@ -5,73 +6,73 @@ owner: eigen
 title: spec project
 status: draft
 description: |
-    The spec project command recomputes and overwrites spec.yaml for a module
-    by replaying all changes in its changes/ directory. It is the manual
-    trigger for re-projection, used after directly editing a change file.
-    Before projecting, it validates each change file for common YAML authoring
-    errors and reports them with file path and line number. A dedicated
-    `project-all` subcommand and `--all` flag project every module in one pass.
+  The spec project command recomputes and overwrites spec.yaml for a module
+  by replaying all changes in its changes/ directory. It is the manual
+  trigger for re-projection, used after directly editing a change file.
+  Before projecting, it validates each change file for common YAML authoring
+  errors and reports them with file path and line number. A dedicated
+  `project-all` subcommand and `--all` flag project every module in one pass.
 behavior: |
-    Accepts a single slash-delimited path argument. Reads all changes from
-    the module's changes/ directory, applies them in sequence order via the
-    projection engine, and writes the resulting SpecModule to spec.yaml.
-    Prints the path of each updated spec.yaml.
+  Accepts a single slash-delimited path argument. Reads all changes from
+  the module's changes/ directory, applies them in sequence order via the
+  projection engine, and writes the resulting SpecModule to spec.yaml.
+  Prints the path of each updated spec.yaml.
 
-    Before projection, each change file in scope is scanned for common YAML
-    authoring errors:
-    - Backtick characters (`) inside an unquoted scalar value.
-    - A bare colon followed by a space or end-of-line inside an unquoted scalar
-      that would be interpreted as a YAML key-value separator.
-    If any errors are found, projection is aborted and each error is reported
-    with the file path, line number, and a human-readable description. No
-    spec.yaml files are written when pre-validation fails.
+  Before projection, each change file in scope is scanned for common YAML
+  authoring errors:
+  - Backtick characters (`) inside an unquoted scalar value.
+  - A bare colon followed by a space or end-of-line inside an unquoted scalar
+    that would be interpreted as a YAML key-value separator.
+  If any errors are found, projection is aborted and each error is reported
+  with the file path, line number, and a human-readable description. No
+  spec.yaml files are written when pre-validation fails.
 
-    `eigen spec project --all` (or the alias `eigen spec project-all`) reprojects
-    every module found under the specs root in a single pass. Each updated
-    spec.yaml path is printed. Pre-validation runs for all change files before
-    any module is projected.
+  `eigen spec project --all` (or the alias `eigen spec project-all`) reprojects
+  every module found under the specs root in a single pass. Each updated
+  spec.yaml path is printed. Pre-validation runs for all change files before
+  any module is projected.
 acceptance_criteria:
-    - id: AC-001
-      description: Reprojects spec.yaml from current changes
-      given: A module whose change file has been edited since the last projection
-      when: eigen spec project <path> is run
-      then: spec.yaml reflects the updated change content
-    - id: AC-002
-      description: Fails with a clear error if the module does not exist
-      given: A path that has no changes/ directory
-      when: eigen spec project <path> is run
-      then: Exits non-zero and prints an error identifying the missing module
-    - id: AC-003
-      description: Reprojects all modules when --all flag is passed
-      given: Multiple modules exist under the specs root
-      when: eigen spec project --all (or eigen spec project-all) is run
-      then: spec.yaml is rewritten for every module and each path is printed
-    - id: AC-004
-      description: Aborts and reports error for backtick in unquoted scalar
-      given: A change file whose unquoted string value contains a backtick character
-      when: eigen spec project <path> is run
-      then: |
-        Exits non-zero, prints the file path and line number, and describes
-        the backtick error; no spec.yaml is written
-    - id: AC-005
-      description: Aborts and reports error for bare colon in unquoted scalar
-      given: A change file whose unquoted string value contains a bare colon that would be parsed as a YAML key separator
-      when: eigen spec project <path> is run
-      then: |
-        Exits non-zero, prints the file path and line number, and describes
-        the bare-colon error; no spec.yaml is written
-    - id: AC-006
-      description: Pre-validation across all modules aborts before any projection
-      given: Multiple modules are in scope (--all) and one change file has a YAML error
-      when: eigen spec project --all is run
-      then: |
-        Exits non-zero and reports all errors found across all change files;
-        no spec.yaml files are written for any module
-    - id: AC-007
-      description: Valid change files pass pre-validation without error
-      given: All change files in scope are free of backticks and bare colons in unquoted scalars
-      when: eigen spec project <path> is run
-      then: Pre-validation succeeds silently and projection proceeds normally
+  - id: AC-001
+    description: Reprojects spec.yaml from current changes
+    given: A module whose change file has been edited since the last projection
+    when: eigen spec project <path> is run
+    then: spec.yaml reflects the updated change content
+  - id: AC-002
+    description: Fails with a clear error if the module does not exist
+    given: A path that has no changes/ directory
+    when: eigen spec project <path> is run
+    then: Exits non-zero and prints an error identifying the missing module
+  - id: AC-003
+    description: Reprojects all modules when --all flag is passed
+    given: Multiple modules exist under the specs root
+    when: eigen spec project --all (or eigen spec project-all) is run
+    then: spec.yaml is rewritten for every module and each path is printed
+  - id: AC-004
+    description: Aborts and reports error for backtick in unquoted scalar
+    given: A change file whose unquoted string value contains a backtick character
+    when: eigen spec project <path> is run
+    then: |
+      Exits non-zero, prints the file path and line number, and describes
+      the backtick error; no spec.yaml is written
+  - id: AC-005
+    description: Aborts and reports error for bare colon in unquoted scalar
+    given: A change file whose unquoted string value contains a bare colon that would be parsed as a YAML key separator
+    when: eigen spec project <path> is run
+    then: |
+      Exits non-zero, prints the file path and line number, and describes
+      the bare-colon error; no spec.yaml is written
+  - id: AC-006
+    description: Pre-validation across all modules aborts before any projection
+    given: Multiple modules are in scope (--all) and one change file has a YAML error
+    when: eigen spec project --all is run
+    then: |
+      Exits non-zero and reports all errors found across all change files;
+      no spec.yaml files are written for any module
+  - id: AC-007
+    description: Valid change files pass pre-validation without error
+    given: All change files in scope are free of backticks and bare colons in unquoted scalars
+    when: eigen spec project <path> is run
+    then: Pre-validation succeeds silently and projection proceeds normally
 dependencies: []
 technology: {}
 last_change: chg-004
