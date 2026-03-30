@@ -11,7 +11,7 @@ reason: |
   files. AC-006 only required SpecModule to expose Format; this change adds a
   parallel requirement for Change and makes explicit that both CLI commands must
   set Change.Format = "eigen/v1" before calling yaml.Marshal.
-status: approved
+status: compiled
 changes:
   acceptance_criteria:
     - id: AC-006

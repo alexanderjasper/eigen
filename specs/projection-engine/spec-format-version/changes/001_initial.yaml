@@ -10,7 +10,7 @@ reason: |
   the format evolves. Establishing format: eigen/v1 as a first-class field now
   — before any breaking changes are made — gives migration tooling a reliable
   hook without breaking backward compatibility with existing specs that omit it.
-status: approved
+status: compiled
 changes:
   title: Spec Format Version
   owner: eigen
