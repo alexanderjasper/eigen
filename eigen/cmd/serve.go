@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/alexanderjasper/eigen/internal/server"
+	"github.com/alexanderjasper/eigen/internal/worktree"
 )
 
 var servePort int
@@ -25,6 +27,15 @@ func init() {
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("getting cwd: %w", err)
+	}
+	gitRoot, err := worktree.FindGitRoot(cwd)
+	if err != nil {
+		// If we can't find a git root, use an empty string (server handles gracefully).
+		gitRoot = ""
+	}
 	fmt.Printf("eigen serve → http://localhost:%d\n", servePort)
-	return server.Start(specsRoot, servePort, serveOpen)
+	return server.Start(gitRoot, specsRoot, servePort, serveOpen)
 }

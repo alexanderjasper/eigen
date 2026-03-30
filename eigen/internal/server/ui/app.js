@@ -1,7 +1,9 @@
 'use strict';
 
 let allModules = [];
+let allWorktrees = [];
 let activePath = null;
+let activeWorktreeName = null;
 
 function injectToast() {
   const toast = document.createElement('div');
@@ -34,11 +36,16 @@ async function init() {
   treeSpinner.className = 'spinner';
   treeEl.appendChild(treeSpinner);
   try {
-    const res = await fetch('/api/modules');
-    if (!res.ok) throw new Error('/api/modules returned ' + res.status + ' ' + res.statusText);
-    allModules = await res.json();
+    const [worktreesRes, modulesRes] = await Promise.all([
+      fetch('/api/worktrees'),
+      fetch('/api/modules'),
+    ]);
+    if (!modulesRes.ok) throw new Error('/api/modules returned ' + modulesRes.status + ' ' + modulesRes.statusText);
+    allModules = await modulesRes.json();
+    allWorktrees = worktreesRes.ok ? await worktreesRes.json() : [];
     treeSpinner.remove();
-    renderTree(allModules);
+    renderTreeView();
+    updatePageTitle();
   } catch (err) {
     treeSpinner.remove();
     showToast(err.message);
@@ -49,6 +56,21 @@ async function init() {
   });
   injectReviewPanel();
   startReviewPoller();
+  startWorktreePoller();
+}
+
+function updatePageTitle() {
+  document.title = allWorktrees.length > 1
+    ? 'eigen (' + allWorktrees.length + ' branches)'
+    : 'eigen';
+}
+
+function renderTreeView() {
+  if (allWorktrees.length > 1) {
+    renderGroupedTree();
+  } else {
+    renderTree(allModules);
+  }
 }
 
 // ── Tree ──────────────────────────────────────────────────────────────────────
@@ -110,7 +132,7 @@ function renderTree(modules) {
   container.setAttribute('role', 'tree');
   const tree = buildTree(modules);
   for (const node of tree.values()) {
-    container.appendChild(createNodeEl(node));
+    container.appendChild(createNodeEl(node, null));
   }
   initRovingTabindex();
   container.addEventListener('keydown', e => {
@@ -169,16 +191,17 @@ function renderTree(modules) {
   });
 }
 
-function createNodeEl(node) {
+function createNodeEl(node, worktreeName) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tree-node';
   wrapper.dataset.path = node.path;
+  if (worktreeName) wrapper.dataset.worktree = worktreeName;
 
   const label = document.createElement('div');
   label.className = 'tree-label';
   label.setAttribute('role', 'treeitem');
   label.setAttribute('tabindex', '-1');
-  if (node.path === activePath) label.classList.add('active');
+  if (node.path === activePath && (worktreeName || null) === activeWorktreeName) label.classList.add('active');
 
   const toggle = document.createElement('span');
   toggle.className = 'toggle';
@@ -202,7 +225,7 @@ function createNodeEl(node) {
     childrenEl = document.createElement('div');
     childrenEl.className = 'tree-children';
     for (const child of node.children.values()) {
-      childrenEl.appendChild(createNodeEl(child));
+      childrenEl.appendChild(createNodeEl(child, worktreeName));
     }
     wrapper.appendChild(childrenEl);
 
@@ -215,18 +238,85 @@ function createNodeEl(node) {
   }
 
   if (node.module) {
-    label.addEventListener('click', () => loadDetail(node.path));
+    label.addEventListener('click', () => loadDetail(node.path, node.module.worktree));
   }
 
   return wrapper;
+}
+
+// ── Grouped tree (multi-worktree) ─────────────────────────────────────────────
+
+function renderGroupedTree() {
+  const container = document.getElementById('tree');
+  container.innerHTML = '';
+  container.setAttribute('role', 'tree');
+
+  for (const wt of allWorktrees) {
+    const wtModules = allModules.filter(m => m.worktree === wt.name);
+    const groupSection = document.createElement('div');
+    groupSection.className = 'tree-group-section';
+    groupSection.dataset.worktree = wt.name;
+
+    // Group header.
+    const header = document.createElement('div');
+    header.className = 'tree-group-header tree-label';
+    header.setAttribute('role', 'treeitem');
+    header.setAttribute('aria-expanded', 'true');
+    header.setAttribute('tabindex', '-1');
+
+    const toggle = document.createElement('span');
+    toggle.className = 'toggle open';
+    toggle.textContent = '▶';
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'tree-name';
+    nameEl.textContent = wt.name + ' (' + wt.branch + ')';
+
+    header.appendChild(toggle);
+    header.appendChild(nameEl);
+    groupSection.appendChild(header);
+
+    // Children container.
+    const childrenEl = document.createElement('div');
+    childrenEl.className = 'tree-group-children tree-children';
+    const tree = buildTree(wtModules);
+    for (const node of tree.values()) {
+      childrenEl.appendChild(createNodeEl(node, wt.name));
+    }
+    groupSection.appendChild(childrenEl);
+
+    // Toggle on click.
+    toggle.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = toggle.classList.toggle('open');
+      childrenEl.classList.toggle('hidden', !open);
+      header.setAttribute('aria-expanded', String(open));
+    });
+    header.addEventListener('click', e => {
+      if (e.target === toggle) return;
+      const open = toggle.classList.toggle('open');
+      childrenEl.classList.toggle('hidden', !open);
+      header.setAttribute('aria-expanded', String(open));
+    });
+
+    container.appendChild(groupSection);
+  }
+
+  initRovingTabindex();
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
 
 function filterTree(query) {
   if (!query) {
-    renderTree(allModules);
-    if (activePath) highlightActive(activePath);
+    renderTreeView();
+    if (activePath) highlightActive(activePath, activeWorktreeName);
+    return;
+  }
+
+  if (allWorktrees.length > 1) {
+    filterGroupedTree(query);
+    if (activePath) highlightActive(activePath, activeWorktreeName);
     return;
   }
 
@@ -246,31 +336,68 @@ function filterTree(query) {
 
   const visible = allModules.filter(m => pathSet.has(m.path));
   renderTree(visible);
-  if (activePath) highlightActive(activePath);
+  if (activePath) highlightActive(activePath, activeWorktreeName);
 }
 
-function highlightActive(path) {
+function filterGroupedTree(query) {
+  renderGroupedTree();
+  // Hide group sections where no child labels match.
+  const sections = document.querySelectorAll('.tree-group-section');
+  for (const section of sections) {
+    const childLabels = Array.from(section.querySelectorAll('.tree-node .tree-label'));
+    const anyMatch = childLabels.some(lbl => {
+      const path = lbl.closest('.tree-node').dataset.path || '';
+      const name = lbl.querySelector('.tree-name')?.textContent || '';
+      return path.toLowerCase().includes(query) || name.toLowerCase().includes(query);
+    });
+    if (!anyMatch) {
+      section.style.display = 'none';
+    } else {
+      section.style.display = '';
+      // Hide non-matching child nodes.
+      for (const node of section.querySelectorAll('.tree-node')) {
+        const path = node.dataset.path || '';
+        const name = node.querySelector(':scope > .tree-label .tree-name')?.textContent || '';
+        if (!path.toLowerCase().includes(query) && !name.toLowerCase().includes(query)) {
+          node.style.display = 'none';
+        } else {
+          node.style.display = '';
+        }
+      }
+    }
+  }
+}
+
+function highlightActive(path, worktreeName) {
   const nodes = document.querySelectorAll('.tree-label');
   for (const n of nodes) {
-    n.classList.toggle('active', n.closest('.tree-node').dataset.path === path);
+    const treeNode = n.closest('.tree-node');
+    if (!treeNode) continue; // group headers have no .tree-node ancestor
+    const pathMatch = treeNode.dataset.path === path;
+    const wtMatch = worktreeName == null
+      ? !treeNode.dataset.worktree  // flat mode: no worktree set
+      : treeNode.dataset.worktree === worktreeName;
+    n.classList.toggle('active', pathMatch && wtMatch);
   }
 }
 
 // ── Detail ────────────────────────────────────────────────────────────────────
 
-async function loadDetail(path) {
+async function loadDetail(path, worktreeName) {
   activePath = path;
-  highlightActive(path);
+  activeWorktreeName = worktreeName || null;
+  highlightActive(path, activeWorktreeName);
   const rightEl = document.getElementById('right');
   document.getElementById('detail').style.display = 'none';
   document.getElementById('detail-empty').style.display = 'none';
   const detailSpinner = document.createElement('div');
   detailSpinner.className = 'spinner';
   rightEl.appendChild(detailSpinner);
+  const wtParam = worktreeName ? '?worktree=' + encodeURIComponent(worktreeName) : '';
   try {
     const [specRes, changesRes] = await Promise.all([
-      fetch('/api/modules/' + path),
-      fetch('/api/modules/' + path + '/changes'),
+      fetch('/api/modules/' + path + wtParam),
+      fetch('/api/modules/' + path + '/changes' + wtParam),
     ]);
     if (!specRes.ok) throw new Error('/api/modules/' + path + ' returned ' + specRes.status);
     const spec = await specRes.json();
@@ -305,6 +432,14 @@ function renderDetail(spec, changes) {
     metaRow.appendChild(depReason);
   }
   el.appendChild(title);
+
+  // Worktree/branch secondary label (AC-042).
+  if (spec.worktree && spec.branch) {
+    const wtLabel = h('div', 'detail-worktree-label');
+    wtLabel.textContent = spec.worktree + ' (' + spec.branch + ')';
+    el.appendChild(wtLabel);
+  }
+
   el.appendChild(metaRow);
 
   // Description
@@ -440,8 +575,9 @@ function stopReviewPoller() {
 
 async function pollOnce() {
   if (!activePath) { schedulePoll(); return; }
+  const wtParam = activeWorktreeName ? '?worktree=' + encodeURIComponent(activeWorktreeName) : '';
   try {
-    const res = await fetch('/api/modules/' + activePath + '/changes');
+    const res = await fetch('/api/modules/' + activePath + '/changes' + wtParam);
     if (!res.ok) { hideReviewPanel(); schedulePoll(); return; }
     const changes = await res.json();
     const draft = changes.filter(c => !c.status || c.status === 'draft');
@@ -485,13 +621,15 @@ function showReviewPanel(draftChanges) {
     const actions = document.createElement('div');
     actions.className = 'review-actions';
 
+    const wtParam = activeWorktreeName ? '?worktree=' + encodeURIComponent(activeWorktreeName) : '';
+
     const approveBtn = document.createElement('button');
     approveBtn.className = 'btn-approve';
     approveBtn.textContent = 'Approve';
     approveBtn.addEventListener('click', async () => {
       approveBtn.disabled = true; rejectBtn.disabled = true;
       try {
-        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve', { method: 'POST' });
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/approve' + wtParam, { method: 'POST' });
         if (!res.ok) throw new Error('Approve failed: ' + res.status);
       } catch (err) { showToast(err.message); }
       finally { approveBtn.disabled = false; rejectBtn.disabled = false; }
@@ -505,7 +643,7 @@ function showReviewPanel(draftChanges) {
       if (!comment) return;
       approveBtn.disabled = true; rejectBtn.disabled = true;
       try {
-        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject', {
+        const res = await fetch('/api/modules/' + activePath + '/changes/' + change.filename + '/reject' + wtParam, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ comment }),
         });
@@ -527,6 +665,48 @@ function hideReviewPanel() {
   if (panel) panel.style.display = 'none';
   stopReviewPoller();
   schedulePoll();
+}
+
+// ── Worktree Poller ───────────────────────────────────────────────────────────
+
+let worktreePollerTimer = null;
+
+function startWorktreePoller() {
+  stopWorktreePoller();
+  scheduleWorktreePoll();
+}
+
+function stopWorktreePoller() {
+  if (worktreePollerTimer !== null) {
+    clearTimeout(worktreePollerTimer);
+    worktreePollerTimer = null;
+  }
+}
+
+function scheduleWorktreePoll() {
+  worktreePollerTimer = setTimeout(pollWorktrees, 3000);
+}
+
+async function pollWorktrees() {
+  try {
+    const res = await fetch('/api/worktrees');
+    if (!res.ok) { scheduleWorktreePoll(); return; }
+    const newWorktrees = await res.json();
+    // Check if the worktree set has changed by comparing names.
+    const oldNames = allWorktrees.map(w => w.name).sort().join(',');
+    const newNames = newWorktrees.map(w => w.name).sort().join(',');
+    if (oldNames !== newNames) {
+      allWorktrees = newWorktrees;
+      // Also refresh modules.
+      const modRes = await fetch('/api/modules');
+      if (modRes.ok) allModules = await modRes.json();
+      renderTreeView();
+      updatePageTitle();
+    }
+  } catch (_) {
+    // ignore
+  }
+  scheduleWorktreePoll();
 }
 
 // ── Start ─────────────────────────────────────────────────────────────────────

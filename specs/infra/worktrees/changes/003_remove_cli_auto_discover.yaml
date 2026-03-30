@@ -1,0 +1,90 @@
+format: eigen/v1
+id: chg-003
+sequence: 3
+timestamp: "2026-03-30T00:00:00Z"
+type: updated
+summary: Remove worktree CLI commands; replace registry file with auto-discovery of .claude/worktrees/
+reason: |
+  The `eigen worktree create/list/remove` commands specced in chg-001 turned out to
+  be unnecessary. Claude Code already creates worktrees at `.claude/worktrees/<name>/`
+  as part of its own workflow (e.g. the eigen-change skill). Requiring developers to
+  also run `eigen worktree create` adds friction without value.
+
+  The `.eigen/worktrees.json` registry file (chg-001) and the fsnotify watch on it
+  (chg-002) are both superseded: `eigen serve` now discovers worktrees by scanning
+  `.claude/worktrees/` directly at startup, and watches that directory for new
+  subdirectories appearing (or being removed) while serve is running. No registration
+  step is required from the developer at all.
+
+  The scaffold pre-commit hook fix (spec-cli/cmd-scaffold chg-008) was also found to
+  be unnecessary: git worktrees share the main repo's `.git/hooks/` via the commondir
+  mechanism, so a hook installed at the main repo root already runs in all worktrees.
+status: compiled
+compiled_commits:
+  - 087cfa4
+changes:
+  description: |
+    `eigen serve` runs a single HTTP server in the main repository. It discovers
+    active worktrees by scanning `.claude/worktrees/` at startup: every subdirectory
+    that is a valid git worktree (i.e. `git rev-parse --abbrev-ref HEAD` succeeds) is
+    included automatically — no registration step required from the developer.
+
+    `eigen serve` also watches `.claude/worktrees/` continuously while running: when
+    a new subdirectory appears (e.g. Claude creates a worktree for a new feature
+    branch), the server dynamically adds a specs-directory watcher for it and begins
+    serving its modules; when a subdirectory is removed, the watcher is closed and
+    its modules are evicted. All without requiring a server restart.
+
+    There are no `eigen worktree create/list/remove` commands. There is no
+    `.eigen/worktrees.json` registry file. Discovery is entirely filesystem-based.
+
+    All modules/changes from the main repo and every discovered worktree are
+    aggregated into a single combined module list exposed by the API. Every
+    ModuleSummary and module detail carries a `worktree` field (the subdirectory
+    name, or "main") and a `branch` field. The UI groups the module tree by
+    worktree/branch so the developer can browse all in-flight work from one tab.
+  behavior: |
+    On startup, `eigen serve` calls `git rev-parse --show-toplevel` to locate the
+    git repository root, then scans `<gitRoot>/.claude/worktrees/`. For each
+    subdirectory where `git rev-parse --abbrev-ref HEAD` succeeds, it records the
+    name, branch, and absolute path, opens a specs-directory watcher, and includes
+    the worktree's modules in all API responses.
+
+    A second fsnotify watcher monitors `.claude/worktrees/` itself. CREATE events
+    on immediate children trigger a new worktree to be loaded (after a brief delay
+    to let git finish setup). REMOVE/RENAME events on immediate children cause the
+    corresponding worktree to be evicted from the live state.
+
+    GET /api/worktrees returns the live list of worktrees (main + discovered), each
+    with name, branch, path, and status ("active" or "orphaned"). The UI polls this
+    endpoint and re-renders the grouped tree when the worktree set changes.
+  acceptance_criteria:
+    - id: AC-001
+      description: eigen serve auto-discovers worktrees in .claude/worktrees/ at startup
+      given: .claude/worktrees/ contains two subdirectories that are valid git worktrees
+      when: eigen serve starts
+      then: |
+        GET /api/worktrees returns three entries (main + two discovered worktrees);
+        GET /api/modules returns modules from all three, each tagged with worktree and branch;
+        no manual registration step was required
+    - id: AC-002
+      description: eigen serve picks up a new worktree created while serve is running
+      given: eigen serve is running with only the main worktree
+      when: A new subdirectory is created inside .claude/worktrees/ and is a valid git worktree
+      then: |
+        Within a few seconds, GET /api/worktrees includes the new entry and
+        GET /api/modules includes its modules; no server restart required
+    - id: AC-003
+      description: eigen serve evicts a worktree when its directory is removed
+      given: eigen serve is running with main + one discovered worktree
+      when: The worktree subdirectory is deleted
+      then: |
+        Within a few seconds, GET /api/worktrees no longer includes the removed entry
+        and GET /api/modules no longer includes its modules; no server restart required
+    - id: AC-004
+      description: eigen serve runs as a single instance serving all worktrees from one port
+      given: A repository with multiple worktrees in .claude/worktrees/
+      when: eigen serve is run once from the main repo root
+      then: |
+        All worktrees' specs are visible in one UI on one port; no --port flags or
+        multiple serve processes are needed
