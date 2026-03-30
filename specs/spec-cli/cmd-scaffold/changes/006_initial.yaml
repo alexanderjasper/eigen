@@ -14,7 +14,7 @@ reason: |
   files. The hook therefore only needs to normalize spec.yaml via `project-all`
   today. A future `eigen spec format` command could extend the hook to also
   re-canonicalize change files; the hook design should not preclude this extension.
-status: approved
+status: compiled
 changes:
   behavior: |
     Accepts an optional path argument (defaults to the current working directory),
