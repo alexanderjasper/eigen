@@ -1,15 +1,15 @@
 format: eigen/v1
 id: chg-004
 sequence: 4
-timestamp: 2026-03-30T07:51:15Z
-author: ""
+timestamp: "2026-03-30T07:51:15Z"
 type: updated
-summary: "Add keyboard navigation and ARIA accessibility to the tree view"
+summary: Add keyboard navigation and ARIA accessibility to the tree view
 reason: |
   The tree view is currently mouse-only, which prevents keyboard users and
   assistive technology users from navigating the spec tree. Adding roving
   tabindex keyboard navigation and ARIA tree roles makes the UI usable
   without a pointer device and exposes tree structure to screen readers.
+status: approved
 changes:
   behavior: |
     On load the UI fetches /api/modules and builds a tree from the flat
@@ -64,7 +64,7 @@ changes:
     - id: AC-019
       description: tree container has role="tree"
       given: the tree has been rendered
-      when: a screen reader or accessibility tool inspects the #tree element
+      when: a screen reader or accessibility tool inspects the
       then: the element exposes role="tree"
     - id: AC-020
       description: each tree label has role="treeitem"
