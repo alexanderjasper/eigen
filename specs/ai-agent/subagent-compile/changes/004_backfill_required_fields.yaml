@@ -10,7 +10,9 @@ reason: |
   These fields were left empty when the module was initially compiled. The free-text
   dependency paths also block validation. This change backfills all missing required fields
   so the module passes eigen spec validate.
-status: approved
+status: compiled
+compiled_commits:
+  - 315e5cefb3382163a11f78e81c44e8010acd3c96
 changes:
   behavior: |
     compile-agent receives a spec path and an approved plan as inline content. It reads both
@@ -20,7 +22,6 @@ changes:
     (running tests if applicable), and commits atomically. After completing all steps it
     verifies spec acceptance criteria are satisfied and reports any that cannot be tested yet.
     It marks each compiled change via eigen spec change-status once the build passes.
-  dependencies: []
   acceptance_criteria:
     - id: AC-001
       description: |

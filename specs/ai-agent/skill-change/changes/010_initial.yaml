@@ -16,6 +16,7 @@ reason: |
       and the loop spins forever with no diagnostic output.
 status: draft
 changes:
+  dependencies: []
   behavior: |
     The /change skill orchestrates spec -> plan -> compile. At setup it captures both
     BRANCH (from git branch --show-current) and WORKTREE (the worktree name, derived
