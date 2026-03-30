@@ -27,6 +27,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&specsRoot, "specs", "", "path to specs directory (default: EIGEN_SPECS env or ../specs)")
 
 	rootCmd.AddCommand(specCmd)
+	rootCmd.AddCommand(worktreeCmd)
 }
 
 func resolveSpecsRoot(cmd *cobra.Command, args []string) error {
