@@ -214,7 +214,15 @@ func ValidateChangeLog(path string, changes []*Change) []ValidationError {
 				Message: e.Message,
 			})
 		}
-		current = Project(path, changes[:indexOf(changes, *ch)+1])
+		projected, err := Project(path, changes[:indexOf(changes, *ch)+1])
+		if err != nil {
+			errs = append(errs, ValidationError{
+				Field:   fmt.Sprintf("change %s", ch.ID),
+				Message: fmt.Sprintf("projection error: %v", err),
+			})
+			return errs
+		}
+		current = projected
 	}
 	return errs
 }
@@ -241,8 +249,6 @@ func ValidateChanges(current SpecModule, changes ChangeSet) []ValidationError {
 		{"title", changes.Title, current.Title},
 		{"owner", changes.Owner, current.Owner},
 		{"status", changes.Status, current.Status},
-		{"description", changes.Description, current.Description},
-		{"behavior", changes.Behavior, current.Behavior},
 	}
 	for _, f := range simpleFields {
 		if f.changed != "" && f.changed == f.current {
@@ -250,6 +256,38 @@ func ValidateChanges(current SpecModule, changes ChangeSet) []ValidationError {
 				Field:   f.name,
 				Message: "no-op: value is identical to current spec state",
 			})
+		}
+	}
+
+	// TextChange fields: description and behavior.
+	for _, tf := range []struct {
+		name    string
+		tc      TextChange
+		current string
+	}{
+		{"description", changes.Description, current.Description},
+		{"behavior", changes.Behavior, current.Behavior},
+	} {
+		if !tf.tc.IsSet() {
+			continue
+		}
+		if tf.tc.IsFullReplace() {
+			if tf.tc.FullText() == tf.current {
+				errs = append(errs, ValidationError{
+					Field:   tf.name,
+					Message: "no-op: value is identical to current spec state",
+				})
+			}
+		} else {
+			// Op-based: replay ops to compute result.
+			result, err := applyTextChange(tf.name, tf.current, tf.tc)
+			if err == nil && result == tf.current {
+				errs = append(errs, ValidationError{
+					Field:   tf.name,
+					Message: "no-op: value is identical to current spec state",
+				})
+			}
+			// If err != nil, the ops fail — not a no-op, skip flagging.
 		}
 	}
 

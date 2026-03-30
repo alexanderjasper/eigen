@@ -258,7 +258,7 @@ func TestWriteChange(t *testing.T) {
 			Changes: spec.ChangeSet{
 				Title:       "T",
 				Owner:       "bob",
-				Description: "D",
+				Description: spec.NewTextChangeScalar("D"),
 			},
 		}
 
@@ -620,7 +620,7 @@ func TestWriteChangeIndentation(t *testing.T) {
 		Status:    "draft",
 		Changes: spec.ChangeSet{
 			Title:       "T",
-			Description: "D",
+			Description: spec.NewTextChangeScalar("D"),
 		},
 	}
 

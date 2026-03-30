@@ -51,8 +51,8 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 			Title:       module,
 			Owner:       "",
 			Status:      "draft",
-			Description: "TODO: describe what this module does.\n",
-			Behavior:    "TODO: describe how this module behaves.\n",
+			Description: spec.NewTextChangeScalar("TODO: describe what this module does.\n"),
+			Behavior:    spec.NewTextChangeScalar("TODO: describe how this module behaves.\n"),
 			AcceptanceCriteria: []spec.AcceptanceCriterion{
 				{
 					ID:          "AC-001",
@@ -84,7 +84,10 @@ func runSpecNew(cmd *cobra.Command, args []string) error {
 	for i := range changes {
 		changePtrs[i] = &changes[i]
 	}
-	s := spec.Project(path, changePtrs)
+	s, err := spec.Project(path, changePtrs)
+	if err != nil {
+		return fmt.Errorf("projecting %s: %w", path, err)
+	}
 	if err := storage.WriteSpec(specsRoot, path, s); err != nil {
 		return fmt.Errorf("writing spec.yaml: %w", err)
 	}
