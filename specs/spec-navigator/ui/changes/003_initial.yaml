@@ -1,6 +1,6 @@
 id: chg-003
 sequence: 3
-timestamp: 2026-03-30T07:37:14Z
+timestamp: "2026-03-30T07:37:14Z"
 author: alexander
 type: updated
 summary: Add error handling and loading states to the spec navigator UI
@@ -11,6 +11,7 @@ reason: |
   loading or while approve/reject submissions are in flight. This change adds
   dismissible error toasts, spinner indicators in both panes, and in-flight
   button disabling to make the UI resilient and transparent.
+status: approved
 changes:
   behavior: |
     On load the UI fetches /api/modules and builds a tree from the flat
