@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-show
 owner: eigen
 title: spec show
-status: draft
+status: compiled
 description: |
   The spec show command prints the current spec.yaml of a module to stdout.
 behavior: |

@@ -238,6 +238,98 @@ func worktreesHandler(state *serveState) http.HandlerFunc {
 	}
 }
 
+// GlobalChangeEntry is the JSON shape returned by GET /api/changes.
+type GlobalChangeEntry struct {
+	ModulePath string `json:"module_path"`
+	Worktree   string `json:"worktree"`
+	// Embed all Change fields inline.
+	Format          string            `json:"format,omitempty"`
+	ID              string            `json:"id"`
+	Sequence        int               `json:"sequence"`
+	Timestamp       string            `json:"timestamp"`
+	Author          string            `json:"author"`
+	Type            string            `json:"type"`
+	Summary         string            `json:"summary"`
+	Reason          string            `json:"reason"`
+	Status          string            `json:"status,omitempty"`
+	ReviewComment   string            `json:"review_comment,omitempty"`
+	CompiledCommits []string          `json:"compiled_commits,omitempty"`
+	Filename        string            `json:"filename,omitempty"`
+	Changes         interface{}       `json:"changes,omitempty"`
+}
+
+// globalChangesHandler handles GET /api/changes?status=draft
+// Returns all changes across all worktrees and modules, optionally filtered by status.
+func globalChangesHandler(state *serveState) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		statusFilter := r.URL.Query().Get("status")
+
+		state.mu.RLock()
+		order := make([]string, len(state.order))
+		copy(order, state.order)
+		type wtSnap struct {
+			name      string
+			specsRoot string
+		}
+		snaps := make([]wtSnap, 0, len(order))
+		for _, name := range order {
+			aw, ok := state.worktrees[name]
+			if !ok {
+				continue
+			}
+			snaps = append(snaps, wtSnap{name: name, specsRoot: aw.SpecsRoot})
+		}
+		state.mu.RUnlock()
+
+		var results []GlobalChangeEntry
+		for _, snap := range snaps {
+			refs, err := storage.WalkModules(snap.specsRoot, "")
+			if err != nil {
+				continue
+			}
+			for _, ref := range refs {
+				changes, err := storage.ReadChanges(snap.specsRoot, ref.Path)
+				if err != nil {
+					continue
+				}
+				for _, ch := range changes {
+					if statusFilter != "" {
+						chStatus := ch.Status
+						if chStatus == "" {
+							chStatus = "draft"
+						}
+						if chStatus != statusFilter {
+							continue
+						}
+					}
+					results = append(results, GlobalChangeEntry{
+						ModulePath:      ref.Path,
+						Worktree:        snap.name,
+						Format:          ch.Format,
+						ID:              ch.ID,
+						Sequence:        ch.Sequence,
+						Timestamp:       ch.Timestamp,
+						Author:          ch.Author,
+						Type:            ch.Type,
+						Summary:         ch.Summary,
+						Reason:          ch.Reason,
+						Status:          ch.Status,
+						ReviewComment:   ch.ReviewComment,
+						CompiledCommits: ch.CompiledCommits,
+						Filename:        ch.Filename,
+						Changes:         ch.Changes,
+					})
+				}
+			}
+		}
+
+		if results == nil {
+			results = []GlobalChangeEntry{}
+		}
+		writeJSON(w, results)
+	}
+}
+
 // changeApproveHandler handles POST /api/modules/<path>/changes/<filename>/approve.
 func changeApproveHandler(state *serveState) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -260,6 +352,20 @@ func changeApproveHandler(state *serveState) http.HandlerFunc {
 			}
 			jsonError(w, "module not found", http.StatusNotFound)
 			return
+		}
+
+		// Optionally accept a comment in the request body (backward-compatible).
+		var req struct {
+			Comment string `json:"comment"`
+		}
+		if r.Body != nil && r.ContentLength != 0 {
+			_ = json.NewDecoder(r.Body).Decode(&req)
+		}
+		if strings.TrimSpace(req.Comment) != "" {
+			if err := storage.SetChangeComment(specsRoot, modPath, filename, req.Comment); err != nil && !errors.Is(err, os.ErrNotExist) {
+				jsonError(w, "failed to set comment: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 
 		if err := storage.SetChangeStatus(specsRoot, modPath, filename, "approved", nil); err != nil {

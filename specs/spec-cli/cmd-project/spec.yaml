@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-project
 owner: eigen
 title: spec project
-status: draft
+status: compiled
 description: |
   The spec project command recomputes and overwrites spec.yaml for a module
   by replaying all changes in its changes/ directory. It is the manual

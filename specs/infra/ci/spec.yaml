@@ -4,7 +4,7 @@ domain: infra
 module: ci
 owner: alexander
 title: GitHub Actions CI
-status: draft
+status: compiled
 description: |
   A GitHub Actions workflow file at .github/workflows/ci.yml that runs on
   every push and every pull-request event. The pipeline has three sequential

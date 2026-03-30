@@ -4,7 +4,7 @@ domain: projection-engine
 module: audit-trail
 owner: eigen
 title: Compiled Change Audit Trail
-status: draft
+status: compiled
 description: |
   The audit trail feature links each compiled change file to the git commits
   that implement it. When a change is marked `compiled`, the CLI records the

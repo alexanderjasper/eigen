@@ -460,6 +460,64 @@ func TestProject(t *testing.T) {
 		}
 	})
 
+	// AC-041: all changes compiled promotes module status
+	t.Run("all_changes_compiled_promotes_status", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "draft"}},
+			{ID: "chg-002", Sequence: 2, Status: "compiled", Changes: ChangeSet{Title: "updated"}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Status != "compiled" {
+			t.Errorf("Status = %q, want %q (all changes compiled)", got.Status, "compiled")
+		}
+	})
+
+	// AC-042: mixed compiled/non-compiled does not promote
+	t.Run("mixed_compiled_status_no_promotion", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "draft"}},
+			{ID: "chg-002", Sequence: 2, Status: "draft", Changes: ChangeSet{Title: "updated"}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Status != "draft" {
+			t.Errorf("Status = %q, want %q (not all changes compiled)", got.Status, "draft")
+		}
+	})
+
+	// AC-043: deprecated takes precedence over compiled promotion
+	t.Run("all_compiled_deprecated_not_promoted", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "deprecated", DeprecationReason: "obsolete"}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Status != "deprecated" {
+			t.Errorf("Status = %q, want deprecated (terminal status overrides compiled promotion)", got.Status)
+		}
+	})
+
+	// AC-044: removed takes precedence over compiled promotion
+	t.Run("all_compiled_removed_not_promoted", func(t *testing.T) {
+		changes := []*Change{
+			{ID: "chg-001", Sequence: 1, Status: "compiled", Changes: ChangeSet{Status: "removed"}},
+		}
+		got, err := Project("d/m", changes)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.Status != "removed" {
+			t.Errorf("Status = %q, want removed (terminal status overrides compiled promotion)", got.Status)
+		}
+	})
+
 	// AC-045: replace op substitutes first occurrence
 	t.Run("replace_first_occurrence", func(t *testing.T) {
 		changes := []*Change{
