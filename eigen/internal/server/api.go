@@ -125,7 +125,7 @@ func changeApproveHandler(specsRoot string) http.HandlerFunc {
 			return
 		}
 
-		if err := storage.SetChangeStatus(specsRoot, modPath, filename, "approved"); err != nil {
+		if err := storage.SetChangeStatus(specsRoot, modPath, filename, "approved", nil); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				jsonError(w, "change file not found", http.StatusNotFound)
 				return

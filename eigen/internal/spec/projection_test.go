@@ -1,7 +1,10 @@
 package spec
 
 import (
+	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestProject(t *testing.T) {
@@ -361,4 +364,30 @@ func TestProject(t *testing.T) {
 			t.Errorf("Format = %q, want %q (must not be sourced from change)", got.Format, "eigen/v1")
 		}
 	})
+}
+
+// TestProjectCompiledCommitsNotProjected verifies AC-009: compiled_commits on a Change is not
+// folded into the projected SpecModule YAML.
+func TestProjectCompiledCommitsNotProjected(t *testing.T) {
+	changes := []*Change{
+		{
+			ID:              "chg-001",
+			Sequence:        1,
+			CompiledCommits: []string{"abc1234567890"},
+			Changes: ChangeSet{
+				Title: "My Title",
+			},
+		},
+	}
+
+	got := Project("d/m", changes)
+
+	// Marshal the result to YAML and check that compiled_commits is absent.
+	data, err := yaml.Marshal(got)
+	if err != nil {
+		t.Fatalf("yaml.Marshal error: %v", err)
+	}
+	if strings.Contains(string(data), "compiled_commits") {
+		t.Errorf("projected spec.yaml contains compiled_commits, want it absent:\n%s", string(data))
+	}
 }
