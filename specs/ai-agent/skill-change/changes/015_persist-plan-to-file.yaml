@@ -1,0 +1,85 @@
+format: eigen/v1
+id: chg-015
+sequence: 15
+timestamp: "2026-04-18T17:23:20Z"
+author: alexander
+type: updated
+summary: Persist approved plan to .eigen/plans/ file and pass file path to compile-agent
+reason: |
+  Currently the approved plan text is passed inline as PLAN_CONTENT in the compile-agent
+  prompt. This has three downsides: (1) long plans inflate prompt size and risk
+  paraphrasing or truncation when the skill constructs the Agent invocation string;
+  (2) there is no audit trail of what plan was actually executed; (3) a fresh compile
+  invocation cannot recover the plan without re-running the plan phase.
+
+  Persisting the plan to .eigen/plans/<module-slug>-<timestamp>.md before launching
+  compile-agent solves all three: the file is the single source of truth, the prompt
+  is a compact path reference, and the file remains on disk as an audit artifact.
+  The compile-agent reads the plan from the path rather than from inline content.
+status: compiled
+compiled_commits:
+  - 6556db7c79312760a8c16a5eaae9bab2649be8be
+changes:
+  acceptance_criteria:
+    - id: AC-003
+      description: |
+        Phase 2 — Plan — runs as follows:
+        (1) eigen-change launches plan-agent (read-only subagent) with SPEC_PATH, MODULE_PATH,
+            and BRANCH. plan-agent explores the codebase and returns a comprehensive draft plan
+            as text output. plan-agent does NOT enter plan mode or write any files.
+        (2) eigen-change (main conversation) calls EnterPlanMode, presenting the draft plan
+            text to the user via the plan mode UI.
+        (3) User reviews the plan in plan mode UI and either approves or comments/rejects.
+        (4) eigen-change calls ExitPlanMode to collect approval status and the approved plan text.
+        (5) On approval: eigen-change writes the plan text to
+            .eigen/plans/<module-slug>-<ISO-timestamp>.md (creating the directory if absent),
+            stores the path as PLAN_PATH, and proceeds to Phase 3 passing PLAN_PATH to
+            compile-agent. The filename slug replaces `/` with `-` in MODULE_PATH and uses
+            UTC timestamp in YYYYMMDDTHHMMSSZ form. No plan commit is made. Plan files are
+            retained after compilation as an audit artifact and are excluded from git via
+            .gitignore.
+        (6) On rejection: eigen-change collects feedback via AskUserQuestion, runs the Spec
+            Feedback Loop (spec-agent writes a new change file), then restarts Phase 2 from
+            step (1).
+      given: The spec phase has been approved
+      when: eigen-change launches plan-agent with SPEC_PATH and MODULE_PATH
+      then: |
+        plan-agent returns a draft plan as text; eigen-change presents it in plan mode UI for
+        user approval. On approval, eigen-change persists the plan to
+        .eigen/plans/<module-slug>-<timestamp>.md and stores the path as PLAN_PATH.
+    - id: AC-004
+      description: |
+        After plan approval, eigen-change writes the approved plan text to
+        `.eigen/plans/<module-slug>-<ISO-timestamp>.md` (creating the directory if needed),
+        stores the path as PLAN_PATH, and passes PLAN_PATH (not inline content) to
+        compile-agent alongside SPEC_PATH and MODULE_PATH. compile-agent reads the plan from
+        the file before implementing. Plan files are retained after compilation as an audit
+        artifact and are not deleted. The .eigen/plans/ directory is gitignored.
+      given: The plan has been approved by the user
+      when: eigen-change launches compile-agent
+      then: |
+        eigen-change writes the plan to .eigen/plans/<slug>-<timestamp>.md, passes
+        PLAN_PATH to compile-agent, and compile-agent reads the plan from the file at
+        that path. The plan file persists after compilation as an audit artifact.
+    - id: AC-024
+      description: |
+        The .eigen/plans/ directory is added to .gitignore so plan files are never
+        accidentally committed. The directory is created at runtime by eigen-change
+        before writing the first plan file; no pre-existing directory is required.
+      given: eigen-change is about to write a plan file
+      when: It creates .eigen/plans/ and writes the file
+      then: |
+        The .eigen/plans/ directory exists on disk (created if absent) and is listed in
+        .gitignore. The plan file is written successfully and is not staged or committed.
+    - id: AC-025
+      description: |
+        compile-agent is updated to accept PLAN_PATH (a file path) instead of PLAN_CONTENT
+        (inline text). The agent reads the plan by calling Read on PLAN_PATH before
+        implementing. The compile-agent definition (both embedded source and .claude/ copy)
+        no longer references PLAN_CONTENT.
+      given: compile-agent receives an invocation prompt containing PLAN_PATH
+      when: compile-agent begins its workflow
+      then: |
+        compile-agent calls Read on PLAN_PATH to load the plan text, then proceeds with
+        implementation. If the file at PLAN_PATH does not exist, compile-agent stops and
+        reports the missing path to eigen-change rather than guessing at the plan.
