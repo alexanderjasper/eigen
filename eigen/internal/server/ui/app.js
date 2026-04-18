@@ -579,7 +579,15 @@ async function pollOnce() {
   try {
     const res = await fetch('/api/changes?status=draft');
     if (!res.ok) { hideReviewPanel(); schedulePoll(); return; }
-    const drafts = await res.json();
+    const allDrafts = await res.json();
+    // Same change file appears once per worktree — deduplicate by module_path+filename,
+    // preferring the main/primary worktree so approve/reject targets the canonical copy.
+    const seen = new Map();
+    for (const d of allDrafts) {
+      const key = (d.module_path || '') + '/' + (d.filename || '');
+      if (!seen.has(key) || !d.worktree || d.worktree === 'main') seen.set(key, d);
+    }
+    const drafts = Array.from(seen.values());
     if (drafts.length === 0) { hideReviewPanel(); schedulePoll(); return; }
     // Don't interrupt if the panel is already open.
     const panel = document.getElementById('review-panel');
