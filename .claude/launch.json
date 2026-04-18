@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "eigen-serve",
+      "runtimeExecutable": "go",
+      "runtimeArgs": ["run", "./eigen", "serve", "--specs", "specs"],
+      "port": 7171
+    }
+  ]
+}
