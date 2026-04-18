@@ -1,0 +1,52 @@
+format: eigen/v1
+id: chg-003
+sequence: 3
+timestamp: "2026-04-18T16:31:37Z"
+type: updated
+summary: Slugify summary in change filename when summary is non-empty
+reason: |
+  61% of change files were named NNN_initial.yaml because the non-interactive
+  WriteChange path defaulted to "_initial" whenever Summary was empty at template
+  write time. The spec-agent and other callers populate Summary after the fact,
+  meaning the slug was always derived from an empty string. The fix makes
+  WriteChange (and its callers) use the slugified Summary as the filename slug
+  whenever Summary is non-empty, reserving "_initial" only for the case where
+  Summary is truly empty.
+status: compiled
+compiled_commits:
+  - bd11c44249b853deb8aca5be9aedca165847e78d
+  - 82c8874d4e0e6cd42b106c64c32d9a5faeb21c31
+changes:
+  behavior:
+    - op: replace
+      old: |-
+        WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
+        mode 0644. WriteChange marshals a Change to YAML and writes it to the
+        changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
+        3 digits) and mode 0644.
+      new: |-
+        WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
+        mode 0644. WriteChange marshals a Change to YAML and writes it to the
+        changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
+        3 digits) and mode 0644. The slug is derived from the Change's Summary
+        field: if Summary is non-empty, it is lowercased, all non-alphanumeric
+        character runs are replaced with hyphens, leading/trailing hyphens are
+        trimmed, and the result is truncated to 40 characters. If Summary is
+        empty (or produces an empty slug after transformation), the slug
+        defaults to "initial".
+  acceptance_criteria:
+    - id: AC-030
+      description: WriteChange uses slugified summary as filename when summary is non-empty
+      given: A Change with Sequence 4 and Summary "Add validation for empty modules"
+      when: WriteChange is called
+      then: The file is written as "004_add-validation-for-empty-modules.yaml" in the changes/ directory
+    - id: AC-031
+      description: WriteChange falls back to "initial" slug when summary is empty
+      given: A Change with Sequence 5 and an empty Summary field
+      when: WriteChange is called
+      then: The file is written as "005_initial.yaml" in the changes/ directory
+    - id: AC-032
+      description: WriteChange truncates slugified summary to 40 characters
+      given: A Change with a Summary that slugifies to more than 40 characters
+      when: WriteChange is called
+      then: The filename slug portion is at most 40 characters long
