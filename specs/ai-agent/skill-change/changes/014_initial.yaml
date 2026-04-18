@@ -19,7 +19,9 @@ reason: |
   `eigen spec change-comment <module> <file> ""` for each one. This ensures only a
   genuine new rejection (where the user explicitly writes a new comment) is detected as a
   rejection.
-status: approved
+status: compiled
+compiled_commits:
+  - fc7e0ec52133533150c5e92abc1422c1f945a8cf
 changes:
   behavior:
     - op: append
