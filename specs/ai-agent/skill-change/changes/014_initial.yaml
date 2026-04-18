@@ -1,0 +1,46 @@
+format: eigen/v1
+id: chg-014
+sequence: 14
+timestamp: "2026-04-18T16:29:57Z"
+author: alexander
+type: updated
+summary: Clear stale review_comment on change files before re-entering the approval poll
+reason: |
+  Bug #15: after a rejection, the skill records feedback via `eigen spec change-comment`
+  on the change files. When the spec-agent finishes incorporating feedback and the skill
+  re-enters the approval poll, those review_comment values are still present on the
+  change files. The polling loop checks whether any change file has a review_comment set
+  to detect rejection — so the stale comments from the previous rejection cycle
+  immediately trigger a false positive "REJECTED" result on the very next poll, before the
+  user has had any chance to review the updated spec.
+
+  Fix: before re-entering the approval poll (step 2), clear the review_comment on every
+  change file that was just processed by running
+  `eigen spec change-comment <module> <file> ""` for each one. This ensures only a
+  genuine new rejection (where the user explicitly writes a new comment) is detected as a
+  rejection.
+changes:
+  behavior:
+    - op: append
+      text: |
+
+        After a spec rejection is processed and spec-agent writes the feedback change
+        file, the skill clears the stale review_comment on all change files before
+        re-entering the approval poll: for each change file run
+        `eigen spec change-comment <module-path> <filename> ""`.
+        This prevents old rejection comments from triggering a false positive on the
+        next poll.
+  acceptance_criteria:
+    - id: AC-023
+      description: |
+        After a rejection → Spec Feedback Loop → spec-agent run cycle completes,
+        the skill clears the review_comment field on all change files that were
+        previously commented before re-entering the approval poll. This prevents
+        stale comments from triggering a false rejection on the next poll.
+      given: A spec rejection has been processed and spec-agent has written an updated change file
+      when: eigen-change is about to re-enter the approval poll (step 2)
+      then: |
+        It runs `eigen spec change-comment <module-path> <filename> ""` for each change
+        file that previously had a review_comment, clearing the stale value before the
+        next poll begins. The next poll only detects a rejection if the user writes a
+        new comment in the review UI.
