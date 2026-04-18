@@ -625,11 +625,22 @@ function renderReviewList() {
   const changesEl = document.getElementById('review-changes');
   changesEl.innerHTML = '';
 
+  const header = document.createElement('div');
+  header.className = 'review-list-header';
+
   const count = document.createElement('div');
   count.className = 'review-list-count';
   const n = reviewDraftChanges.length;
   count.textContent = n + ' change' + (n !== 1 ? 's' : '') + ' pending';
-  changesEl.appendChild(count);
+
+  const approveAllBtn = document.createElement('button');
+  approveAllBtn.className = 'btn-approve-all';
+  approveAllBtn.textContent = 'Approve All';
+  approveAllBtn.addEventListener('click', () => approveAll(approveAllBtn, count));
+
+  header.appendChild(count);
+  header.appendChild(approveAllBtn);
+  changesEl.appendChild(header);
 
   reviewDraftChanges.forEach((change, idx) => {
     const row = document.createElement('div');
@@ -652,6 +663,36 @@ function renderReviewList() {
     });
     changesEl.appendChild(row);
   });
+}
+
+async function approveAll(btn, countEl) {
+  btn.disabled = true;
+  const total = reviewDraftChanges.length;
+  let approved = 0;
+  const snapshot = reviewDraftChanges.slice();
+
+  for (const change of snapshot) {
+    btn.textContent = 'Approving ' + (approved + 1) + '/' + total + '...';
+    const wtParam = change.worktree ? '?worktree=' + encodeURIComponent(change.worktree) : '';
+    try {
+      const res = await fetch(
+        '/api/modules/' + (change.module_path||'') + '/changes/' + (change.filename||'') + '/approve' + wtParam,
+        { method: 'POST' }
+      );
+      if (!res.ok) throw new Error('Approve failed: ' + res.status);
+      const liveIdx = reviewDraftChanges.indexOf(change);
+      if (liveIdx !== -1) reviewDraftChanges.splice(liveIdx, 1);
+      approved++;
+    } catch (err) {
+      showToast(err.message);
+      break;
+    }
+  }
+
+  if (reviewDraftChanges.length === 0) { hideReviewPanel(); return; }
+  btn.disabled = false;
+  btn.textContent = 'Approve All';
+  renderReviewList();
 }
 
 function renderReviewDetail(index) {

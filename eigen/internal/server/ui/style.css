@@ -513,6 +513,27 @@ html, body {
   letter-spacing: .05em;
   margin-bottom: 16px;
 }
+.review-list-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.review-list-header .review-list-count {
+  margin-bottom: 0;
+  flex: 1;
+}
+.btn-approve-all {
+  padding: 5px 14px;
+  font-size: 12px;
+  background: rgba(16,185,129,.15);
+  color: var(--status-stable);
+  border: 1px solid rgba(16,185,129,.3);
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-approve-all:hover:not(:disabled) { background: rgba(16,185,129,.3); }
+.btn-approve-all:disabled { opacity: 0.4; cursor: not-allowed; }
 .review-list-row {
   display: flex;
   align-items: center;
