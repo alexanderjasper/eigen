@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -77,9 +78,13 @@ func WriteSpec(specsRoot, path string, s spec.SpecModule) error {
 	return nil
 }
 
-// WriteChange writes a Change to the changes/ directory with the given sequence number and slug.
-func WriteChange(specsRoot, path string, ch spec.Change, slug string) error {
+// WriteChange writes a Change to the changes/ directory, deriving the filename slug from ch.Summary.
+func WriteChange(specsRoot, path string, ch spec.Change) error {
 	dir := ChangesPath(specsRoot, path)
+	slug := slugify(ch.Summary)
+	if slug == "" {
+		slug = "initial"
+	}
 	filename := fmt.Sprintf("%03d_%s.yaml", ch.Sequence, slug)
 	data, err := marshalCanonical(ch)
 	if err != nil {
@@ -224,6 +229,18 @@ func marshalCanonical(v interface{}) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+var storageNonAlnum = regexp.MustCompile(`[^a-z0-9]+`)
+
+func slugify(s string) string {
+	s = strings.ToLower(s)
+	s = storageNonAlnum.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	if len(s) > 40 {
+		s = s[:40]
+	}
+	return s
 }
 
 // pruneZeroScalars removes mapping entries whose value is an empty string or "0".
