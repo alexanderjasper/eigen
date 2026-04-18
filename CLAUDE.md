@@ -11,7 +11,16 @@ specs/          Eigen specifications for this repo (eigen is built using itself)
 
 ### spec.yaml is generated — never edit it directly
 
-`spec.yaml` in each module directory is projected from the `changes/` files by `eigen spec project`. The pre-commit hook re-runs projection automatically. Always edit change files; changes to `spec.yaml` will be overwritten.
+`spec.yaml` in each module directory is projected from the `changes/` files by `eigen spec project`. Always edit change files; changes to `spec.yaml` will be overwritten.
+
+The pre-commit hook re-runs projection automatically, but **does not stage the updated `spec.yaml` files**. After editing change files, you must explicitly stage and commit the projected `spec.yaml` alongside them:
+
+```bash
+git add specs/<module>/changes/001_foo.yaml specs/<module>/spec.yaml
+git commit
+```
+
+Forgetting to commit `spec.yaml` means CI validates the stale projected file, not the one matching your change files.
 
 ### The `dependencies` field takes module paths only
 
