@@ -29,7 +29,9 @@ reason: |
   inside those agents, blocking them from asking clarifying questions of the user directly.
   Adding a tools: field to each agent's frontmatter listing the tools the agent needs
   (including AskUserQuestion where appropriate) fixes this bootstrapping gap.
-status: approved
+status: compiled
+compiled_commits:
+  - 2e4687622a807d9578ba6639755b41ea59c8c713
 changes:
   behavior:
     - op: prepend
