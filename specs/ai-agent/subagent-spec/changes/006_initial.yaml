@@ -12,7 +12,7 @@ reason: |
   Eigen supports surgical op-based mutations (append, replace, prepend, delete) that
   express only what changed. spec-agent should prefer these for existing modules and
   reserve full scalar replacement for new modules being created from scratch.
-status: approved
+status: compiled
 changes:
   behavior:
     - op: append
