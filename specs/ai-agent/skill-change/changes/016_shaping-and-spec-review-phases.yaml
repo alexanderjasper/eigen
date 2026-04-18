@@ -1,0 +1,114 @@
+format: eigen/v1
+id: chg-016
+sequence: 16
+timestamp: "2026-04-18T18:04:52Z"
+author: alexander
+type: updated
+summary: Add Phase 0 (Shaping) and Phase 1b (Spec Review) clarification sub-phases, and add AskUserQuestion to agent tool allowlists
+reason: |
+  The current workflow jumps straight into spec writing after the user provides a feature
+  description. This often leads to wasted spec cycles when the description is ambiguous,
+  the scope is unclear, or the user's intent does not match what the agent produces.
+
+  Two new inline clarification sub-phases address this:
+  - Phase 0 (Shaping): runs before spec-agent, lets the main conversation ask the user
+    clarifying questions via AskUserQuestion (as many as genuinely needed, but only when
+    the answer will influence the spec or implementation). Always mandatory — no skip flag.
+  - Phase 1b (Spec Review): runs after spec-agent returns but before the browser-based
+    review UI poll. The main conversation reads the projected spec.yaml, identifies concerns
+    (edge cases, ambiguities, missing error handling, etc.), and presents each concern as a
+    separate sequential AskUserQuestion. Only when all concerns are resolved does eigen-change
+    enter the review UI poll.
+
+  Both phases run inline in the main eigen-change conversation thread; no new subagent
+  files are needed. Shaping answers are passed verbatim as additional context in the
+  spec-agent invocation prompt alongside the feature description.
+
+  Additionally, spec-agent (and other agent definition files) currently lack an explicit
+  tools allowlist in their YAML frontmatter. This means AskUserQuestion is unavailable
+  inside those agents, blocking them from asking clarifying questions of the user directly.
+  Adding a tools: field to each agent's frontmatter listing the tools the agent needs
+  (including AskUserQuestion where appropriate) fixes this bootstrapping gap.
+status: compiled
+compiled_commits:
+  - 2e4687622a807d9578ba6639755b41ea59c8c713
+changes:
+  behavior:
+    - op: prepend
+      text: |
+        Phase 0 — Shaping runs inline in the main conversation before spec-agent is invoked.
+        eigen-change uses AskUserQuestion to ask the user clarifying questions that
+        disambiguate scope, edge cases, or constraints. There is no cap on the number of
+        questions, but eigen-change must only ask when the answer will influence the spec or
+        implementation — noise-generating questions are omitted. Phase 0 is always mandatory;
+        there is no skip flag. The answers are collected and passed verbatim as additional
+        context in the spec-agent invocation prompt alongside the original feature description.
+
+        Phase 1b — Spec Review runs inline in the main conversation after spec-agent writes
+        and projects the spec but before the browser-based review UI poll begins. eigen-change
+        reads the projected spec.yaml and identifies concerns (edge cases, ambiguities, missing
+        error handling, etc.). Each concern is presented as a separate sequential AskUserQuestion.
+        The user addresses each in turn. If any response triggers a spec revision, the Spec
+        Feedback Loop runs (spec-agent writes a new change file, re-projects), and Phase 1b
+        restarts from scratch against the revised spec. If no concerns are identified,
+        eigen-change enters the review UI poll immediately.
+    - op: replace
+      old: |-
+        The approval polling loop checks the HTTP status code
+      new: |-
+        After Phase 1b confirms the user is satisfied, the approval polling loop checks the HTTP status code
+  acceptance_criteria:
+    - id: AC-026
+      description: |
+        Phase 0 — Shaping: before invoking spec-agent, eigen-change asks the user clarifying
+        questions via AskUserQuestion in the main conversation thread. Questions target scope
+        ambiguities, edge cases, or missing constraints that would block the spec-agent.
+        There is no cap on the number of questions — eigen-change asks as many as genuinely
+        needed. However, eigen-change must only ask a question when the answer will actually
+        influence the spec or implementation; questions whose answers would not change anything
+        must be omitted to keep the conversation context clean. Phase 0 is always mandatory —
+        there is no skip flag or invocation argument to bypass it.
+      given: A user invokes /eigen-change with a feature description
+      when: Phase 0 runs before spec-agent is launched
+      then: |
+        eigen-change asks the user clarifying questions via AskUserQuestion — as many as
+        genuinely needed, but only questions whose answers will influence the spec or
+        implementation. Questions whose answers would not change the spec or plan are skipped.
+        The user's answers are collected and appended verbatim as "Shaping context" in the
+        spec-agent invocation prompt alongside the original feature description.
+    - id: AC-027
+      description: |
+        Phase 1b — Spec Review: after spec-agent writes and projects the spec (and before
+        the review UI poll begins), eigen-change reads the projected spec.yaml and identifies
+        concerns — edge cases, ambiguities, missing error handling, unclear acceptance criteria,
+        etc. Each concern is presented to the user as a separate, sequential AskUserQuestion.
+        The user addresses each concern in turn. After all concerns have been raised and
+        resolved, eigen-change enters the review UI poll. If the user's response to any concern
+        indicates a spec change is needed, the Spec Feedback Loop runs (spec-agent writes a new
+        change file, re-projects), and Phase 1b restarts from the beginning with the updated spec.
+      given: spec-agent has completed writing and projecting the spec
+      when: Phase 1b runs before the review UI poll
+      then: |
+        eigen-change reads the projected spec.yaml and derives a list of concerns. For each
+        concern, it calls AskUserQuestion with that single concern before moving to the next.
+        Only after every concern has been presented and the user has responded to each does
+        eigen-change enter the review UI poll. If any response triggers a spec revision, the
+        Spec Feedback Loop runs and Phase 1b repeats from scratch against the revised spec.
+        If no concerns are identified, eigen-change enters the review UI poll immediately.
+    - id: AC-028
+      description: |
+        Agent tool allowlists: every agent definition file (spec-agent.md, plan-agent.md,
+        compile-agent.md, review-agent.md) gains an explicit tools: field in its YAML
+        frontmatter listing only the tools that agent needs. spec-agent's allowlist includes
+        AskUserQuestion so it can ask clarifying questions of the user directly. plan-agent
+        and review-agent do not receive AskUserQuestion because they are read-only research
+        agents that return text to the caller rather than interacting with the user.
+        compile-agent does not receive AskUserQuestion; if ambiguous it stops and reports.
+      given: An agent definition file is deployed via eigen scaffold
+      when: The agent runs inside a subagent thread
+      then: |
+        The agent's frontmatter tools: field lists only the tools it needs. spec-agent's
+        list includes AskUserQuestion. plan-agent and review-agent do not have
+        AskUserQuestion. compile-agent does not have AskUserQuestion. The generated
+        .claude/agents/<name>.md copies match the embedded source files in
+        eigen/cmd/agents/<name>.md.

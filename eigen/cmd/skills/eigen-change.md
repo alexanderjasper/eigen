@@ -36,6 +36,33 @@ Ask the user which module path to use (e.g. `ai-agent/skill-change`) or derive i
 
 ---
 
+## Phase 0 — Shaping
+
+Before invoking spec-agent, ask the user clarifying questions inline in the main conversation thread using AskUserQuestion. The goal is to surface ambiguities, edge cases, or missing constraints that would otherwise block the spec-agent or produce a spec that needs immediate revision.
+
+**Rules:**
+- Ask as many questions as genuinely needed — there is no cap.
+- Only ask a question when the answer will influence the spec or implementation. Questions whose answers would not change anything must be omitted.
+- Phase 0 is always mandatory — there is no skip flag or argument to bypass it.
+- Ask questions one at a time, sequentially.
+
+**Collecting answers:**
+After all questions have been answered, collect them into a "Shaping context" block:
+
+```
+Shaping context:
+Q: <question 1>
+A: <answer 1>
+
+Q: <question 2>
+A: <answer 2>
+...
+```
+
+This block is passed verbatim to the spec-agent invocation prompt in Phase 1.
+
+---
+
 ## Phase 1 — Spec
 
 Launch the spec-agent to produce the spec:
@@ -48,6 +75,8 @@ Agent(
 
     Feature description: <description from user>
     Module path: <module-path>
+
+    <Shaping context block from Phase 0 — paste verbatim here>
 
     Ask the user clarifying questions, explore the codebase, write the spec change files,
     run `eigen spec project <module-path>`, and validate.
@@ -64,6 +93,19 @@ After the agent completes:
 2. Commit the spec files:
      git add specs/<module-path>/
      git commit -m "spec(<module>): <summary from spec-agent report>"
+
+### Phase 1b — Spec Review
+
+After committing the spec and before opening the review UI poll, review the written spec inline:
+
+1. Read `specs/<module-path>/spec.yaml` (the projected spec).
+2. Identify concerns: edge cases not covered by ACs, ambiguities in the behavior description, missing error handling, unclear given/when/then, contradictions between ACs, etc.
+3. For each concern, call AskUserQuestion with that single concern and wait for the user's response before moving to the next concern. Present concerns one at a time, sequentially.
+4. After each user response:
+   - If the response indicates a spec change is needed (e.g. "yes, add that", "good catch, include it", or any substantive correction): run the **Spec Feedback Loop** with the user's response as feedback, then **restart Phase 1b from step 1** against the revised spec.
+   - If the response indicates no change is needed (e.g. "that's fine", "out of scope", "not needed"): continue to the next concern.
+5. After all concerns have been presented and resolved with no further spec changes, proceed to step 3 (the review UI poll).
+6. If no concerns are identified, proceed directly to step 3.
 
 3. Tell the user: "Spec written. Open http://localhost:7171 to review and approve/reject in the browser. I'll proceed automatically when you submit."
 
