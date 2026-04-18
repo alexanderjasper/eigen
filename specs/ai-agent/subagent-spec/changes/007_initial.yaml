@@ -13,7 +13,7 @@ reason: |
   silently overwritten the next time `eigen scaffold --force` is run. The source of
   truth is the embedded files in eigen/cmd/. Both spec-agent and compile-agent must
   edit those files and then re-scaffold to regenerate the .claude/ copies.
-status: draft
+status: approved
 changes:
   behavior:
     - op: append
