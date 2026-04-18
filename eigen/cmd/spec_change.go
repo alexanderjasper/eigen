@@ -53,7 +53,15 @@ func runSpecChange(cmd *cobra.Command, args []string) error {
 
 // writeChangeDirect writes the template straight to changes/ and reprojects.
 func writeChangeDirect(path string, seq int, template string) error {
-	filename := fmt.Sprintf("%03d_initial.yaml", seq)
+	var ch spec.Change
+	if err := yaml.Unmarshal([]byte(template), &ch); err != nil {
+		return fmt.Errorf("parsing change template: %w", err)
+	}
+	slug := slugify(ch.Summary)
+	if slug == "" {
+		slug = "initial"
+	}
+	filename := fmt.Sprintf("%03d_%s.yaml", seq, slug)
 	changePath := filepath.Join(storage.ChangesPath(specsRoot, path), filename)
 	if err := os.WriteFile(changePath, []byte(template), 0644); err != nil {
 		return fmt.Errorf("writing change file: %w", err)
