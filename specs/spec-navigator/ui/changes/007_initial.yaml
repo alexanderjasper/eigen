@@ -1,0 +1,79 @@
+format: eigen/v1
+id: chg-007
+sequence: 7
+timestamp: "2026-04-18T14:29:36Z"
+type: updated
+summary: render op-based mutations in the review UI as formatted YAML instead of raw JSON
+reason: |
+  The spec-agent now emits op-based mutations (e.g. `- op: append, text: ...`) for
+  behavior and description fields in change files. The review UI's renderChangeFields
+  function falls through to JSON.stringify for any non-string value, making op-based
+  mutations unreadable in the review panel. Users need to see what the mutation does —
+  e.g. what text is being appended or replaced — without reading a JSON blob.
+status: compiled
+compiled_commits:
+  - e64ac8e6f9fa7629b27b41aa971b957e76cf7896
+changes:
+  behavior:
+    - op: append
+      text: |
+        When renderChangeFields encounters a field value that is an array of op
+        objects (i.e. an array where each element has an "op" key), it renders each
+        op as a human-readable block instead of a raw JSON dump:
+        - For op "append": shows a label "Append:" followed by the text in a
+          preformatted block.
+        - For op "prepend": shows a label "Prepend:" followed by the text in a
+          preformatted block.
+        - For op "replace": shows a label "Replace:" followed by the old text, then
+          a label "With:" followed by the new text, each in preformatted blocks.
+        - For op "delete": shows a label "Delete:" followed by the text in a
+          preformatted block.
+        - For unrecognised op values: falls back to YAML-style formatted display of
+          the object (key: value pairs), not JSON.stringify.
+
+        If a field value is an array but the elements do not have an "op" key, it
+        falls back to YAML-style formatted display (one item per line, indented)
+        rather than JSON.stringify.
+
+        If a field value is a non-array object and no specific renderer exists for
+        that field, it is displayed as formatted key: value pairs rather than
+        JSON.stringify.
+  acceptance_criteria:
+    - id: AC-047
+      description: op-based append mutation renders human-readably in the review UI
+      given: a change file has behavior as [{op:"append", text:"New paragraph..."}]
+      when: the review panel renders the change card
+      then: |
+        The behavior field shows a label "Append:" followed by the appended text
+        in a preformatted block; no JSON blob appears.
+    - id: AC-048
+      description: op-based replace mutation renders human-readably in the review UI
+      given: a change file has description as [{op:"replace", old:"old text", new:"new text"}]
+      when: the review panel renders the change card
+      then: |
+        The description field shows "Replace:" with the old text and "With:" with
+        the new text in preformatted blocks; no JSON blob appears.
+    - id: AC-049
+      description: op-based prepend mutation renders human-readably in the review UI
+      given: a change file has behavior as [{op:"prepend", text:"Intro paragraph..."}]
+      when: the review panel renders the change card
+      then: |
+        The behavior field shows a label "Prepend:" followed by the text in a
+        preformatted block; no JSON blob appears.
+    - id: AC-050
+      description: op-based delete mutation renders human-readably in the review UI
+      given: a change file has behavior as [{op:"delete", text:"sentence to remove"}]
+      when: the review panel renders the change card
+      then: |
+        The behavior field shows a label "Delete:" followed by the text in a
+        preformatted block; no JSON blob appears.
+    - id: AC-051
+      description: multiple ops in a single field are all rendered
+      given: a change file has behavior as [{op:"replace", old:"A", new:"B"}, {op:"append", text:"C"}]
+      when: the review panel renders the change card
+      then: both the replace block and the append block are rendered in order within the behavior field
+    - id: AC-052
+      description: non-string non-array objects fall back to key-value display not JSON
+      given: a change field value is a plain object that is not an op-array
+      when: the review panel renders the change card
+      then: the field is displayed as formatted key-value pairs (not a JSON blob)

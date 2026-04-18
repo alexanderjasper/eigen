@@ -3,6 +3,7 @@ package spec
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -83,15 +84,51 @@ func (tc *TextChange) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // MarshalYAML implements yaml.Marshaler.
-// Unset returns nil; scalar returns string; ops returns slice.
+// Unset returns nil; scalar returns string; ops returns a yaml.Node sequence.
+// We build yaml.Node values directly to avoid yaml.v3 producing |N explicit-indent
+// block scalars (e.g. |4) for strings that start with \n — those cannot be
+// round-tripped through yaml.Unmarshal in nested contexts due to a yaml.v3 bug.
 func (tc TextChange) MarshalYAML() (interface{}, error) {
 	if !tc.set {
 		return nil, nil
 	}
 	if tc.ops != nil {
-		return tc.ops, nil
+		seq := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		for _, op := range tc.ops {
+			m := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+			addScalar(m, "op", op.Op)
+			if op.Old != "" {
+				addLiteral(m, "old", op.Old)
+			}
+			if op.New != "" {
+				addLiteral(m, "new", op.New)
+			}
+			if op.Text != "" {
+				addLiteral(m, "text", op.Text)
+			}
+			seq.Content = append(seq.Content, m)
+		}
+		return seq, nil
 	}
 	return tc.fullText, nil
+}
+
+func addScalar(m *yaml.Node, key, val string) {
+	m.Content = append(m.Content,
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: val},
+	)
+}
+
+func addLiteral(m *yaml.Node, key, val string) {
+	// yaml.v3 emits "|N" (explicit indent indicator) when a literal block string starts
+	// with "\n", producing output that yaml.Unmarshal cannot re-parse in nested contexts.
+	// Trim the leading newline so the encoder emits plain "|" instead.
+	val = strings.TrimLeft(val, "\n")
+	m.Content = append(m.Content,
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key},
+		&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: val, Style: yaml.LiteralStyle},
+	)
 }
 
 // UnmarshalJSON implements json.Unmarshaler.

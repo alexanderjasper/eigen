@@ -4,7 +4,7 @@ domain: spec-navigator
 module: review-ux
 owner: alexander
 title: Review UX
-status: draft
+status: compiled
 description: |
   spec-navigator/review-ux defines the enhanced review experience in the
   spec navigator UI. It covers four concerns:
