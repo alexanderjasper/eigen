@@ -10,7 +10,9 @@ reason: |
   changes are from a single trusted agent invocation. An "Approve All" button
   at the top of the list view lets the user approve every displayed draft in
   a single action.
-status: approved
+status: compiled
+compiled_commits:
+  - fdb78904a7090e4464a3850c8f4ab83873f4bdcd
 changes:
   description: |
     spec-navigator/review-ux defines the enhanced review experience in the
