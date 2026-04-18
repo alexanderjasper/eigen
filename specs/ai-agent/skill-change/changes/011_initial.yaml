@@ -17,6 +17,7 @@ reason: |
      running the actual binary against live API endpoints and rendered pages. The review
      phase must build the binary and exercise the local environment to verify behavior, not
      just reason about source text.
+status: approved
 changes:
   behavior:
     - op: replace
