@@ -1,0 +1,132 @@
+id: chg-002
+sequence: 2
+timestamp: "2026-04-18T00:00:00Z"
+author: alexander
+type: updated
+summary: Add Approve All button to review panel list view
+reason: |
+  When a spec agent creates multiple change files in a single run, the user
+  must click Approve individually for each one. This is tedious when all
+  changes are from a single trusted agent invocation. An "Approve All" button
+  at the top of the list view lets the user approve every displayed draft in
+  a single action.
+status: draft
+changes:
+  description: |
+    spec-navigator/review-ux defines the enhanced review experience in the
+    spec navigator UI. It covers four concerns:
+
+    1. List-to-detail navigation: when draft changes are detected, the review
+       panel shows a scrollable list of change summaries. Clicking a summary
+       opens the full change detail within the panel. Next/prev buttons (and
+       keyboard shortcuts) let the user step through items without returning
+       to the list.
+
+    2. Always-visible comment textarea: each change card in the review panel
+       has a permanently visible textarea for comments. The user can type a
+       comment independently of approving or rejecting. On approve, any text
+       in the textarea is sent as an optional comment. On reject, the textarea
+       content is sent as the required comment (no browser prompt()).
+
+    3. Resizable panes: both the left sidebar (#left) and the review panel
+       (#review-panel) get a drag handle on their inner edge. Dragging resizes
+       the pane. The detail/main area flexes to fill remaining space. Minimum
+       widths prevent panes from collapsing to zero.
+
+    4. Approve All: the review panel list view includes an "Approve All"
+       button that approves every currently-displayed draft change in sequence
+       without requiring individual interaction per change.
+
+    This module does not change the review API endpoints, polling logic, or
+    data model. It depends on spec-navigator/change-review for the API and
+    spec-navigator/ui for the base layout.
+  behavior: |
+    Review list view:
+    - When showReviewPanel is called with draft changes, the panel first
+      renders a list view: each change is a clickable row showing its
+      filename, summary, and status badge.
+    - A count indicator (e.g. "3 changes pending") is shown at the top.
+    - An "Approve All" button is rendered in the list view header, next to
+      the count indicator. Clicking it approves every change in the list
+      sequentially by POSTing to each change's /approve endpoint with no
+      comment. While running, the button is disabled and shows a progress
+      indicator (e.g. "Approving 2/3..."). On completion, the review panel
+      hides (same as when the last individual approval clears the list). If
+      any individual approval fails, an error toast is shown and the button
+      re-enables; successfully approved items are already removed from the
+      list.
+    - Clicking a row transitions the panel to detail view for that change,
+      showing the full change field preview, comment textarea, and
+      approve/reject buttons.
+    - A "Back to list" link at the top of the detail view returns to the
+      list view.
+
+    Next/prev navigation:
+    - In detail view, "Previous" and "Next" buttons appear at the top of the
+      card. They navigate to the adjacent change in the list order.
+    - The "Previous" button is hidden (or disabled) on the first item; "Next"
+      is hidden (or disabled) on the last item.
+    - Keyboard shortcuts: pressing "j" or "n" goes to the next change;
+      "k" or "p" goes to the previous change. These shortcuts are only active
+      when the comment textarea is not focused.
+
+    Always-visible comment textarea:
+    - Each change detail view includes a <textarea> with the class
+      "review-comments" that is always rendered (not gated behind reject).
+    - The textarea placeholder reads "Add a comment (optional for approve,
+      required for reject)...".
+    - If the change already has a review_comment from a prior rejection, the
+      textarea is pre-populated with that text.
+    - On approve: if the textarea is non-empty, the comment is sent in the
+      POST body as { comment: "..." }. If empty, no comment field is sent.
+    - On reject: the textarea must be non-empty. If the user clicks Reject
+      with an empty textarea, an inline validation message appears below the
+      textarea ("A comment is required to reject.") and the POST is not sent.
+      No browser prompt() is used.
+
+    Resizable left sidebar:
+    - A vertical drag handle element (class "resize-handle") is appended as
+      the last child of #left (right edge).
+    - Mousedown on the handle initiates a resize. Mousemove updates the
+      CSS variable --left-width. Mouseup ends the resize.
+    - Minimum width: 180px. Maximum width: 50% of viewport width.
+    - The cursor changes to col-resize during drag.
+    - The handle is 6px wide, centered on the border, and shows a subtle
+      visual indicator on hover.
+
+    Resizable review panel:
+    - A vertical drag handle element (class "resize-handle") is prepended as
+      the first child of #review-panel (left edge).
+    - Mousedown on the handle initiates a resize. Mousemove updates the
+      panel width. Mouseup ends the resize.
+    - Minimum width: 320px. Maximum width: 80% of viewport width.
+    - The cursor changes to col-resize during drag.
+
+    General:
+    - Drag handles use pointer events (pointerdown/pointermove/pointerup)
+      for touch compatibility.
+    - During a drag, a transparent overlay is added to prevent iframes or
+      text selection from interfering.
+    - Pane widths persist in localStorage under keys "eigen-left-width" and
+      "eigen-review-width". On page load, stored values are applied if present.
+  acceptance_criteria:
+    - id: AC-029
+      description: Approve All button is visible in list view
+      given: the review panel is showing the list view with 3 draft changes
+      when: the list view renders
+      then: an "Approve All" button is visible alongside the count indicator
+    - id: AC-030
+      description: Approve All approves every draft change in sequence
+      given: the review panel is showing 3 draft changes
+      when: the user clicks "Approve All"
+      then: POSTs to /approve for each of the 3 changes in list order with no comment body; the review panel hides when all succeed
+    - id: AC-031
+      description: Approve All button is disabled while running
+      given: the user has clicked "Approve All" and approvals are in progress
+      when: the button is observed mid-run
+      then: the button is disabled and displays a progress indicator such as "Approving 2/3..."
+    - id: AC-032
+      description: Approve All shows error toast and re-enables on partial failure
+      given: the third of 3 approvals fails with a non-2xx status
+      when: Approve All is running
+      then: an error toast is shown, the button re-enables, and the list shows only the changes that were not yet approved

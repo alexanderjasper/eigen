@@ -4,7 +4,7 @@ domain: spec-cli
 module: cmd-change
 owner: eigen
 title: spec change
-status: compiled
+status: draft
 description: |
   The spec change command records a new change against an existing
   spec module. By default it writes the change template to the changes/
@@ -17,7 +17,11 @@ behavior: |
 
   Default (non-interactive): writes the template to changes/, reprojects
   spec.yaml, and prints the file path. The caller edits the file and runs
-  eigen spec project <path> to reproject after their edits.
+  eigen spec project <path> to reproject after their edits. When the
+  Summary field in the written template is non-empty, the slug is derived
+  from it via slugify(); when Summary is empty, the slug defaults to
+  "initial". This is consistent with --edit mode, which already slugifies
+  the Summary.
 
   With --edit: writes a temp file, opens $EDITOR, and on save parses,
   writes the change, and reprojects — the original human workflow.
@@ -30,8 +34,8 @@ behavior: |
   each redundant field without writing anything.
 acceptance_criteria:
   - id: AC-001
-    description: Default run writes template and exits without opening editor
-    given: A valid existing module
+    description: Default run with empty summary uses "initial" slug
+    given: A valid existing module and no Summary populated in the template
     when: eigen spec change <path> is run without --edit
     then: Writes NNN_initial.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
   - id: AC-002
@@ -59,7 +63,12 @@ acceptance_criteria:
     given: A module with title "Foo" and AC-001 already projected
     when: eigen spec change writes a changeset that updates AC-001 but leaves title unchanged
     then: The change is accepted; only the changed AC-001 need be in the changeset
+  - id: AC-007
+    description: Default run with non-empty Summary slugifies the filename
+    given: A valid existing module and the spec-agent has populated Summary as "Fix filename slug"
+    when: eigen spec change <path> is run without --edit
+    then: Writes NNN_fix-filename-slug.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
 dependencies: []
 technology: {}
-last_change: chg-005
-changes_count: 5
+last_change: chg-006
+changes_count: 6
