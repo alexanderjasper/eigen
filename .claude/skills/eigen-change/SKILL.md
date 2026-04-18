@@ -123,6 +123,13 @@ After spec-agent returns, commit all pending spec files:
   git add specs/<module-path>/
   git commit -m "spec(<module>): incorporate feedback on <aspect>"
 (Use the aspect/summary from spec-agent's report.)
+
+Clear stale review_comment values before re-entering the poll. For each change file
+that previously had a non-empty review_comment (the filenames extracted during the
+rejection step), run:
+  eigen spec change-comment <module-path> <filename> ""
+This prevents old rejection comments from triggering a false positive on the next poll.
+
 Then re-enter the review cycle (poll module changes from step 2).
 
 ---
