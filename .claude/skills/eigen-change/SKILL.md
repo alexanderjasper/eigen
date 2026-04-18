@@ -16,11 +16,21 @@ If description is missing, ask what the user wants to build.
 
 Before starting, collect context that all agents will need:
 
-```bash
-git branch --show-current
-```
+**Branch setup:**
+- If the invocation args include `--branch <name>`, set `BRANCH=<name>` and skip branch creation.
+- If the user explicitly states they want to continue on the current branch, run `git branch --show-current`, store as `BRANCH`, and skip branch creation.
+- Otherwise, derive a branch name from the module path or description (replace `/` with `-`, prefix with `feat/`, e.g. `feat/skill-change-branch-from-main`), then:
+  ```bash
+  git fetch origin main
+  git checkout -b <derived-branch-name> origin/main
+  ```
+  Store the new branch name as `BRANCH`.
 
-Store as `BRANCH`.
+Capture `WORKTREE`:
+```bash
+basename "$(git rev-parse --show-toplevel)"
+```
+Store as `WORKTREE`.
 
 Ask the user which module path to use (e.g. `ai-agent/skill-change`) or derive it from the description if obvious.
 
@@ -194,8 +204,18 @@ Agent(
     SPEC_PATH: specs/<module-path>/spec.yaml
     MODULE_PATH: <module-path>
 
-    Read the spec and the compiled implementation, verify every acceptance criterion,
-    run the build/test suite, and return the full compliance report.
+    Read the spec and the compiled implementation. Before evaluating correctness:
+    1. Build the binary: run `go build ./...` from the `eigen/` subdirectory of the repo root.
+    2. If the change involves the spec-navigator, serve, or any HTTP API subsystem:
+       - Start `eigen serve &` and wait for it to be ready (poll http://localhost:7171 until HTTP 200).
+       - Exercise relevant API endpoints with curl (e.g. `curl -s http://localhost:7171/api/modules`).
+       - Fetch or check relevant web pages where browser tools are available.
+    3. For all other changes, still build the binary and run `go test ./...`.
+
+    Verify every acceptance criterion. In the compliance report, clearly label each AC as
+    verified through live execution (LIVE) or static analysis only (STATIC).
+
+    Return the full compliance report.
 )
 ```
 
