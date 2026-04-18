@@ -26,7 +26,12 @@ behavior: |
   WriteSpec marshals a SpecModule to YAML and writes it to spec.yaml with
   mode 0644. WriteChange marshals a Change to YAML and writes it to the
   changes/ directory with filename format NNN_<slug>.yaml (zero-padded to
-  3 digits) and mode 0644.
+  3 digits) and mode 0644. The slug is derived from the Change's Summary
+  field: if Summary is non-empty, it is lowercased, all non-alphanumeric
+  character runs are replaced with hyphens, leading/trailing hyphens are
+  trimmed, and the result is truncated to 40 characters. If Summary is
+  empty (or produces an empty slug after transformation), the slug
+  defaults to "initial".
 
   NextSequence returns 1 when no changes exist or the changes directory
   is unreadable; otherwise it returns max(sequence) + 1 across all existing
@@ -195,8 +200,23 @@ acceptance_criteria:
     given: A SpecModule struct with populated fields
     when: WriteSpec is called and the resulting file bytes are inspected
     then: Every indented line in the output file is indented by a multiple of 2 spaces, not 4
+  - id: AC-030
+    description: WriteChange uses slugified summary as filename when summary is non-empty
+    given: A Change with Sequence 4 and Summary "Add validation for empty modules"
+    when: WriteChange is called
+    then: The file is written as "004_add-validation-for-empty-modules.yaml" in the changes/ directory
+  - id: AC-031
+    description: WriteChange falls back to "initial" slug when summary is empty
+    given: A Change with Sequence 5 and an empty Summary field
+    when: WriteChange is called
+    then: The file is written as "005_initial.yaml" in the changes/ directory
+  - id: AC-032
+    description: WriteChange truncates slugified summary to 40 characters
+    given: A Change with a Summary that slugifies to more than 40 characters
+    when: WriteChange is called
+    then: The filename slug portion is at most 40 characters long
 dependencies:
   - spec-cli
 technology: {}
-last_change: chg-002
-changes_count: 2
+last_change: chg-003
+changes_count: 3
