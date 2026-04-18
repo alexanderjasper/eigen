@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-016
 sequence: 16
-timestamp: 2026-04-18T18:04:52Z
+timestamp: "2026-04-18T18:04:52Z"
 author: alexander
 type: updated
 summary: Add Phase 0 (Shaping) and Phase 1b (Spec Review) clarification sub-phases, and add AskUserQuestion to agent tool allowlists
@@ -29,6 +29,7 @@ reason: |
   inside those agents, blocking them from asking clarifying questions of the user directly.
   Adding a tools: field to each agent's frontmatter listing the tools the agent needs
   (including AskUserQuestion where appropriate) fixes this bootstrapping gap.
+status: approved
 changes:
   behavior:
     - op: prepend
@@ -49,11 +50,11 @@ changes:
         Feedback Loop runs (spec-agent writes a new change file, re-projects), and Phase 1b
         restarts from scratch against the revised spec. If no concerns are identified,
         eigen-change enters the review UI poll immediately.
-
     - op: replace
-      old: "The approval polling loop checks the HTTP status code"
-      new: "After Phase 1b confirms the user is satisfied, the approval polling loop checks the HTTP status code"
-
+      old: |-
+        The approval polling loop checks the HTTP status code
+      new: |-
+        After Phase 1b confirms the user is satisfied, the approval polling loop checks the HTTP status code
   acceptance_criteria:
     - id: AC-026
       description: |
