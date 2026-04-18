@@ -16,6 +16,7 @@ reason: |
   compile-agent solves all three: the file is the single source of truth, the prompt
   is a compact path reference, and the file remains on disk as an audit artifact.
   The compile-agent reads the plan from the path rather than from inline content.
+status: approved
 changes:
   acceptance_criteria:
     - id: AC-003
