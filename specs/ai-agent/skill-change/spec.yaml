@@ -42,7 +42,6 @@ behavior: |
   `gh pr create`. The PR title is derived from the module path and change summary;
   the body lists the spec path, ACs implemented, and a standard footer. The PR URL
   is presented to the user as the concluding output.
-
   Phase 4 review runs TWO parallel tracks concurrently (issued as parallel tool calls
   in the same message):
 
