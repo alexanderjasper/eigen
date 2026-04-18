@@ -1,0 +1,77 @@
+format: eigen/v1
+id: chg-011
+sequence: 11
+timestamp: 2026-04-18T14:06:56Z
+author: alexander
+type: updated
+summary: New-branch-from-main at setup; E2E environment verification in review phase
+reason: |
+  Two workflow correctness improvements:
+
+  1. The skill currently continues on whatever branch is checked out when invoked. This
+     risks polluting main or an unrelated feature branch with spec/implementation commits.
+     The skill should always start fresh from an up-to-date main branch so every run is
+     isolated and traceable.
+
+  2. Phase 4 review is limited to static code reading. Real regressions are only caught by
+     running the actual binary against live API endpoints and rendered pages. The review
+     phase must build the binary and exercise the local environment to verify behavior, not
+     just reason about source text.
+status: compiled
+compiled_commits:
+  - 35129aef5cb85834993ee15894d40f0b0e3b0c15
+changes:
+  behavior:
+    - op: replace
+      old: "The /change skill orchestrates spec -> plan -> compile. At setup it captures both\nBRANCH (from git branch --show-current) and WORKTREE (the worktree name, derived\nfrom the basename of `git rev-parse --show-toplevel`). WORKTREE is threaded into all\nHTTP API calls to the eigen serve API as a ?worktree= query parameter so modules are\ncorrectly disambiguated when the same module path exists in multiple worktrees."
+      new: "The /change skill orchestrates spec -> plan -> compile. At setup it fetches the\nlatest main branch (`git fetch origin main`) and creates a new feature branch from it\n(`git checkout -b <feature-branch> origin/main`). The skill does NOT continue on the\ncurrently checked-out branch unless the user explicitly passes a flag (--branch) or\nexplicitly instructs it to do so. The branch name is derived from the module path or\nfeature description (e.g. `feat/skill-change-branch-from-main`). Setup also captures\nBRANCH (the new branch name) and WORKTREE (the worktree name, derived from the basename\nof `git rev-parse --show-toplevel`). WORKTREE is threaded into all HTTP API calls to the\neigen serve API as a ?worktree= query parameter so modules are correctly disambiguated\nwhen the same module path exists in multiple worktrees."
+    - op: append
+      text: |
+
+        Phase 4 review goes beyond static code analysis. The review-agent is instructed to
+        start up as much of the local environment as possible before evaluating correctness.
+        This includes: building the binary (`go build ./...` from the `eigen/` directory),
+        starting the spec-navigator web server if the change involves the serve/navigator
+        subsystem (`eigen serve &` and waiting for it to be ready), and then verifying
+        behavior by exercising relevant API endpoints (curl) and web pages (fetch or browser
+        tools if available). The review-agent reports which environment components it was
+        able to start and which acceptance criteria were verified through live execution
+        versus static analysis only.
+  acceptance_criteria:
+    - id: AC-001
+      description: |
+        `change` skill can be invoked with feature description and optional short-name hint.
+        At setup the skill fetches origin/main, creates a new feature branch from it, and
+        calls spec-subagent with the description. The skill does NOT continue on the current
+        branch unless the user passes --branch or explicitly instructs it to do so.
+      given: A user invokes /change with a feature description
+      when: The skill starts execution
+      then: |
+        The skill runs `git fetch origin main` then `git checkout -b <feature-branch> origin/main`,
+        stores the new branch name as BRANCH, and launches spec-agent with the description.
+    - id: AC-019
+      description: |
+        At setup, if the user has passed a --branch <name> flag or has explicitly stated they
+        want to continue on the current branch, the skill skips branch creation and uses the
+        existing branch. Otherwise branch creation from origin/main is always performed.
+      given: A user invokes /change without a --branch flag
+      when: The Setup section runs
+      then: |
+        A new branch is created from origin/main; the current branch is not used.
+        If --branch is passed or the user explicitly requests the current branch, branch
+        creation is skipped and BRANCH is set to the existing branch name.
+    - id: AC-020
+      description: |
+        Phase 4 review-agent builds the binary and starts any applicable local services
+        before evaluating correctness. It does not rely solely on static source analysis.
+        For changes involving the spec-navigator or serve subsystem, the agent starts
+        `eigen serve` and waits for it to be ready before exercising API endpoints.
+        The compliance report must state which ACs were verified through live execution
+        vs. static analysis only.
+      given: compile-agent has completed implementation and committed code
+      when: review-agent runs in Phase 4
+      then: |
+        review-agent builds the binary (`go build ./...` from `eigen/`), optionally starts
+        `eigen serve` for serve/navigator changes, exercises relevant curl endpoints and web
+        pages, and produces a compliance report that distinguishes live-verified ACs from
+        statically-verified ones.
