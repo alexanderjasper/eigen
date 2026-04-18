@@ -89,3 +89,17 @@ eigen spec change-status <module-path> <file> compiled --commit <HEAD-hash>
 ```
 
 where `<HEAD-hash>` is obtained via `git rev-parse HEAD` after the commit. This appends the hash to `compiled_commits` on the change file, building up an audit trail of all commits that implement the change. Call this once per commit — every implementing commit must be recorded.
+
+## Editing agent and skill definition files
+
+When a plan step requires modifying a skill or agent definition file (e.g. spec-agent.md, compile-agent.md, plan-agent.md, review-agent.md, or any eigen-change*.md skill), edit the **embedded source** files — not the `.claude/` copies.
+
+- Agent definitions: `eigen/cmd/agents/<name>.md`
+- Skill definitions: `eigen/cmd/skills/<name>/SKILL.md`
+
+After editing the embedded source:
+1. Run `cd eigen && go install ./...` to rebuild the binary with the updated embedded file.
+2. Run `eigen scaffold --force --no-hooks` to regenerate the `.claude/agents/` and `.claude/skills/` copies from the updated embedded sources.
+3. Stage and commit both the embedded source file and the regenerated `.claude/` copy together in the same atomic commit.
+
+Never edit `.claude/agents/` or `.claude/skills/` files directly — they are generated outputs and will be overwritten the next time `eigen scaffold --force` runs.

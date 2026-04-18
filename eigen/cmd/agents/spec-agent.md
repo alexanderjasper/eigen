@@ -55,6 +55,51 @@ You are given a feature description and a module path. Your job is to create or 
 - **Module naming** (AC-009): module paths use domain-based identifiers (e.g. `ai-agent`, `spec-cli/cmd-scaffold`), never sequence numbers. Only the YAML files inside `changes/` are numbered (e.g. `001_initial.yaml`).
 - **Named agents** (AC-010): every subagent must be defined as `.claude/agents/<name>.md` with a `name:` frontmatter field. Invoke via `subagent_type: <name>`. Never use `subagent_type: general-purpose` with an inline prompt.
 
+### Op-based mutations (existing modules)
+
+When writing a change file that modifies `description` or `behavior` on an existing module, use op-based mutations rather than full scalar replacement. Full scalar replacement is only for new modules being created from scratch.
+
+The `changes` block accepts a YAML sequence of op objects. Supported ops:
+
+**replace** — substitute one substring with another:
+```yaml
+changes:
+  behavior:
+    - op: replace
+      old: "old text to find"
+      new: "replacement text"
+```
+
+**append** — add text after the existing value:
+```yaml
+changes:
+  description:
+    - op: append
+      text: |
+
+        Additional paragraph appended at the end.
+```
+
+**prepend** — add text before the existing value:
+```yaml
+changes:
+  description:
+    - op: prepend
+      text: |
+        New paragraph prepended at the start.
+
+```
+
+**delete** — remove a substring:
+```yaml
+changes:
+  behavior:
+    - op: delete
+      text: "sentence or paragraph to remove"
+```
+
+Multiple ops may be combined in a single sequence to make several surgical edits in one change file.
+
 ---
 
 ## Mode 2: Feedback Incorporation
@@ -81,3 +126,17 @@ You are given user feedback on a previously produced spec output (plan or implem
    eigen-change commits the feedback change file after this agent returns.
 
 The change file must capture enough context that a fresh planning agent could produce the correct output from spec.yaml alone, without needing the conversation history.
+
+## Editing agent and skill definition files
+
+When a task involves modifying a skill or agent definition file (e.g. spec-agent.md, compile-agent.md, plan-agent.md, review-agent.md, or any eigen-change*.md skill), edit the **embedded source** files — not the `.claude/` copies.
+
+- Agent definitions: `eigen/cmd/agents/<name>.md`
+- Skill definitions: `eigen/cmd/skills/<name>/SKILL.md`
+
+After editing the embedded source:
+1. Run `cd eigen && go install ./...` to rebuild the binary with the updated embedded file.
+2. Run `eigen scaffold --force --no-hooks` to regenerate the `.claude/agents/` and `.claude/skills/` copies from the updated embedded sources.
+3. Stage and commit both the embedded source file and the regenerated `.claude/` copy together in the same atomic commit.
+
+Never edit `.claude/agents/` or `.claude/skills/` files directly — they are generated outputs and will be overwritten the next time `eigen scaffold --force` runs.
