@@ -158,9 +158,17 @@ Call `EnterPlanMode` presenting the draft to the user for review.
 Call `ExitPlanMode` to collect the approval decision.
 
 On approval:
-1. Store the approved plan text from ExitPlanMode.
-2. Tell the user: "Plan approved. Proceeding to implementation."
-3. Proceed to Phase 3, passing the approved plan text inline to compile-agent.
+1. Derive PLAN_PATH:
+   - Compute module slug: replace `/` with `-` in MODULE_PATH (e.g. `ai-agent/skill-change` → `ai-agent-skill-change`)
+   - Compute UTC timestamp: `date -u +%Y%m%dT%H%M%SZ`
+   - PLAN_PATH = `.eigen/plans/<module-slug>-<timestamp>.md`
+2. Write the approved plan text to PLAN_PATH:
+   ```bash
+   mkdir -p .eigen/plans
+   # Write the approved plan text returned by ExitPlanMode to PLAN_PATH
+   ```
+3. Tell the user: "Plan approved. Plan written to <PLAN_PATH>. Proceeding to implementation."
+4. Proceed to Phase 3, passing PLAN_PATH to compile-agent.
 
 On rejection: use AskUserQuestion to collect feedback text, run **Spec Feedback Loop** to update the spec, then restart Phase 2.
 
@@ -176,10 +184,9 @@ Agent(
   prompt: |
     SPEC_PATH: specs/<module-path>/spec.yaml
     MODULE_PATH: <module-path>
-    PLAN_CONTENT:
-    <approved plan text>
+    PLAN_PATH: <PLAN_PATH>
 
-    Read the spec and the PLAN_CONTENT above completely before writing any code. The plan text is provided inline — it is not a file.
+    Read the spec completely and then call Read on PLAN_PATH to load the approved plan before writing any code. If the file at PLAN_PATH does not exist, stop and report the missing path.
     Implement following the plan step by step.
     Build with `go build ./...` from the `eigen/` subdirectory of the repo root.
     Verify each acceptance criterion.
