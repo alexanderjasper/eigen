@@ -10,7 +10,9 @@ reason: |
   function falls through to JSON.stringify for any non-string value, making op-based
   mutations unreadable in the review panel. Users need to see what the mutation does —
   e.g. what text is being appended or replaced — without reading a JSON blob.
-status: approved
+status: compiled
+compiled_commits:
+  - e64ac8e6f9fa7629b27b41aa971b957e76cf7896
 changes:
   behavior:
     - op: append
