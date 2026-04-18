@@ -829,6 +829,39 @@ function renderReviewDetail(index) {
   changesEl.appendChild(card);
 }
 
+function isOpArray(val) {
+  return Array.isArray(val) && val.length > 0 && val.every(el => el !== null && typeof el === 'object' && 'op' in el);
+}
+
+function renderOpBlock(container, op) {
+  function addLabeledPre(labelText, bodyText) {
+    const lbl = document.createElement('div');
+    lbl.className = 'review-op-label';
+    lbl.textContent = labelText;
+    container.appendChild(lbl);
+    const pre = document.createElement('pre');
+    pre.className = 'review-field-text';
+    pre.textContent = bodyText != null ? String(bodyText) : '';
+    container.appendChild(pre);
+  }
+  switch (op.op) {
+    case 'append':  addLabeledPre('Append:', op.text); break;
+    case 'prepend': addLabeledPre('Prepend:', op.text); break;
+    case 'replace': addLabeledPre('Replace:', op.old); addLabeledPre('With:', op.new); break;
+    case 'delete':  addLabeledPre('Delete:', op.text); break;
+    default:        renderKeyValuePairs(container, op);
+  }
+}
+
+function renderKeyValuePairs(container, obj) {
+  const div = document.createElement('div');
+  div.className = 'review-field-value';
+  div.textContent = Object.entries(obj).map(([k, v]) =>
+    k + ': ' + (v !== null && typeof v === 'object' ? JSON.stringify(v) : String(v))
+  ).join('\n');
+  container.appendChild(div);
+}
+
 function renderChangeFields(container, changes) {
   const fieldOrder = ['title', 'owner', 'status', 'deprecation_reason', 'description', 'behavior', 'technology', 'dependencies', 'acceptance_criteria'];
   const seen = new Set();
@@ -888,10 +921,23 @@ function renderChangeFields(container, changes) {
       pre.className = 'review-field-text';
       pre.textContent = val;
       field.appendChild(pre);
+    } else if (isOpArray(val)) {
+      for (const op of val) renderOpBlock(field, op);
+    } else if (Array.isArray(val)) {
+      const pre = document.createElement('pre');
+      pre.className = 'review-field-text';
+      pre.textContent = val.map(item =>
+        (item !== null && typeof item === 'object')
+          ? Object.entries(item).map(([k, v]) => '  ' + k + ': ' + (v != null ? String(v) : '')).join('\n')
+          : '- ' + String(item)
+      ).join('\n');
+      field.appendChild(pre);
+    } else if (typeof val === 'object' && val !== null) {
+      renderKeyValuePairs(field, val);
     } else {
       const valueEl = document.createElement('div');
       valueEl.className = 'review-field-value';
-      valueEl.textContent = typeof val === 'object' ? JSON.stringify(val) : String(val);
+      valueEl.textContent = String(val);
       field.appendChild(valueEl);
     }
 
