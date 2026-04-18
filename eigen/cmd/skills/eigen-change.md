@@ -226,14 +226,26 @@ Read the summary line from the report:
 - **PASS** (all ACs pass):
     Use AskUserQuestion to ask:
     - Question: "Review passed. Approve to finish or reject to revise."
-    - Options: "Approve" (done — summarize branch, spec path, commits made), "Reject" (provide feedback)
+    - Options: "Approve", "Reject" (provide feedback)
+    - If approved: create a GitHub PR:
+      ```bash
+      gh pr create --title "<module>: <change summary>" --body "$(cat <<'EOF'
+      ## Summary
+      - Spec: specs/<module-path>/spec.yaml
+      - ACs implemented: <list AC IDs from spec>
+
+      🤖 Generated with [Claude Code](https://claude.com/claude-code)
+      EOF
+      )"
+      ```
+      Capture the PR URL from stdout and present it to the user as the final output.
     - If rejected: prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phases 3 and 4.
 
 - **PARTIAL or FAIL** (one or more ACs fail):
     Tell the user the review found issues and show the Issues section of the report.
     Use AskUserQuestion to ask:
     - Question: "Review found failing ACs. Re-compile to fix, or override and approve anyway?"
-    - Options: "Re-compile" (pass review Issues as feedback into **Spec Feedback Loop**, restart Phase 2, re-run Phases 3 and 4), "Approve anyway" (done — note the open issues in summary), "Reject" (provide additional feedback)
+    - Options: "Re-compile" (pass review Issues as feedback into **Spec Feedback Loop**, restart Phase 2, re-run Phases 3 and 4), "Approve anyway" (create PR and note open issues in summary), "Reject" (provide additional feedback)
 
 ---
 

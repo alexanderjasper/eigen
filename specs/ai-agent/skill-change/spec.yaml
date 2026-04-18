@@ -4,7 +4,6 @@ domain: ai-agent
 module: skill-change
 owner: alexander
 title: Unified `change` skill — orchestrates spec → plan → compile workflow
-status: compiled
 description: |-
   Refine the feedback loop: when user rejects output at any phase and provides feedback,
   the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
@@ -48,6 +47,11 @@ behavior: |
   tools if available). The review-agent reports which environment components it was
   able to start and which acceptance criteria were verified through live execution
   versus static analysis only.
+
+  On final approval in Phase 4, the skill creates a GitHub pull request via
+  `gh pr create`. The PR title is derived from the module path and change summary;
+  the body lists the spec path, ACs implemented, and a standard footer. The PR URL
+  is presented to the user as the concluding output.
 acceptance_criteria:
   - id: AC-001
     description: |
@@ -248,6 +252,17 @@ acceptance_criteria:
       `eigen serve` for serve/navigator changes, exercises relevant curl endpoints and web
       pages, and produces a compliance report that distinguishes live-verified ACs from
       statically-verified ones.
+  - id: AC-021
+    description: |
+      On "Approve" in Phase 4 PASS case, the skill runs `gh pr create` with a title
+      and body derived from the module path and implemented changes, then presents the
+      PR URL to the user as the final output.
+    given: review-agent returns PASS and the user selects "Approve"
+    when: Phase 4 concludes
+    then: |
+      The skill runs `gh pr create --title "<title>" --body "..."` on the feature branch,
+      captures the PR URL from stdout, and presents it to the user. The PR body includes
+      the spec path, a summary of ACs implemented, and a Claude Code footer.
 dependencies: []
 technology:
   AgentTypes: spec-subagent, plan-subagent, compile-subagent
@@ -256,5 +271,5 @@ technology:
     Specs: changes/*.yaml + spec.yaml (eigen-spec format)
     Plans: temporary plan mode UI only (no file written)
     Code: git commits
-last_change: chg-011
-changes_count: 11
+last_change: chg-012
+changes_count: 12
