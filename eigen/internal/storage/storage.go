@@ -211,16 +211,9 @@ func WalkModules(specsRoot, prefix string) ([]ModuleRef, error) {
 }
 
 // marshalCanonical marshals v to YAML with 2-space indentation and omits zero-value scalar fields.
-// We marshal to bytes first via yaml.Marshal, then decode into a node tree for pruning. Direct
-// node.Encode fails when MarshalYAML returns a slice whose string fields contain YAML-like syntax
-// (e.g. "- key: value" lines), because the yaml.v3 encoder re-parses the emitted scalar text.
 func marshalCanonical(v interface{}) ([]byte, error) {
-	raw, err := yaml.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
 	var node yaml.Node
-	if err := yaml.Unmarshal(raw, &node); err != nil {
+	if err := node.Encode(v); err != nil {
 		return nil, err
 	}
 	pruneZeroScalars(&node)

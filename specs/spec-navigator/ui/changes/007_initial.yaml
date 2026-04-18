@@ -1,21 +1,20 @@
 format: eigen/v1
 id: chg-007
 sequence: 7
-timestamp: 2026-04-18T14:29:36Z
-author: ""
+timestamp: "2026-04-18T14:29:36Z"
 type: updated
-summary: "render op-based mutations in the review UI as formatted YAML instead of raw JSON"
+summary: render op-based mutations in the review UI as formatted YAML instead of raw JSON
 reason: |
   The spec-agent now emits op-based mutations (e.g. `- op: append, text: ...`) for
   behavior and description fields in change files. The review UI's renderChangeFields
   function falls through to JSON.stringify for any non-string value, making op-based
   mutations unreadable in the review panel. Users need to see what the mutation does —
   e.g. what text is being appended or replaced — without reading a JSON blob.
+status: approved
 changes:
   behavior:
     - op: append
       text: |
-
         When renderChangeFields encounters a field value that is an array of op
         objects (i.e. an array where each element has an "op" key), it renders each
         op as a human-readable block instead of a raw JSON dump:
