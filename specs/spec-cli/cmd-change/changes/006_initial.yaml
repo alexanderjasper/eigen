@@ -11,7 +11,7 @@ reason: |
   empty. Fixing this makes the generated filename reflect the change content
   rather than a meaningless default, which is already the correct behavior
   in --edit mode.
-status: draft
+status: approved
 changes:
   behavior: |
     Accepts a single slash-delimited path argument identifying the target
