@@ -1,3 +1,4 @@
 eigen/eigen
 .idea
 .claude/settings.local.json
+.eigen/plans/
