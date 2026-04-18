@@ -1,0 +1,48 @@
+format: eigen/v1
+id: chg-006
+sequence: 6
+timestamp: 2026-04-18T13:45:08Z
+author: alexander
+type: updated
+summary: Edit embedded sources in eigen/cmd/ not .claude/ copies when modifying agent or skill files
+reason: |
+  Issue #37: compile-agent has been editing .claude/agents/ and .claude/skills/ files
+  directly. These are scaffolded outputs written by `eigen scaffold` from the embedded
+  sources in eigen/cmd/agents/ and eigen/cmd/skills/, which are compiled into the eigen
+  binary. Editing .claude/ copies causes drift that gets silently overwritten the next
+  time `eigen scaffold --force` is run. The source of truth is the embedded files in
+  eigen/cmd/. compile-agent must edit those files and then re-scaffold to regenerate
+  the .claude/ copies.
+status: draft
+changes:
+  behavior:
+    - op: append
+      text: |
+
+        When a plan step requires modifying a skill or agent definition file (e.g.
+        spec-agent.md, compile-agent.md, plan-agent.md, review-agent.md, or any
+        eigen-change*.md skill), compile-agent edits the embedded source files in
+        eigen/cmd/agents/ or eigen/cmd/skills/ — NOT the .claude/ copies. After editing
+        the embedded source, it runs `cd eigen && go install ./...` to rebuild the binary,
+        then runs `eigen scaffold --force --no-hooks` to regenerate the .claude/ copies
+        from the updated embedded sources. Both the embedded source and the regenerated
+        .claude/ copies are staged and committed together in the same atomic commit.
+  acceptance_criteria:
+    - id: AC-012
+      description: |
+        When a plan step involves modifying a skill or agent definition file, compile-agent
+        edits the embedded source under eigen/cmd/agents/ or eigen/cmd/skills/, not the
+        .claude/agents/ or .claude/skills/ copy.
+      given: A plan step specifies changes to a skill or agent definition file
+      when: compile-agent applies the step
+      then: The edit targets eigen/cmd/agents/<name>.md or eigen/cmd/skills/<name>/SKILL.md, not the .claude/ copy
+    - id: AC-013
+      description: |
+        After editing an embedded source file, compile-agent rebuilds the binary and
+        regenerates the .claude/ copies so they stay in sync with the embedded sources.
+      given: compile-agent has edited an embedded source file in eigen/cmd/
+      when: It commits the change
+      then: |
+        It runs `cd eigen && go install ./...` to rebuild, then `eigen scaffold --force --no-hooks`
+        to regenerate .claude/ copies; both the embedded source and .claude/ copies are
+        staged and committed in the same atomic commit

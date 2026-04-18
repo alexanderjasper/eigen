@@ -1,0 +1,50 @@
+format: eigen/v1
+id: chg-006
+sequence: 6
+timestamp: 2026-04-18T13:44:27Z
+author: alexander
+type: updated
+summary: Prefer op-based text mutations when modifying existing modules
+reason: |
+  Issue #35: spec-agent currently writes behavior and description fields using full
+  scalar replacement. This is lossy when modifying existing modules because the agent
+  must reproduce the entire field verbatim, leading to truncation and drift over time.
+  Eigen supports surgical op-based mutations (append, replace, prepend, delete) that
+  express only what changed. spec-agent should prefer these for existing modules and
+  reserve full scalar replacement for new modules being created from scratch.
+status: draft
+changes:
+  behavior:
+    - op: append
+      text: |
+
+        When modifying an existing module, spec-agent prefers op-based text mutations
+        (append, replace, prepend, delete) over full scalar replacement for the
+        description and behavior fields. Full scalar replacement is used only when
+        creating a new module from scratch. Op-based mutations express only the
+        surgical change, reducing drift and truncation risk. Examples of the op format
+        are included in the agent's embedded source instructions.
+  acceptance_criteria:
+    - id: AC-009
+      description: |
+        When writing a change file that modifies the description or behavior of an
+        existing module, spec-agent uses op-based mutations rather than full scalar
+        replacement. The op format uses a YAML sequence with objects that have an
+        "op" key (replace, append, prepend, or delete) and the relevant old/new/text
+        fields. Full scalar replacement is reserved for new module creation.
+      given: spec-agent is writing a change file that updates description or behavior on an existing module
+      when: It populates the changes block
+      then: |
+        It uses op-based mutations (e.g. - op: replace / old: "..." / new: "...") rather
+        than a full scalar string, unless the module is being created for the first time
+    - id: AC-010
+      description: |
+        The spec-agent's embedded source includes concrete YAML examples of each
+        op type (replace, append, prepend, delete) so the agent can produce correct
+        syntax without guessing.
+      given: The spec-agent definition file is read
+      when: The op-based mutation section is reviewed
+      then: |
+        The definition contains at least one YAML example for each op type:
+        replace (with old and new), append (with text), prepend (with text),
+        and delete (with text)
