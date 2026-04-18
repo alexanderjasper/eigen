@@ -22,12 +22,7 @@ changes:
     Output: git commits on feature branch
     TestFramework: project-specific (go test, npm test, pytest, etc.)
     Tools: Glob, Grep, Read, Edit, Write, Bash, Git
-  dependencies:
-    - approved plan (markdown)
-    - approved spec (spec.yaml)
-    - codebase with ability to edit/write files
-    - git commands for commits
-    - test running capability (optional)
+  dependencies: []
   acceptance_criteria:
     - id: AC-001
       description: |-
