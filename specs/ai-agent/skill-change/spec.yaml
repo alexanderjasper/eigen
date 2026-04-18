@@ -4,6 +4,7 @@ domain: ai-agent
 module: skill-change
 owner: alexander
 title: Unified `change` skill — orchestrates spec → plan → compile workflow
+status: compiled
 description: |-
   Refine the feedback loop: when user rejects output at any phase and provides feedback,
   the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
