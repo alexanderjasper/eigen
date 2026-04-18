@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-013
 sequence: 13
-timestamp: 2026-04-18T15:22:30Z
+timestamp: "2026-04-18T15:22:30Z"
 author: alexander
 type: updated
 summary: Phase 4 runs dual-track parallel review — review-agent subagent plus inline browser verification via preview MCP tools
@@ -15,13 +15,23 @@ reason: |
   single compliance report. This pattern applies to any project, not just eigen, and the
   companion eigen-change-review skill follows the same approach so users get browser testing
   when invoking it manually.
+status: approved
 changes:
   behavior:
     - op: delete
-      text: "Phase 4 review goes beyond static code analysis. The review-agent is instructed to\nstart up as much of the local environment as possible before evaluating correctness.\nThis includes: building the binary (`go build ./...` from the `eigen/` directory),\nstarting the spec-navigator web server if the change involves the serve/navigator\nsubsystem (`eigen serve &` and waiting for it to be ready), and then verifying\nbehavior by exercising relevant API endpoints (curl) and web pages (fetch or browser\ntools if available). The review-agent reports which environment components it was\nable to start and which acceptance criteria were verified through live execution\nversus static analysis only.\n\n"
+      text: |+
+        Phase 4 review goes beyond static code analysis. The review-agent is instructed to
+        start up as much of the local environment as possible before evaluating correctness.
+        This includes: building the binary (`go build ./...` from the `eigen/` directory),
+        starting the spec-navigator web server if the change involves the serve/navigator
+        subsystem (`eigen serve &` and waiting for it to be ready), and then verifying
+        behavior by exercising relevant API endpoints (curl) and web pages (fetch or browser
+        tools if available). The review-agent reports which environment components it was
+        able to start and which acceptance criteria were verified through live execution
+        versus static analysis only.
+
     - op: append
       text: |
-
         Phase 4 review runs TWO parallel tracks concurrently (issued as parallel tool calls
         in the same message):
 
