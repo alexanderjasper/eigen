@@ -110,12 +110,7 @@ acceptance_criteria:
     given: compile-agent auto-promotes a metadata-only change
     when: It creates the commit
     then: 'The commit message follows the pattern chore(<module>): mark <filename> compiled -- no code changes required'
-dependencies:
-  - approved plan (markdown)
-  - approved spec (spec.yaml)
-  - codebase with ability to edit/write files
-  - git commands for commits
-  - test running capability (optional)
+dependencies: []
 technology:
   CommitPattern: 'feat/fix/refactor/docs/test(<area>): <summary>'
   Input: plan.md path, spec.yaml path
