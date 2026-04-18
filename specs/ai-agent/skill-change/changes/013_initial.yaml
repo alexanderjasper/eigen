@@ -1,0 +1,75 @@
+format: eigen/v1
+id: chg-013
+sequence: 13
+timestamp: 2026-04-18T15:22:30Z
+author: alexander
+type: updated
+summary: Phase 4 runs dual-track parallel review — review-agent subagent plus inline browser verification via preview MCP tools
+reason: |
+  Static analysis and build checks are not sufficient to verify runtime behavior for changes
+  that affect a running application's UI or API. Phase 4 should concurrently run the
+  review-agent subagent (Go build, curl/API checks, static analysis) AND perform inline
+  browser verification in the main conversation thread using preview MCP tools
+  (preview_start, preview_screenshot, preview_snapshot, preview_click, etc.). Both tracks
+  run as parallel tool calls in the same message. The combined findings are merged into a
+  single compliance report. This pattern applies to any project, not just eigen, and the
+  companion eigen-change-review skill follows the same approach so users get browser testing
+  when invoking it manually.
+changes:
+  behavior:
+    - op: delete
+      text: "Phase 4 review goes beyond static code analysis. The review-agent is instructed to\nstart up as much of the local environment as possible before evaluating correctness.\nThis includes: building the binary (`go build ./...` from the `eigen/` directory),\nstarting the spec-navigator web server if the change involves the serve/navigator\nsubsystem (`eigen serve &` and waiting for it to be ready), and then verifying\nbehavior by exercising relevant API endpoints (curl) and web pages (fetch or browser\ntools if available). The review-agent reports which environment components it was\nable to start and which acceptance criteria were verified through live execution\nversus static analysis only.\n\n"
+    - op: append
+      text: |
+
+        Phase 4 review runs TWO parallel tracks concurrently (issued as parallel tool calls
+        in the same message):
+
+        Track 1 — review-agent subagent: static analysis, build checks (e.g. `go build ./...`
+        or the project-appropriate build command), and API/endpoint verification via curl or
+        equivalent CLI tools. The review-agent starts the local environment as needed (e.g.
+        starting a local server and waiting for it to be ready) before exercising endpoints.
+        It reports which ACs were verified through live execution vs. static analysis.
+
+        Track 2 — inline browser verification: the main conversation thread uses preview MCP
+        tools (preview_start, preview_screenshot, preview_snapshot, preview_click, etc.) to
+        open the running application in a browser and visually verify UI and runtime behavior.
+        This track runs inline (not in a subagent) so preview MCP tools are available.
+        If the change does not involve a web UI, Track 2 still runs but notes that no browser
+        verification was applicable and reports its finding accordingly.
+
+        Both tracks run in the same message as parallel tool calls. After both complete, their
+        findings are merged into a single compliance report that distinguishes which ACs were
+        verified by each track. The PASS/FAIL verdict is based on the combined results.
+
+        This dual-track pattern is general and applies to any project, not only eigen.
+  acceptance_criteria:
+    - id: AC-020
+      description: |
+        Phase 4 runs TWO parallel tracks simultaneously: (1) the review-agent subagent
+        performs static analysis, build verification, and API/curl checks; (2) the main
+        conversation thread performs inline browser verification using preview MCP tools
+        (preview_start, preview_screenshot, preview_snapshot, preview_click, etc.).
+        Both tracks are issued as parallel tool calls in the same message. After both
+        complete, their findings are merged into a single compliance report. This pattern
+        is general — it applies to any project — and is not gated on whether the change
+        involves a specific subsystem.
+      given: compile-agent has completed implementation and committed code
+      when: eigen-change enters Phase 4
+      then: |
+        Both tracks start in parallel in the same message. The review-agent subagent runs
+        build + static + API checks. The main thread runs preview MCP tools to open the
+        application in a browser and verify runtime/UI behavior. The merged compliance
+        report states which ACs were verified by each track and gives a combined PASS/FAIL.
+    - id: AC-022
+      description: |
+        The eigen-change-review companion skill (for manual invocation of Phase 4) follows
+        the same dual-track pattern as the main eigen-change skill: it runs the review-agent
+        subagent AND inline browser verification via preview MCP tools in parallel, merging
+        results into a single compliance report.
+      given: A user manually invokes the eigen-change-review companion skill
+      when: The review phase executes
+      then: |
+        review-agent subagent and inline preview MCP browser verification run as parallel
+        tool calls. Findings are merged. The same PASS/FAIL logic applies as in Phase 4
+        of the main eigen-change skill.
