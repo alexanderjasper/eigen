@@ -46,6 +46,7 @@ dependencies:
   - spec-navigator/api
   - spec-navigator/ui
   - spec-navigator/change-review
+  - spec-navigator/review-ux
 technology: {}
-last_change: chg-002
-changes_count: 2
+last_change: chg-003
+changes_count: 3

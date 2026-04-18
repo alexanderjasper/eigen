@@ -59,35 +59,7 @@ After the agent completes:
 
    Start a background poll (run_in_background: true, timeout: 300000):
    ```bash
-   MODULE="<module-path>"
-   while true; do
-     RESULT=$(curl -s "http://localhost:7171/api/modules/$MODULE/changes")
-     # Check if all draft changes are now approved
-     ALL_APPROVED=$(echo "$RESULT" | python3 -c "
-   import sys,json
-   changes=json.load(sys.stdin)
-   draft=[c for c in changes if not c.get('status') or c['status']=='draft']
-   print('yes' if len(draft)==0 else 'no')
-   " 2>/dev/null)
-     if [ "$ALL_APPROVED" = "yes" ]; then
-       echo "APPROVED"
-       echo "$RESULT"
-       exit 0
-     fi
-     # Check if any change has a review_comment (rejection feedback)
-     HAS_COMMENT=$(echo "$RESULT" | python3 -c "
-   import sys,json
-   changes=json.load(sys.stdin)
-   comments=[c for c in changes if c.get('review_comment')]
-   print('yes' if comments else 'no')
-   " 2>/dev/null)
-     if [ "$HAS_COMMENT" = "yes" ]; then
-       echo "REJECTED"
-       echo "$RESULT"
-       exit 0
-     fi
-     sleep 3
-   done
+   eigen spec await-approval <module-path> --timeout 5m
    ```
    Wait for the background task completion notification.
 

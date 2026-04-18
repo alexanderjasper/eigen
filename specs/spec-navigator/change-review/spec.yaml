@@ -14,39 +14,23 @@ description: |
   The eigen-change skill polls the module changes endpoint and watches for status
   transitions instead of polling a session endpoint.
 behavior: |
-  The session-based review API is removed entirely (unchanged from chg-002).
+  In the review card rendering (createChangeCard or equivalent), the
+  worktree query parameter construction for approve and reject fetch calls
+  is changed from:
 
-  Two endpoints remain (unchanged from chg-002):
-  POST /api/modules/<module-path>/changes/<filename>/approve
-  POST /api/modules/<module-path>/changes/<filename>/reject
+    const wtParam = change.worktree && change.worktree !== 'main'
+      ? '?worktree=' + encodeURIComponent(change.worktree)
+      : '';
 
-  review_comment field, SetChangeComment storage function, and eigen spec
-  change-comment CLI command are unchanged from chg-002.
+  to:
 
-  UI pending-review polling is replaced as follows:
+    const wtParam = change.worktree
+      ? '?worktree=' + encodeURIComponent(change.worktree)
+      : '';
 
-  startReviewPoller() is replaced with a setTimeout-chain implementation.
-  A module-level variable `reviewPollerTimer` holds the current pending
-  setTimeout handle (or null when stopped).
-
-  Polling behaviour:
-  - Fixed poll interval is 3000ms.
-  - No backoff and no consecutive-no-draft counter.
-  - After each poll (whether draft changes are found or not), the next poll
-    is scheduled 3000ms after the current fetch resolves or rejects.
-  - When the review panel becomes visible (showReviewPanel is called), polling
-    is paused: the pending setTimeout is cleared and reviewPollerTimer is set
-    to null. Polling does not restart until the panel is hidden.
-  - When the review panel is hidden (hideReviewPanel is called), polling
-    resumes: the next poll is scheduled 3000ms later.
-  - stopReviewPoller() clears the pending timer and sets reviewPollerTimer to
-    null. It is called on hideReviewPanel and may be called at any time to
-    halt polling.
-  - The poller uses a setTimeout chain: the next poll is scheduled only after
-    the current fetch resolves (or rejects), so slow server responses cannot
-    cause poll requests to stack.
-
-  All other UI behaviour is unchanged from chg-002.
+  This ensures the ?worktree= parameter is always sent when a change has a
+  worktree field, including when the worktree is 'main'. All other behavior
+  is unchanged.
 acceptance_criteria:
   - id: AC-012
     description: approve endpoint sets change file status to approved
@@ -133,6 +117,26 @@ acceptance_criteria:
     given: the server takes longer than 3000ms to respond to a fetch
     when: the timeout would have fired a second time under setInterval
     then: no second fetch is issued until the first fetch resolves and schedules the next poll
+  - id: AC-031
+    description: approve request for main worktree includes worktree query parameter
+    given: a draft change file belongs to the main worktree (change.worktree is 'main')
+    when: the user clicks approve in the review UI
+    then: the fetch URL includes ?worktree=main and the server returns 200 (not 409)
+  - id: AC-032
+    description: approve request for non-main worktree still includes worktree query parameter
+    given: a draft change file belongs to a feature worktree (e.g. change.worktree is 'my-feature')
+    when: the user clicks approve in the review UI
+    then: the fetch URL includes ?worktree=my-feature and the server returns 200
+  - id: AC-033
+    description: reject request for main worktree includes worktree query parameter
+    given: a draft change file belongs to the main worktree (change.worktree is 'main')
+    when: the user clicks reject with a comment in the review UI
+    then: the fetch URL includes ?worktree=main and the server returns 200 (not 409)
+  - id: AC-034
+    description: worktree param omitted when change has no worktree field
+    given: a draft change file has no worktree field (change.worktree is falsy)
+    when: the user clicks approve or reject in the review UI
+    then: the fetch URL has no ?worktree= query parameter
 dependencies:
   - spec-navigator/api
   - spec-navigator/ui
@@ -150,5 +154,5 @@ technology:
   RemovedTypes: ReviewSession, ChangeEntry, reviewStore, generateSessionID
   SessionID: server-generated UUID (crypto/rand)
   SessionStorage: in-memory only (no disk persistence)
-last_change: chg-004
-changes_count: 4
+last_change: chg-005
+changes_count: 5

@@ -1,0 +1,77 @@
+format: eigen/v1
+id: chg-010
+sequence: 10
+timestamp: "2026-03-30T18:19:52Z"
+author: alexander
+type: updated
+summary: Fix review polling bugs — add worktree parameter and error handling to API calls
+reason: |
+  Three bugs cause the approval polling loop to spin forever or silently fail:
+  (1) GitHub #21: WORKTREE is never captured in Setup, so API calls lack the ?worktree=
+      parameter needed to disambiguate modules across worktrees.
+  (2) GitHub #11: The polling curl to /api/modules/$MODULE/changes omits ?worktree=,
+      causing 409 Conflict when the module exists in multiple worktrees.
+  (3) GitHub #14: All python3 invocations use 2>/dev/null, silently swallowing HTTP
+      errors (409, 5xx, network failures). Both check variables become empty strings
+      and the loop spins forever with no diagnostic output.
+status: compiled
+compiled_commits:
+  - 707c422
+  - 4f7e5c9
+changes:
+  behavior: |
+    The /change skill orchestrates spec -> plan -> compile. At setup it captures both
+    BRANCH (from git branch --show-current) and WORKTREE (the worktree name, derived
+    from the basename of `git rev-parse --show-toplevel`). WORKTREE is threaded into all
+    HTTP API calls to the eigen serve API as a ?worktree= query parameter so modules are
+    correctly disambiguated when the same module path exists in multiple worktrees.
+
+    The approval polling loop checks the HTTP status code of each curl response before
+    attempting JSON parsing. If the response is not HTTP 200, the loop logs a diagnostic
+    message with the status code and response body. After a configurable number of
+    consecutive failures (default 5), the loop exits with an error message instead of
+    spinning forever. Python3 stderr is no longer suppressed (2>/dev/null is removed).
+  acceptance_criteria:
+    - id: AC-014
+      description: |
+        The Setup section captures WORKTREE by running
+        `basename "$(git rev-parse --show-toplevel)"` and storing the result.
+        WORKTREE is available to all subsequent phases alongside BRANCH.
+      given: The /change skill starts execution
+      when: The Setup section runs
+      then: WORKTREE is captured from the basename of the git worktree root and stored for use in all phases
+    - id: AC-015
+      description: |
+        All HTTP API calls to the eigen serve API (e.g. polling
+        /api/modules/$MODULE/changes) include ?worktree=$WORKTREE as a query
+        parameter. This prevents 409 Conflict responses when the module exists
+        in both the main worktree and a feature worktree.
+      given: The skill makes any curl request to the eigen serve API
+      when: The URL is constructed
+      then: The URL includes ?worktree=$WORKTREE as a query parameter
+    - id: AC-016
+      description: |
+        The polling loop checks the HTTP status code returned by curl (using
+        curl -s -w "%{http_code}" -o <tmpfile>) before attempting to parse the
+        response body as JSON. If the status code is not 200, the body is not
+        passed to python3 for parsing.
+      given: The polling loop makes a curl request
+      when: The HTTP response is received
+      then: The status code is checked; non-200 responses are not parsed as JSON
+    - id: AC-017
+      description: |
+        The python3 invocations in the polling loop do not suppress stderr
+        (2>/dev/null is removed). Parse errors and exceptions are visible in
+        the polling output.
+      given: The polling loop runs python3 to parse JSON
+      when: python3 encounters an error (malformed JSON, missing keys, etc.)
+      then: The error message is visible in the polling output, not suppressed
+    - id: AC-018
+      description: |
+        If the polling loop encounters 5 consecutive non-200 HTTP responses
+        (or curl failures), it exits with a non-zero status and prints a
+        diagnostic message including the last HTTP status code and response body.
+        The loop does not spin forever on persistent errors.
+      given: The eigen serve API is returning errors (409, 5xx, or unreachable)
+      when: 5 consecutive polling attempts fail
+      then: The loop exits with a diagnostic error message instead of spinning indefinitely
