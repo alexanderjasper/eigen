@@ -4,7 +4,6 @@ domain: ai-agent
 module: skill-change
 owner: alexander
 title: Unified `change` skill — orchestrates spec → plan → compile workflow
-status: compiled
 description: |-
   Refine the feedback loop: when user rejects output at any phase and provides feedback,
   the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
@@ -22,25 +21,44 @@ description: |-
   rejection, eigen-change commits the feedback change file after the next spec-agent run
   completes.
 behavior: |
-  The /change skill orchestrates spec -> plan -> compile. At setup it captures both
-  BRANCH (from git branch --show-current) and WORKTREE (the worktree name, derived
-  from the basename of `git rev-parse --show-toplevel`). WORKTREE is threaded into all
-  HTTP API calls to the eigen serve API as a ?worktree= query parameter so modules are
-  correctly disambiguated when the same module path exists in multiple worktrees.
+  The /change skill orchestrates spec -> plan -> compile. At setup it fetches the
+  latest main branch (`git fetch origin main`) and creates a new feature branch from it
+  (`git checkout -b <feature-branch> origin/main`). The skill does NOT continue on the
+  currently checked-out branch unless the user explicitly passes a flag (--branch) or
+  explicitly instructs it to do so. The branch name is derived from the module path or
+  feature description (e.g. `feat/skill-change-branch-from-main`). Setup also captures
+  BRANCH (the new branch name) and WORKTREE (the worktree name, derived from the basename
+  of `git rev-parse --show-toplevel`). WORKTREE is threaded into all HTTP API calls to the
+  eigen serve API as a ?worktree= query parameter so modules are correctly disambiguated
+  when the same module path exists in multiple worktrees.
 
   The approval polling loop checks the HTTP status code of each curl response before
   attempting JSON parsing. If the response is not HTTP 200, the loop logs a diagnostic
   message with the status code and response body. After a configurable number of
   consecutive failures (default 5), the loop exits with an error message instead of
   spinning forever. Python3 stderr is no longer suppressed (2>/dev/null is removed).
+
+  Phase 4 review goes beyond static code analysis. The review-agent is instructed to
+  start up as much of the local environment as possible before evaluating correctness.
+  This includes: building the binary (`go build ./...` from the `eigen/` directory),
+  starting the spec-navigator web server if the change involves the serve/navigator
+  subsystem (`eigen serve &` and waiting for it to be ready), and then verifying
+  behavior by exercising relevant API endpoints (curl) and web pages (fetch or browser
+  tools if available). The review-agent reports which environment components it was
+  able to start and which acceptance criteria were verified through live execution
+  versus static analysis only.
 acceptance_criteria:
   - id: AC-001
     description: |
       `change` skill can be invoked with feature description and optional short-name hint.
-      Skill creates feature branch and calls spec-subagent with the description.
+      At setup the skill fetches origin/main, creates a new feature branch from it, and
+      calls spec-subagent with the description. The skill does NOT continue on the current
+      branch unless the user passes --branch or explicitly instructs it to do so.
     given: A user invokes /change with a feature description
     when: The skill starts execution
-    then: spec-agent is launched with the description; a feature branch is available
+    then: |
+      The skill runs `git fetch origin main` then `git checkout -b <feature-branch> origin/main`,
+      stores the new branch name as BRANCH, and launches spec-agent with the description.
   - id: AC-002
     description: |
       After spec-agent finishes writing change files and running `eigen spec project`,
@@ -203,6 +221,32 @@ acceptance_criteria:
     given: The eigen serve API is returning errors (409, 5xx, or unreachable)
     when: 5 consecutive polling attempts fail
     then: The loop exits with a diagnostic error message instead of spinning indefinitely
+  - id: AC-019
+    description: |
+      At setup, if the user has passed a --branch <name> flag or has explicitly stated they
+      want to continue on the current branch, the skill skips branch creation and uses the
+      existing branch. Otherwise branch creation from origin/main is always performed.
+    given: A user invokes /change without a --branch flag
+    when: The Setup section runs
+    then: |
+      A new branch is created from origin/main; the current branch is not used.
+      If --branch is passed or the user explicitly requests the current branch, branch
+      creation is skipped and BRANCH is set to the existing branch name.
+  - id: AC-020
+    description: |
+      Phase 4 review-agent builds the binary and starts any applicable local services
+      before evaluating correctness. It does not rely solely on static source analysis.
+      For changes involving the spec-navigator or serve subsystem, the agent starts
+      `eigen serve` and waits for it to be ready before exercising API endpoints.
+      The compliance report must state which ACs were verified through live execution
+      vs. static analysis only.
+    given: compile-agent has completed implementation and committed code
+    when: review-agent runs in Phase 4
+    then: |
+      review-agent builds the binary (`go build ./...` from `eigen/`), optionally starts
+      `eigen serve` for serve/navigator changes, exercises relevant curl endpoints and web
+      pages, and produces a compliance report that distinguishes live-verified ACs from
+      statically-verified ones.
 dependencies: []
 technology:
   AgentTypes: spec-subagent, plan-subagent, compile-subagent
@@ -211,5 +255,5 @@ technology:
     Specs: changes/*.yaml + spec.yaml (eigen-spec format)
     Plans: temporary plan mode UI only (no file written)
     Code: git commits
-last_change: chg-010
-changes_count: 10
+last_change: chg-011
+changes_count: 11
