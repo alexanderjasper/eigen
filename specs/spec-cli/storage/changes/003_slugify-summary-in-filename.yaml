@@ -12,7 +12,9 @@ reason: |
   WriteChange (and its callers) use the slugified Summary as the filename slug
   whenever Summary is non-empty, reserving "_initial" only for the case where
   Summary is truly empty.
-status: approved
+status: compiled
+compiled_commits:
+  - bd11c44249b853deb8aca5be9aedca165847e78d
 changes:
   behavior:
     - op: replace
