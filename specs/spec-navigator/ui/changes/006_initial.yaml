@@ -1,7 +1,7 @@
 format: eigen/v1
 id: chg-006
 sequence: 6
-timestamp: 2026-03-30T10:47:50Z
+timestamp: "2026-03-30T10:47:50Z"
 author: alexander
 type: updated
 summary: Add compiled status badge to the UI
@@ -11,6 +11,9 @@ reason: |
   status, the badge rendered as the grey "unknown" fallback instead of a distinct
   compiled indicator. Added a teal badge-compiled style to visually distinguish
   fully-compiled modules from ones still in draft or pending approval.
+status: compiled
+compiled_commits:
+  - 9a0c8656d746ae0dfaa85f34c00d18eb9d59bbbb
 changes:
   acceptance_criteria:
     - id: AC-046

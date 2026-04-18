@@ -716,7 +716,7 @@ function renderReviewDetail(index) {
   card.appendChild(validation);
 
   // Actions
-  const wtParam = change.worktree && change.worktree !== 'main'
+  const wtParam = change.worktree
     ? '?worktree=' + encodeURIComponent(change.worktree)
     : '';
   const modPath = change.module_path || '';

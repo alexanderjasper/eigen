@@ -23,12 +23,7 @@ changes:
       Specs: changes/*.yaml + spec.yaml (eigen-spec format)
       Plans: markdown file
       Code: git commits
-  dependencies:
-    - Agent tool (with subagent_type parameter)
-    - spec-subagent definition
-    - plan-subagent definition
-    - compile-subagent definition
-    - Integration with .claude/skills/ infrastructure
+  dependencies: []
   acceptance_criteria:
     - id: AC-001
       description: |-
