@@ -26,7 +26,17 @@ Run `git log --oneline -20` to find recent commits for this module. Use Glob and
 
 If the spec references specific CLI commands, function names, or file paths, grep for them directly.
 
-### 3. Verify each AC
+### 3. Build and exercise the environment
+
+Before evaluating any AC:
+
+1. Build the binary: run `go build ./...` from the `eigen/` subdirectory of the repo root. Record PASS or FAIL.
+2. If the spec involves `eigen serve`, the spec-navigator, or any HTTP API subsystem:
+   - Start `eigen serve &` and poll `http://localhost:7171` until HTTP 200 is returned (30-second timeout).
+   - Exercise relevant API endpoints with curl and record the responses as evidence.
+3. Run `go test ./...` and capture the output.
+
+### 4. Verify each AC
 
 For each acceptance criterion, assess whether the implementation satisfies it:
 
@@ -34,9 +44,9 @@ For each acceptance criterion, assess whether the implementation satisfies it:
 - **FAIL**: the behaviour is missing, incomplete, or contradicts the AC (describe exactly what is wrong)
 - **UNCERTAIN**: the code exists but you cannot confirm correctness without running it (note what would need to be tested)
 
-Run `go test ./...` (or the equivalent build/test command for this codebase) and include the result as evidence.
+Label each result as `LIVE` (verified through live execution) or `STATIC` (verified through static source analysis only).
 
-### 4. Return compliance report
+### 5. Return compliance report
 
 Return a structured markdown report as your text output to the caller. Format:
 
@@ -46,13 +56,18 @@ Return a structured markdown report as your text output to the caller. Format:
 ### Summary
 <one sentence: PASS / PARTIAL / FAIL and why>
 
+### Environment
+- Binary build: PASS / FAIL
+- eigen serve started: YES / NO / N/A
+- Endpoints exercised: <list or N/A>
+
 ### Acceptance Criteria
 
-| ID | Description | Result | Evidence |
-|----|-------------|--------|----------|
-| AC-001 | ... | PASS | eigen/cmd/foo.go:42-55 |
-| AC-002 | ... | FAIL | missing — no handler for X |
-| AC-003 | ... | UNCERTAIN | code present but untested path |
+| ID | Description | Result | Verification | Evidence |
+|----|-------------|--------|--------------|----------|
+| AC-001 | ... | PASS | LIVE | eigen/cmd/foo.go:42-55 |
+| AC-002 | ... | FAIL | STATIC | missing — no handler for X |
+| AC-003 | ... | UNCERTAIN | STATIC | code present but untested path |
 
 ### Issues
 <numbered list of FAIL and UNCERTAIN items with specific file references and what needs to change>
