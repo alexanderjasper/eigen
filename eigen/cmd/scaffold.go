@@ -19,6 +19,9 @@ var eigenChangeCompileSkill []byte
 //go:embed skills/eigen-change.md
 var eigenChangeSkill []byte
 
+//go:embed skills/eigen-change-review.md
+var eigenChangeReviewSkill []byte
+
 //go:embed agents/spec-agent.md
 var specAgentDef []byte
 
@@ -27,6 +30,9 @@ var planAgentDef []byte
 
 //go:embed agents/compile-agent.md
 var compileAgentDef []byte
+
+//go:embed agents/review-agent.md
+var reviewAgentDef []byte
 
 var scaffoldForce bool
 var scaffoldNoHooks bool
@@ -108,6 +114,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		{"eigen-change-spec", eigenChangeSpecSkill},
 		{"eigen-change-compile", eigenChangeCompileSkill},
 		{"eigen-change", eigenChangeSkill},
+		{"eigen-change-review", eigenChangeReviewSkill},
 	}
 
 	agents := []struct {
@@ -117,6 +124,7 @@ func runScaffold(cmd *cobra.Command, args []string) error {
 		{"spec-agent", specAgentDef},
 		{"plan-agent", planAgentDef},
 		{"compile-agent", compileAgentDef},
+		{"review-agent", reviewAgentDef},
 	}
 
 	// AC-004: check for existing files before writing anything

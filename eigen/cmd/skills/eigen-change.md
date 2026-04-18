@@ -179,18 +179,46 @@ Agent(
 )
 ```
 
-After compile-agent completes:
+After compile-agent completes, proceed to Phase 4.
 
-1. Tell the user: "Implementation complete."
-2. Use AskUserQuestion to ask:
-   - Question: "Implementation looks good?"
-   - Options: "Approve" (done — summarize branch, spec path, commits made), "Reject" (provide feedback)
-   - If rejected, prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phase 3.
+---
+
+## Phase 4 — Review
+
+Launch the review-agent to verify spec compliance:
+
+```
+Agent(
+  subagent_type: review-agent,
+  prompt: |
+    SPEC_PATH: specs/<module-path>/spec.yaml
+    MODULE_PATH: <module-path>
+
+    Read the spec and the compiled implementation, verify every acceptance criterion,
+    run the build/test suite, and return the full compliance report.
+)
+```
+
+Present the returned compliance report to the user.
+
+Read the summary line from the report:
+
+- **PASS** (all ACs pass):
+    Use AskUserQuestion to ask:
+    - Question: "Review passed. Approve to finish or reject to revise."
+    - Options: "Approve" (done — summarize branch, spec path, commits made), "Reject" (provide feedback)
+    - If rejected: prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phases 3 and 4.
+
+- **PARTIAL or FAIL** (one or more ACs fail):
+    Tell the user the review found issues and show the Issues section of the report.
+    Use AskUserQuestion to ask:
+    - Question: "Review found failing ACs. Re-compile to fix, or override and approve anyway?"
+    - Options: "Re-compile" (pass review Issues as feedback into **Spec Feedback Loop**, restart Phase 2, re-run Phases 3 and 4), "Approve anyway" (done — note the open issues in summary), "Reject" (provide additional feedback)
 
 ---
 
 ## Notes
 
 - **Spec is always updated first on rejection**: feedback becomes a new change file in `changes/` before re-running any phase. This ensures the spec stays authoritative — a fresh agent could re-plan or re-implement from spec.yaml alone.
-- **Companion skills**: `/eigen-change-spec` and `/eigen-change-compile` are available for manual phase invocation.
+- **Companion skills**: `/eigen-change-spec`, `/eigen-change-compile`, and `/eigen-change-review` are available for manual phase invocation.
 - **Plan mode UI is preserved**: eigen-change enters plan mode after plan-agent returns the draft, so plan mode UI is presented in the main conversation thread.
