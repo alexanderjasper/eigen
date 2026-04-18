@@ -11,7 +11,9 @@ reason: |
   empty. Fixing this makes the generated filename reflect the change content
   rather than a meaningless default, which is already the correct behavior
   in --edit mode.
-status: approved
+status: compiled
+compiled_commits:
+  - d9c0745f03f2fc06bc5ad791b21a62ace8b38d2c
 changes:
   behavior: |
     Accepts a single slash-delimited path argument identifying the target
