@@ -227,8 +227,8 @@ func TestWriteChange(t *testing.T) {
 		root := t.TempDir()
 		setupModule(t, root, "mymod")
 
-		ch := spec.Change{ID: "chg-007", Sequence: 7, Summary: "feature"}
-		if err := WriteChange(root, "mymod", ch, "add-feature"); err != nil {
+		ch := spec.Change{ID: "chg-007", Sequence: 7, Summary: "add-feature"}
+		if err := WriteChange(root, "mymod", ch); err != nil {
 			t.Fatalf("WriteChange error: %v", err)
 		}
 
@@ -262,7 +262,7 @@ func TestWriteChange(t *testing.T) {
 			},
 		}
 
-		if err := WriteChange(root, "mymod", original, "initial"); err != nil {
+		if err := WriteChange(root, "mymod", original); err != nil {
 			t.Fatalf("WriteChange error: %v", err)
 		}
 
@@ -285,6 +285,64 @@ func TestWriteChange(t *testing.T) {
 		}
 		if got.Changes.Title != original.Changes.Title {
 			t.Errorf("Changes.Title = %q, want %q", got.Changes.Title, original.Changes.Title)
+		}
+	})
+
+	// AC-030: slugified summary used as filename
+	t.Run("slugified_summary_as_filename_AC030", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "mymod")
+
+		ch := spec.Change{Sequence: 4, Summary: "Add validation for empty modules"}
+		if err := WriteChange(root, "mymod", ch); err != nil {
+			t.Fatalf("WriteChange error: %v", err)
+		}
+
+		path := filepath.Join(ChangesPath(root, "mymod"), "004_add-validation-for-empty-modules.yaml")
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected file %q not found: %v", path, err)
+		}
+	})
+
+	// AC-031: empty summary falls back to "initial"
+	t.Run("empty_summary_falls_back_to_initial_AC031", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "mymod")
+
+		ch := spec.Change{Sequence: 5, Summary: ""}
+		if err := WriteChange(root, "mymod", ch); err != nil {
+			t.Fatalf("WriteChange error: %v", err)
+		}
+
+		path := filepath.Join(ChangesPath(root, "mymod"), "005_initial.yaml")
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected file %q not found: %v", path, err)
+		}
+	})
+
+	// AC-032: slug truncated to 40 characters
+	t.Run("long_summary_slug_truncated_to_40_chars_AC032", func(t *testing.T) {
+		root := t.TempDir()
+		setupModule(t, root, "mymod")
+
+		ch := spec.Change{Sequence: 6, Summary: "This is a very long summary that should be truncated to forty characters max in the slug"}
+		if err := WriteChange(root, "mymod", ch); err != nil {
+			t.Fatalf("WriteChange error: %v", err)
+		}
+
+		entries, err := os.ReadDir(ChangesPath(root, "mymod"))
+		if err != nil {
+			t.Fatalf("reading changes dir: %v", err)
+		}
+		if len(entries) != 1 {
+			t.Fatalf("expected 1 file, got %d", len(entries))
+		}
+		filename := entries[0].Name()
+		// Strip "006_" prefix and ".yaml" suffix to get slug portion
+		slug := strings.TrimPrefix(filename, "006_")
+		slug = strings.TrimSuffix(slug, ".yaml")
+		if len(slug) > 40 {
+			t.Errorf("slug %q has length %d, want <= 40", slug, len(slug))
 		}
 	})
 }
@@ -624,7 +682,7 @@ func TestWriteChangeIndentation(t *testing.T) {
 		},
 	}
 
-	if err := WriteChange(root, "mymod", ch, "initial"); err != nil {
+	if err := WriteChange(root, "mymod", ch); err != nil {
 		t.Fatalf("WriteChange error: %v", err)
 	}
 
@@ -650,7 +708,7 @@ func TestWriteChangeOmitsZeroValues(t *testing.T) {
 		Status:  "draft",
 	}
 
-	if err := WriteChange(root, "mymod", ch, "something"); err != nil {
+	if err := WriteChange(root, "mymod", ch); err != nil {
 		t.Fatalf("WriteChange error: %v", err)
 	}
 
