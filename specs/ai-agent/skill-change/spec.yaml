@@ -4,7 +4,6 @@ domain: ai-agent
 module: skill-change
 owner: alexander
 title: Unified `change` skill — orchestrates spec → plan → compile workflow
-status: compiled
 description: |-
   Refine the feedback loop: when user rejects output at any phase and provides feedback,
   the skill immediately invokes spec-agent to write a new change file incorporating the feedback,
@@ -64,6 +63,13 @@ behavior: |
   verified by each track. The PASS/FAIL verdict is based on the combined results.
 
   This dual-track pattern is general and applies to any project, not only eigen.
+
+  After a spec rejection is processed and spec-agent writes the feedback change
+  file, the skill clears the stale review_comment on all change files before
+  re-entering the approval poll: for each change file run
+  `eigen spec change-comment <module-path> <filename> ""`.
+  This prevents old rejection comments from triggering a false positive on the
+  next poll.
 acceptance_criteria:
   - id: AC-001
     description: |
@@ -289,6 +295,19 @@ acceptance_criteria:
       review-agent subagent and inline preview MCP browser verification run as parallel
       tool calls. Findings are merged. The same PASS/FAIL logic applies as in Phase 4
       of the main eigen-change skill.
+  - id: AC-023
+    description: |
+      After a rejection → Spec Feedback Loop → spec-agent run cycle completes,
+      the skill clears the review_comment field on all change files that were
+      previously commented before re-entering the approval poll. This prevents
+      stale comments from triggering a false rejection on the next poll.
+    given: A spec rejection has been processed and spec-agent has written an updated change file
+    when: eigen-change is about to re-enter the approval poll (step 2)
+    then: |
+      It runs `eigen spec change-comment <module-path> <filename> ""` for each change
+      file that previously had a review_comment, clearing the stale value before the
+      next poll begins. The next poll only detects a rejection if the user writes a
+      new comment in the review UI.
 dependencies: []
 technology:
   AgentTypes: spec-subagent, plan-subagent, compile-subagent
@@ -297,5 +316,5 @@ technology:
     Specs: changes/*.yaml + spec.yaml (eigen-spec format)
     Plans: temporary plan mode UI only (no file written)
     Code: git commits
-last_change: chg-013
-changes_count: 13
+last_change: chg-014
+changes_count: 14
