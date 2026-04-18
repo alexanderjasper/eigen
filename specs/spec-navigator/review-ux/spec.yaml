@@ -4,10 +4,10 @@ domain: spec-navigator
 module: review-ux
 owner: alexander
 title: Review UX
-status: compiled
+status: draft
 description: |
   spec-navigator/review-ux defines the enhanced review experience in the
-  spec navigator UI. It covers three concerns:
+  spec navigator UI. It covers four concerns:
 
   1. List-to-detail navigation: when draft changes are detected, the review
      panel shows a scrollable list of change summaries. Clicking a summary
@@ -26,6 +26,10 @@ description: |
      the pane. The detail/main area flexes to fill remaining space. Minimum
      widths prevent panes from collapsing to zero.
 
+  4. Approve All: the review panel list view includes an "Approve All"
+     button that approves every currently-displayed draft change in sequence
+     without requiring individual interaction per change.
+
   This module does not change the review API endpoints, polling logic, or
   data model. It depends on spec-navigator/change-review for the API and
   spec-navigator/ui for the base layout.
@@ -35,9 +39,18 @@ behavior: |
     renders a list view: each change is a clickable row showing its
     filename, summary, and status badge.
   - A count indicator (e.g. "3 changes pending") is shown at the top.
+  - An "Approve All" button is rendered in the list view header, next to
+    the count indicator. Clicking it approves every change in the list
+    sequentially by POSTing to each change's /approve endpoint with no
+    comment. While running, the button is disabled and shows a progress
+    indicator (e.g. "Approving 2/3..."). On completion, the review panel
+    hides (same as when the last individual approval clears the list). If
+    any individual approval fails, an error toast is shown and the button
+    re-enables; successfully approved items are already removed from the
+    list.
   - Clicking a row transitions the panel to detail view for that change,
-    showing the full YAML preview, comment textarea, and approve/reject
-    buttons.
+    showing the full change field preview, comment textarea, and
+    approve/reject buttons.
   - A "Back to list" link at the top of the detail view returns to the
     list view.
 
@@ -230,6 +243,26 @@ acceptance_criteria:
     given: the review poller detects 5 draft changes
     when: the list view renders
     then: a count indicator at the top reads "5 changes pending"
+  - id: AC-029
+    description: Approve All button is visible in list view
+    given: the review panel is showing the list view with 3 draft changes
+    when: the list view renders
+    then: an "Approve All" button is visible alongside the count indicator
+  - id: AC-030
+    description: Approve All approves every draft change in sequence
+    given: the review panel is showing 3 draft changes
+    when: the user clicks "Approve All"
+    then: POSTs to /approve for each of the 3 changes in list order with no comment body; the review panel hides when all succeed
+  - id: AC-031
+    description: Approve All button is disabled while running
+    given: the user has clicked "Approve All" and approvals are in progress
+    when: the button is observed mid-run
+    then: the button is disabled and displays a progress indicator such as "Approving 2/3..."
+  - id: AC-032
+    description: Approve All shows error toast and re-enables on partial failure
+    given: the third of 3 approvals fails with a non-2xx status
+    when: Approve All is running
+    then: an error toast is shown, the button re-enables, and the list shows only the changes that were not yet approved
 dependencies:
   - spec-navigator/change-review
   - spec-navigator/ui
@@ -240,5 +273,5 @@ technology:
   ResizeMaxReview: 80vw
   ResizeMinLeft: 180px
   ResizeMinReview: 320px
-last_change: chg-001
-changes_count: 1
+last_change: chg-002
+changes_count: 2

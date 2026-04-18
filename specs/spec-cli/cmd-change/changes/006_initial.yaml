@@ -1,0 +1,48 @@
+id: chg-006
+sequence: 6
+timestamp: "2026-04-18T00:00:00Z"
+author: alexander
+type: updated
+summary: Slugify Summary for filename in non-interactive mode
+reason: |
+  WriteChange always used the hardcoded slug "_initial" in non-interactive
+  (default) mode, even when a descriptive Summary field is present in the
+  template. The "_initial" default should only apply when Summary is truly
+  empty. Fixing this makes the generated filename reflect the change content
+  rather than a meaningless default, which is already the correct behavior
+  in --edit mode.
+status: draft
+changes:
+  behavior: |
+    Accepts a single slash-delimited path argument identifying the target
+    module. Assigns the next sequence number automatically. The change file
+    is named NNN_<slug>.yaml where the slug is derived from the change summary.
+
+    Default (non-interactive): writes the template to changes/, reprojects
+    spec.yaml, and prints the file path. The caller edits the file and runs
+    eigen spec project <path> to reproject after their edits. When the
+    Summary field in the written template is non-empty, the slug is derived
+    from it via slugify(); when Summary is empty, the slug defaults to
+    "initial". This is consistent with --edit mode, which already slugifies
+    the Summary.
+
+    With --edit: writes a temp file, opens $EDITOR, and on save parses,
+    writes the change, and reprojects — the original human workflow.
+
+    Before writing the change file, eigen spec change validates the changes
+    against the current spec state using ValidateChanges from the projection
+    engine. If any field in the changeset is identical to the current spec
+    state (e.g. an acceptance criterion with the same id and identical
+    given/when/then/description), the command exits non-zero and reports
+    each redundant field without writing anything.
+  acceptance_criteria:
+    - id: AC-001
+      description: Default run with empty summary uses "initial" slug
+      given: A valid existing module and no Summary populated in the template
+      when: eigen spec change <path> is run without --edit
+      then: Writes NNN_initial.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
+    - id: AC-007
+      description: Default run with non-empty Summary slugifies the filename
+      given: A valid existing module and the spec-agent has populated Summary as "Fix filename slug"
+      when: eigen spec change <path> is run without --edit
+      then: Writes NNN_fix-filename-slug.yaml to changes/, reprojects spec.yaml, prints the file path, exits 0
