@@ -195,7 +195,9 @@ After compile-agent completes, proceed to Phase 4.
 
 ## Phase 4 — Review
 
-Launch the review-agent to verify spec compliance:
+Issue TWO parallel tool calls in the same message:
+
+**Track 1 — review-agent subagent:**
 
 ```
 Agent(
@@ -204,24 +206,43 @@ Agent(
     SPEC_PATH: specs/<module-path>/spec.yaml
     MODULE_PATH: <module-path>
 
-    Read the spec and the compiled implementation. Before evaluating correctness:
-    1. Build the binary: run `go build ./...` from the `eigen/` subdirectory of the repo root.
-    2. If the change involves the spec-navigator, serve, or any HTTP API subsystem:
-       - Start `eigen serve &` and wait for it to be ready (poll http://localhost:7171 until HTTP 200).
-       - Exercise relevant API endpoints with curl (e.g. `curl -s http://localhost:7171/api/modules`).
-       - Fetch or check relevant web pages where browser tools are available.
-    3. For all other changes, still build the binary and run `go test ./...`.
+    Read the spec and compiled implementation. Before evaluating:
+    1. Build using the project-appropriate command (e.g. `go build ./...` from `eigen/` for Go projects).
+    2. If the change involves a server or HTTP API:
+       - Start the server and poll until HTTP 200 (30s timeout).
+       - Exercise relevant endpoints with curl and record responses.
+    3. Run the project's test suite and capture output.
 
-    Verify every acceptance criterion. In the compliance report, clearly label each AC as
-    verified through live execution (LIVE) or static analysis only (STATIC).
-
+    Verify every AC. Label each LIVE or STATIC. Include "Track: AGENT" in the report header.
     Return the full compliance report.
 )
 ```
 
-Present the returned compliance report to the user.
+**Track 2 — inline browser verification (main thread, same message as Track 1):**
 
-Read the summary line from the report:
+In the same message as the Track 1 Agent call, use preview MCP tools inline:
+
+1. Read the spec's behavior and AC descriptions for UI/web language ("page", "browser", "frontend", "UI", "button", "form", "route").
+2. If a web UI or local server is applicable:
+   a. Call `preview_start` with the appropriate URL (infer from spec; e.g. http://localhost:7171 for eigen serve).
+   b. Call `preview_screenshot` — capture initial state.
+   c. Call `preview_snapshot` — read rendered DOM, verify content.
+   d. For ACs involving UI elements/interactions: `preview_click`, then `preview_screenshot`/`preview_snapshot` to verify state changes.
+   e. Record which ACs were visually confirmed and any discrepancies. Label findings "Track: BROWSER".
+3. If no web UI is applicable:
+   - Record: "Track 2 — inline browser verification: no web UI applicable. Browser verification skipped."
+   - This is not a failure.
+
+**After both tracks complete, merge findings:**
+
+- For each AC: combine results. An AC is PASS if either track confirms it (and neither finds a failure for an AC both tracks checked).
+- Label each AC row with the verifying track(s): AGENT, BROWSER, or BOTH.
+- Overall verdict: PASS only if all ACs pass in the combined result.
+- Include a "Verification coverage" section listing which ACs each track covered.
+
+Present the merged compliance report to the user.
+
+Read the summary line from the combined report:
 
 - **PASS** (all ACs pass):
     Use AskUserQuestion to ask:
@@ -242,7 +263,7 @@ Read the summary line from the report:
     - If rejected: prompt for feedback via follow-up AskUserQuestion, run **Spec Feedback Loop** to update spec, restart Phase 2, then re-run Phases 3 and 4.
 
 - **PARTIAL or FAIL** (one or more ACs fail):
-    Tell the user the review found issues and show the Issues section of the report.
+    Tell the user the review found issues and show the Issues section of the combined report.
     Use AskUserQuestion to ask:
     - Question: "Review found failing ACs. Re-compile to fix, or override and approve anyway?"
     - Options: "Re-compile" (pass review Issues as feedback into **Spec Feedback Loop**, restart Phase 2, re-run Phases 3 and 4), "Approve anyway" (create PR and note open issues in summary), "Reject" (provide additional feedback)
