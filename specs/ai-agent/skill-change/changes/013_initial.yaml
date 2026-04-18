@@ -15,7 +15,9 @@ reason: |
   single compliance report. This pattern applies to any project, not just eigen, and the
   companion eigen-change-review skill follows the same approach so users get browser testing
   when invoking it manually.
-status: approved
+status: compiled
+compiled_commits:
+  - c6ea8b73a0fe48009edb543cc4a90525e5f1d07e
 changes:
   behavior:
     - op: delete
