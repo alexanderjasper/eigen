@@ -13,6 +13,8 @@ reason: |
   express only what changed. spec-agent should prefer these for existing modules and
   reserve full scalar replacement for new modules being created from scratch.
 status: compiled
+compiled_commits:
+  - 922823c468686e7813303e4ad1de78fec00fc932
 changes:
   behavior:
     - op: append

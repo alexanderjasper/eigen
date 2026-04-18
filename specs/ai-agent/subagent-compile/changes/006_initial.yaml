@@ -14,6 +14,8 @@ reason: |
   eigen/cmd/. compile-agent must edit those files and then re-scaffold to regenerate
   the .claude/ copies.
 status: compiled
+compiled_commits:
+  - 922823c468686e7813303e4ad1de78fec00fc932
 changes:
   behavior:
     - op: append
